@@ -6,7 +6,7 @@ use riars_core::t;
 use crate::McpState;
 
 #[derive(Serialize)]
-struct ToolDef {
+pub struct ToolDef {
     name: &'static str,
     description: &'static str,
     #[serde(rename = "inputSchema")]
@@ -14,7 +14,7 @@ struct ToolDef {
 }
 
 #[derive(Serialize)]
-struct ToolList {
+pub struct ToolList {
     tools: Vec<ToolDef>,
 }
 
