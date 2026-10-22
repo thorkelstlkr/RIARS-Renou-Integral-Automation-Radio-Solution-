@@ -13,6 +13,6 @@ chrono = { workspace = true }
 uuid = { workspace = true }
 thiserror = { workspace = true }
 cpal = "0.15"
-symphonia = { version = "0.5", features = ["mp3", "flac", "ogg", "wav", "aac"] }
+symphonia = { version = "0.5", features = ["mp3", "flac", "ogg", "wav", "aac", "isomp4"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 crossbeam-channel = "0.5"

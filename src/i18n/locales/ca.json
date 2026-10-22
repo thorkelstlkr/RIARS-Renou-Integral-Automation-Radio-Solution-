@@ -34,9 +34,13 @@
   "library": {
     "title": "Biblioteca",
     "load": "Carregar",
+    "addFolder": "Afegeix carpeta",
+    "scanning": "S'està escanejant la carpeta...",
+    "added": "{{count}} pistes noves afegides",
+    "loadError": "No es pot reproduir aquest fitxer: {{error}}",
     "searchPlaceholder": "Cercar...",
     "loading": "Carregant...",
-    "empty": "Sense pistes. Escaneja una carpeta des del servidor.",
+    "empty": "Sense pistes. Fes servir «Afegeix carpeta» per escanejar la teva música.",
     "unknownArtist": "Desconegut"
   },
   "nowPlaying": {

@@ -34,9 +34,13 @@
   "library": {
     "title": "Bibliothek",
     "load": "Laden",
+    "addFolder": "Ordner hinzufügen",
+    "scanning": "Ordner wird durchsucht...",
+    "added": "{{count}} neue Titel hinzugefügt",
+    "loadError": "Diese Datei kann nicht abgespielt werden: {{error}}",
     "searchPlaceholder": "Suchen...",
     "loading": "Wird geladen...",
-    "empty": "Keine Titel. Scannen Sie einen Ordner vom Server.",
+    "empty": "Keine Titel. Mit „Ordner hinzufügen“ Ihre Musik einlesen.",
     "unknownArtist": "Unbekannt"
   },
   "nowPlaying": {

@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 
 interface Track {
   id: number;
@@ -20,6 +21,7 @@ const S: Record<string, React.CSSProperties> = {
   btn: { padding: "4px 10px", borderRadius: "var(--radius)", fontSize: 12, background: "var(--bg-panel)" },
   search: { padding: "8px 12px", borderBottom: "1px solid var(--border)" },
   input: { width: "100%", fontSize: 13 },
+  notice: { padding: "6px 12px", fontSize: 12, borderBottom: "1px solid var(--border)", wordBreak: "break-word" },
   list: { flex: 1, overflowY: "auto" },
   empty: { padding: "24px 12px", textAlign: "center", color: "var(--text-muted)", fontSize: 13 },
   track: { padding: "8px 12px", cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.03)" },
@@ -32,6 +34,7 @@ export default function MediaLibrary() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
 
   const loadTracks = useCallback(async () => {
     setLoading(true);
@@ -40,6 +43,32 @@ export default function MediaLibrary() {
     } catch { /* not ready */ }
     finally { setLoading(false); }
   }, []);
+
+  useEffect(() => { loadTracks(); }, [loadTracks]);
+
+  const addFolder = useCallback(async () => {
+    const folder = await open({ directory: true, multiple: false });
+    if (typeof folder !== "string") return;
+    setNotice({ text: t("library.scanning") });
+    try {
+      const count = await invoke<number>("library_scan_folder", { path: folder });
+      setNotice({ text: t("library.added", { count }) });
+      setSearch("");
+      await loadTracks();
+    } catch (e) {
+      setNotice({ text: String(e), error: true });
+    }
+  }, [loadTracks, t]);
+
+  const playTrack = useCallback(async (track: Track) => {
+    try {
+      await invoke("engine_load_track", { path: track.file_path });
+      await invoke("engine_play");
+      setNotice(null);
+    } catch (e) {
+      setNotice({ text: t("library.loadError", { error: String(e) }), error: true });
+    }
+  }, [t]);
 
   const handleSearch = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value;
@@ -57,11 +86,19 @@ export default function MediaLibrary() {
     <div style={S.wrap}>
       <div style={S.toolbar}>
         <h2 style={S.title}>{t("library.title")}</h2>
-        <button style={S.btn} onClick={loadTracks}>{t("library.load")}</button>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button style={S.btn} onClick={addFolder}>{t("library.addFolder")}</button>
+          <button style={S.btn} onClick={loadTracks}>{t("library.load")}</button>
+        </div>
       </div>
       <div style={S.search}>
         <input style={S.input} placeholder={t("library.searchPlaceholder")} value={search} onChange={handleSearch} />
       </div>
+      {notice && (
+        <div style={{ ...S.notice, color: notice.error ? "var(--red)" : "var(--text-secondary)" }}>
+          {notice.text}
+        </div>
+      )}
       <div style={S.list}>
         {loading && <div style={S.empty}>{t("library.loading")}</div>}
         {!loading && tracks.length === 0 && (
@@ -69,7 +106,8 @@ export default function MediaLibrary() {
         )}
         {tracks.map((tr) => (
           <div key={tr.id} style={S.track}
-            onDoubleClick={() => invoke("engine_load_track", { path: tr.file_path })}>
+            title={tr.file_path}
+            onDoubleClick={() => playTrack(tr)}>
             <div style={S.name}>{tr.title}</div>
             <div style={S.meta}>
               <span>{tr.artist || t("library.unknownArtist")}</span>

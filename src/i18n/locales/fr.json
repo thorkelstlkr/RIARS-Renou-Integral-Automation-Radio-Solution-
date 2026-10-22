@@ -34,9 +34,13 @@
   "library": {
     "title": "Bibliothèque",
     "load": "Charger",
+    "addFolder": "Ajouter un dossier",
+    "scanning": "Analyse du dossier...",
+    "added": "{{count}} nouvelles pistes ajoutées",
+    "loadError": "Impossible de lire ce fichier : {{error}}",
     "searchPlaceholder": "Rechercher...",
     "loading": "Chargement...",
-    "empty": "Aucune piste. Analysez un dossier depuis le serveur.",
+    "empty": "Aucune piste. Utilisez « Ajouter un dossier » pour analyser votre musique.",
     "unknownArtist": "Inconnu"
   },
   "nowPlaying": {
