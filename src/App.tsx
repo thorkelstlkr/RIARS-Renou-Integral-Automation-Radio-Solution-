@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import TransportControls from "./components/TransportControls";
 import PlaylistPanel from "./components/PlaylistPanel";
 import MediaLibrary from "./components/MediaLibrary";
 import NowPlaying from "./components/NowPlaying";
 import VuMeter from "./components/VuMeter";
 import StreamStatus from "./components/StreamStatus";
+import LanguageSelector from "./components/LanguageSelector";
 
 const APP_STYLES: Record<string, React.CSSProperties> = {
   app: { display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" },
@@ -32,6 +34,7 @@ const APP_STYLES: Record<string, React.CSSProperties> = {
 };
 
 export default function App() {
+  const { t } = useTranslation();
   const [volume, setVolume] = useState(0.8);
   const [clock, setClock] = useState(new Date().toLocaleTimeString());
 
@@ -45,10 +48,11 @@ export default function App() {
       <header style={APP_STYLES.header}>
         <div style={APP_STYLES.logo}>
           RIARS
-          <span style={APP_STYLES.logoSub}>Renou Integral Automation Radio Solution</span>
+          <span style={APP_STYLES.logoSub}>{t("app.subtitle")}</span>
         </div>
         <TransportControls volume={volume} onVolumeChange={setVolume} />
         <StreamStatus />
+        <LanguageSelector />
       </header>
 
       <main style={APP_STYLES.main}>
@@ -66,7 +70,7 @@ export default function App() {
 
       <footer style={APP_STYLES.footer}>
         <span style={{ fontFamily: "var(--font-mono)" }}>{clock}</span>
-        <span style={{ color: "var(--green)" }}>RIARS v0.1.0</span>
+        <span style={{ color: "var(--green)" }}>{t("app.version")}</span>
       </footer>
     </div>
   );

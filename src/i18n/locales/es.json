@@ -1,0 +1,64 @@
+{
+  "app": {
+    "subtitle": "Renou Integral Automation Radio Solution",
+    "version": "RIARS v0.1.0"
+  },
+  "transport": {
+    "play": "Reproducir",
+    "pause": "Pausa",
+    "stop": "Detener",
+    "next": "Siguiente",
+    "volume": "Vol"
+  },
+  "playlist": {
+    "title": "Lista de reproducción",
+    "add": "+ Añadir",
+    "clear": "Limpiar",
+    "headerNumber": "#",
+    "headerTitle": "Título",
+    "headerType": "Tipo",
+    "headerDuration": "Duración",
+    "itemCount": "{{count}} elementos",
+    "itemCount_one": "{{count}} elemento",
+    "demo": {
+      "welcome": "Bienvenida",
+      "jingle": "Jingle",
+      "localNews": "Noticias locales",
+      "newsroom": "Redacción",
+      "morningMusic": "Bloque musical matinal",
+      "autoPlaylist": "Playlist Auto",
+      "adBreak": "Cuña publicitaria",
+      "sponsor": "Sponsor"
+    }
+  },
+  "library": {
+    "title": "Biblioteca",
+    "load": "Cargar",
+    "searchPlaceholder": "Buscar...",
+    "loading": "Cargando...",
+    "empty": "Sin canciones. Escanea una carpeta desde el servidor.",
+    "unknownArtist": "Desconocido"
+  },
+  "nowPlaying": {
+    "onAir": "AL AIRE",
+    "paused": "PAUSA",
+    "stopped": "DETENIDO",
+    "noTrack": "Sin pista cargada"
+  },
+  "stream": {
+    "streaming": "EMITIENDO",
+    "offline": "DESCONECTADO"
+  },
+  "vuMeter": {
+    "title": "Medidor VU"
+  },
+  "language": {
+    "label": "Idioma",
+    "en": "Inglés",
+    "es": "Español",
+    "fr": "Francés",
+    "de": "Alemán",
+    "pt": "Portugués",
+    "ca": "Catalán"
+  }
+}

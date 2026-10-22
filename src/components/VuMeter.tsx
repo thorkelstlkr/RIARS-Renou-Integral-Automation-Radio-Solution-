@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 export default function VuMeter() {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [levelL, setLevelL] = useState(0);
   const [levelR, setLevelR] = useState(0);
@@ -30,7 +32,7 @@ export default function VuMeter() {
   return (
     <div style={{ padding: 12, flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
       <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" as const, letterSpacing: 1, marginBottom: 8 }}>
-        VU Meter
+        {t("vuMeter.title")}
       </div>
       <canvas ref={canvasRef} width={200} height={140} style={{ width: "100%", maxWidth: 200, imageRendering: "pixelated" }} />
       <div style={{ display: "flex", justifyContent: "space-around", width: "100%", maxWidth: 200, marginTop: 8, fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>

@@ -1,10 +1,12 @@
 pub mod audio;
 pub mod library;
+pub mod locale;
 pub mod playlist;
 pub mod streaming;
 
 pub use audio::engine::{AudioEngine, EngineStateInfo, PlaybackState};
 pub use library::db::{MediaLibrary, Track};
+pub use locale::{current_language, set_language, t, SUPPORTED_LANGUAGES};
 pub use playlist::playlist::Playlist;
 pub use playlist::scheduler::Scheduler;
 pub use streaming::icecast::{IcecastConfig, IcecastStreamer};

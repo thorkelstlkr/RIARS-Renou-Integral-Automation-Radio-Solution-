@@ -1,0 +1,64 @@
+{
+  "app": {
+    "subtitle": "Renou Integral Automation Radio Solution",
+    "version": "RIARS v0.1.0"
+  },
+  "transport": {
+    "play": "Play",
+    "pause": "Pause",
+    "stop": "Stop",
+    "next": "Next",
+    "volume": "Vol"
+  },
+  "playlist": {
+    "title": "Playlist",
+    "add": "+ Add",
+    "clear": "Clear",
+    "headerNumber": "#",
+    "headerTitle": "Title",
+    "headerType": "Type",
+    "headerDuration": "Duration",
+    "itemCount": "{{count}} items",
+    "itemCount_one": "{{count}} item",
+    "demo": {
+      "welcome": "Welcome",
+      "jingle": "Jingle",
+      "localNews": "Local news",
+      "newsroom": "Newsroom",
+      "morningMusic": "Morning music block",
+      "autoPlaylist": "Auto Playlist",
+      "adBreak": "Ad break",
+      "sponsor": "Sponsor"
+    }
+  },
+  "library": {
+    "title": "Library",
+    "load": "Load",
+    "searchPlaceholder": "Search...",
+    "loading": "Loading...",
+    "empty": "No tracks. Scan a folder from the server.",
+    "unknownArtist": "Unknown"
+  },
+  "nowPlaying": {
+    "onAir": "ON AIR",
+    "paused": "PAUSED",
+    "stopped": "STOPPED",
+    "noTrack": "No track loaded"
+  },
+  "stream": {
+    "streaming": "STREAMING",
+    "offline": "OFFLINE"
+  },
+  "vuMeter": {
+    "title": "VU Meter"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "es": "Spanish",
+    "fr": "French",
+    "de": "German",
+    "pt": "Portuguese",
+    "ca": "Catalan"
+  }
+}

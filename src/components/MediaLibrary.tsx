@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 
 interface Track {
@@ -27,6 +28,7 @@ const S: Record<string, React.CSSProperties> = {
 };
 
 export default function MediaLibrary() {
+  const { t } = useTranslation();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -54,24 +56,24 @@ export default function MediaLibrary() {
   return (
     <div style={S.wrap}>
       <div style={S.toolbar}>
-        <h2 style={S.title}>Biblioteca</h2>
-        <button style={S.btn} onClick={loadTracks}>Cargar</button>
+        <h2 style={S.title}>{t("library.title")}</h2>
+        <button style={S.btn} onClick={loadTracks}>{t("library.load")}</button>
       </div>
       <div style={S.search}>
-        <input style={S.input} placeholder="Buscar..." value={search} onChange={handleSearch} />
+        <input style={S.input} placeholder={t("library.searchPlaceholder")} value={search} onChange={handleSearch} />
       </div>
       <div style={S.list}>
-        {loading && <div style={S.empty}>Cargando...</div>}
+        {loading && <div style={S.empty}>{t("library.loading")}</div>}
         {!loading && tracks.length === 0 && (
-          <div style={S.empty}>Sin canciones. Escanea una carpeta desde el servidor.</div>
+          <div style={S.empty}>{t("library.empty")}</div>
         )}
-        {tracks.map((t) => (
-          <div key={t.id} style={S.track}
-            onDoubleClick={() => invoke("engine_load_track", { path: t.file_path })}>
-            <div style={S.name}>{t.title}</div>
+        {tracks.map((tr) => (
+          <div key={tr.id} style={S.track}
+            onDoubleClick={() => invoke("engine_load_track", { path: tr.file_path })}>
+            <div style={S.name}>{tr.title}</div>
             <div style={S.meta}>
-              <span>{t.artist || "Desconocido"}</span>
-              {t.duration_ms > 0 && <span style={{ fontFamily: "var(--font-mono)" }}>{fmt(t.duration_ms)}</span>}
+              <span>{tr.artist || t("library.unknownArtist")}</span>
+              {tr.duration_ms > 0 && <span style={{ fontFamily: "var(--font-mono)" }}>{fmt(tr.duration_ms)}</span>}
             </div>
           </div>
         ))}

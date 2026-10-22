@@ -1,0 +1,64 @@
+{
+  "app": {
+    "subtitle": "Renou Integral Automation Radio Solution",
+    "version": "RIARS v0.1.0"
+  },
+  "transport": {
+    "play": "Reproduir",
+    "pause": "Pausa",
+    "stop": "Aturar",
+    "next": "Següent",
+    "volume": "Vol"
+  },
+  "playlist": {
+    "title": "Llista de reproducció",
+    "add": "+ Afegir",
+    "clear": "Netejar",
+    "headerNumber": "#",
+    "headerTitle": "Títol",
+    "headerType": "Tipus",
+    "headerDuration": "Durada",
+    "itemCount": "{{count}} elements",
+    "itemCount_one": "{{count}} element",
+    "demo": {
+      "welcome": "Benvinguda",
+      "jingle": "Jingle",
+      "localNews": "Notícies locals",
+      "newsroom": "Redacció",
+      "morningMusic": "Bloc musical matinal",
+      "autoPlaylist": "Playlist Auto",
+      "adBreak": "Falca publicitària",
+      "sponsor": "Patrocinador"
+    }
+  },
+  "library": {
+    "title": "Biblioteca",
+    "load": "Carregar",
+    "searchPlaceholder": "Cercar...",
+    "loading": "Carregant...",
+    "empty": "Sense pistes. Escaneja una carpeta des del servidor.",
+    "unknownArtist": "Desconegut"
+  },
+  "nowPlaying": {
+    "onAir": "EN ANTENA",
+    "paused": "EN PAUSA",
+    "stopped": "ATURAT",
+    "noTrack": "Cap pista carregada"
+  },
+  "stream": {
+    "streaming": "EN DIRECTE",
+    "offline": "FORA DE LÍNIA"
+  },
+  "vuMeter": {
+    "title": "Mesurador VU"
+  },
+  "language": {
+    "label": "Llengua",
+    "en": "Anglès",
+    "es": "Espanyol",
+    "fr": "Francès",
+    "de": "Alemany",
+    "pt": "Portuguès",
+    "ca": "Català"
+  }
+}

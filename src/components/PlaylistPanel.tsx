@@ -1,17 +1,18 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface PlaylistItem {
   id: string;
-  title: string;
-  artist: string;
+  titleKey: string;
+  artistKey: string;
   duration: string;
 }
 
 const DEMO: PlaylistItem[] = [
-  { id: "1", title: "Bienvenida", artist: "Jingle", duration: "0:15" },
-  { id: "2", title: "Noticias locales", artist: "Redaccion", duration: "5:00" },
-  { id: "3", title: "Bloque musical matinal", artist: "Playlist Auto", duration: "45:00" },
-  { id: "4", title: "Cuna publicitaria", artist: "Sponsor", duration: "0:30" },
+  { id: "1", titleKey: "playlist.demo.welcome", artistKey: "playlist.demo.jingle", duration: "0:15" },
+  { id: "2", titleKey: "playlist.demo.localNews", artistKey: "playlist.demo.newsroom", duration: "5:00" },
+  { id: "3", titleKey: "playlist.demo.morningMusic", artistKey: "playlist.demo.autoPlaylist", duration: "45:00" },
+  { id: "4", titleKey: "playlist.demo.adBreak", artistKey: "playlist.demo.sponsor", duration: "0:30" },
 ];
 
 const S: Record<string, React.CSSProperties> = {
@@ -46,21 +47,22 @@ const S: Record<string, React.CSSProperties> = {
 };
 
 export default function PlaylistPanel() {
+  const { t } = useTranslation();
   const [items] = useState(DEMO);
   const [activeId, setActiveId] = useState("1");
 
   return (
     <div style={S.panel}>
       <div style={S.toolbar}>
-        <h2 style={S.title}>Playlist</h2>
-        <button style={S.btn}>+ Anadir</button>
-        <button style={S.btn}>Limpiar</button>
+        <h2 style={S.title}>{t("playlist.title")}</h2>
+        <button style={S.btn}>{t("playlist.add")}</button>
+        <button style={S.btn}>{t("playlist.clear")}</button>
       </div>
       <div style={S.hdr}>
-        <span style={S.num}>#</span>
-        <span style={S.tit}>Titulo</span>
-        <span style={S.art}>Tipo</span>
-        <span style={S.dur}>Duracion</span>
+        <span style={S.num}>{t("playlist.headerNumber")}</span>
+        <span style={S.tit}>{t("playlist.headerTitle")}</span>
+        <span style={S.art}>{t("playlist.headerType")}</span>
+        <span style={S.dur}>{t("playlist.headerDuration")}</span>
       </div>
       <div style={S.list}>
         {items.map((item, i) => (
@@ -68,13 +70,13 @@ export default function PlaylistPanel() {
             style={{ ...S.row, ...(item.id === activeId ? S.active : {}) }}
             onClick={() => setActiveId(item.id)}>
             <span style={S.num}>{i + 1}</span>
-            <span style={S.tit}>{item.title}</span>
-            <span style={S.art}>{item.artist}</span>
+            <span style={S.tit}>{t(item.titleKey)}</span>
+            <span style={S.art}>{t(item.artistKey)}</span>
             <span style={S.dur}>{item.duration}</span>
           </div>
         ))}
       </div>
-      <div style={S.foot}>{items.length} elementos</div>
+      <div style={S.foot}>{t("playlist.itemCount", { count: items.length })}</div>
     </div>
   );
 }

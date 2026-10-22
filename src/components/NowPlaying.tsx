@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 
 interface EngineState {
@@ -20,6 +21,7 @@ const S: Record<string, React.CSSProperties> = {
 };
 
 export default function NowPlaying() {
+  const { t } = useTranslation();
   const [es, setEs] = useState<EngineState>({
     state: "Stopped", volume: 0.8, current_track: null, position_ms: 0, duration_ms: 0,
   });
@@ -37,7 +39,7 @@ export default function NowPlaying() {
   };
 
   const pct = es.duration_ms > 0 ? (es.position_ms / es.duration_ms) * 100 : 0;
-  const label = es.state === "Playing" ? "AL AIRE" : es.state === "Paused" ? "PAUSA" : "DETENIDO";
+  const label = es.state === "Playing" ? t("nowPlaying.onAir") : es.state === "Paused" ? t("nowPlaying.paused") : t("nowPlaying.stopped");
   const color = es.state === "Playing" ? "var(--green)" : es.state === "Paused" ? "var(--yellow)" : "var(--text-muted)";
 
   return (
@@ -46,7 +48,7 @@ export default function NowPlaying() {
         <span style={{ ...S.dot, background: color }} />
         {label}
       </div>
-      <div style={S.track}>{es.current_track ?? "Sin pista cargada"}</div>
+      <div style={S.track}>{es.current_track ?? t("nowPlaying.noTrack")}</div>
       <div style={S.bar}><div style={{ ...S.fill, width: `${pct}%`, transition: "width 0.25s linear" }} /></div>
       <div style={S.times}>
         <span>{fmt(es.position_ms)}</span>

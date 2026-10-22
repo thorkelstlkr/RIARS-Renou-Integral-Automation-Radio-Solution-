@@ -3,6 +3,17 @@ use std::sync::Mutex;
 use riars_core::{AudioEngine, EngineStateInfo, MediaLibrary, Playlist, Track};
 use tauri::State;
 
+#[tauri::command]
+fn set_locale(lang: String) -> Result<(), String> {
+    riars_core::set_language(&lang);
+    Ok(())
+}
+
+#[tauri::command]
+fn get_supported_languages() -> Vec<&'static str> {
+    riars_core::SUPPORTED_LANGUAGES.to_vec()
+}
+
 pub struct AppState {
     pub engine: Mutex<AudioEngine>,
     pub library: Mutex<MediaLibrary>,
@@ -113,6 +124,8 @@ pub fn run() {
             library_get_tracks,
             library_search,
             playlist_create,
+            set_locale,
+            get_supported_languages,
         ])
         .run(tauri::generate_context!())
         .expect("error while running RIARS");

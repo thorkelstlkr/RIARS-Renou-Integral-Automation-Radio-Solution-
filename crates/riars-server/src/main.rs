@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use clap::Parser;
 use riars_api::AppState;
-use riars_core::{AudioEngine, MediaLibrary, Scheduler};
+use riars_core::{set_language, t, AudioEngine, MediaLibrary, Scheduler, SUPPORTED_LANGUAGES};
 
 #[derive(Parser)]
 #[command(name = "riars-server")]
@@ -23,6 +23,22 @@ struct Cli {
     /// Folder to auto-scan on startup
     #[arg(long)]
     scan: Option<String>,
+
+    /// Language for user-facing messages (en, es, fr, de, pt, ca)
+    #[arg(long, default_value = "en", value_parser = parse_lang)]
+    lang: String,
+}
+
+fn parse_lang(s: &str) -> Result<String, String> {
+    if SUPPORTED_LANGUAGES.contains(&s) {
+        Ok(s.to_string())
+    } else {
+        Err(format!(
+            "Unsupported language '{}'. Available: {}",
+            s,
+            SUPPORTED_LANGUAGES.join(", ")
+        ))
+    }
 }
 
 #[tokio::main]
@@ -30,23 +46,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let cli = Cli::parse();
+    set_language(&cli.lang);
 
-    log::info!("RIARS v{} starting...", env!("CARGO_PKG_VERSION"));
+    log::info!("{} v{}", t("server_starting"), env!("CARGO_PKG_VERSION"));
 
-    let engine = AudioEngine::new().expect("Failed to initialize audio engine");
-    let mut library =
-        MediaLibrary::open(&cli.db_path).expect("Failed to initialize media library");
+    let engine = AudioEngine::new().expect(&t("engine_init_failed"));
+    let mut library = MediaLibrary::open(&cli.db_path).expect(&t("library_init_failed"));
     let scheduler = Scheduler::new();
 
     if let Some(ref folder) = cli.scan {
         match library.scan_folder(folder) {
-            Ok(count) => log::info!("Auto-scanned {folder}: {count} tracks added"),
-            Err(e) => log::warn!("Failed to scan {folder}: {e}"),
+            Ok(count) => log::info!("{} {folder}: {count} {}", t("auto_scanned"), t("tracks_added")),
+            Err(e) => log::warn!("{} {folder}: {e}", t("scan_failed")),
         }
     }
 
     if cli.mcp_stdio {
-        log::info!("Starting MCP server (stdio transport)");
+        log::info!("{}", t("mcp_started"));
         let mcp_state = riars_mcp::McpState {
             engine: Arc::new(Mutex::new(engine)),
             library: Arc::new(Mutex::new(library)),
@@ -54,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         riars_mcp::run_stdio(mcp_state).await?;
     } else {
-        log::info!("Starting REST API on port {}", cli.port);
+        log::info!("{} 0.0.0.0:{}", t("api_listening"), cli.port);
         let state = Arc::new(AppState {
             engine: Mutex::new(engine),
             library: Mutex::new(library),

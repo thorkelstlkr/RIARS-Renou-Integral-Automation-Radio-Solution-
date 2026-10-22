@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 const S: Record<string, React.CSSProperties> = {
   wrap: {
     display: "flex", alignItems: "center", gap: 6, marginLeft: "auto",
@@ -8,11 +10,12 @@ const S: Record<string, React.CSSProperties> = {
 };
 
 export default function StreamStatus() {
+  const { t } = useTranslation();
   const connected = false;
   return (
     <div style={S.wrap}>
       <span style={{ ...S.dot, background: connected ? "var(--green)" : "var(--text-muted)" }} />
-      <span style={S.label}>{connected ? "STREAMING" : "OFFLINE"}</span>
+      <span style={S.label}>{connected ? t("stream.streaming") : t("stream.offline")}</span>
     </div>
   );
 }
