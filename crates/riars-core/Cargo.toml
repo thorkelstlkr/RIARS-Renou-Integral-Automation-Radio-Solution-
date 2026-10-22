@@ -1,0 +1,18 @@
+[package]
+name = "riars-core"
+description = "Core audio engine, playlists, scheduling, streaming, and media library for RIARS"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+cpal = "0.15"
+symphonia = { version = "0.5", features = ["mp3", "flac", "ogg", "wav", "aac"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+crossbeam-channel = "0.5"
