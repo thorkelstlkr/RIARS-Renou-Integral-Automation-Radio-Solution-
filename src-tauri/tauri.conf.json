@@ -10,10 +10,9 @@
     "beforeBuildCommand": "npm run build"
   },
   "app": {
-    "title": "RIARS — Renou Integral Automation Radio Solution",
     "windows": [
       {
-        "title": "RIARS",
+        "title": "RIARS — Renou Integral Automation Radio Solution",
         "width": 1400,
         "height": 900,
         "minWidth": 1024,
