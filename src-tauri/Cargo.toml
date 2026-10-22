@@ -1,0 +1,19 @@
+[package]
+name = "riars-desktop"
+description = "RIARS desktop and Android app (Tauri v2)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+riars-core = { path = "../crates/riars-core" }
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
