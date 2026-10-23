@@ -1,6 +1,7 @@
 use serde::Serialize;
 use serde_json::{json, Value};
 
+use riars_core::audio::crossfade::FadeCurve;
 use riars_core::t;
 
 use crate::McpState;
@@ -144,6 +145,19 @@ pub fn list_tools() -> ToolList {
                 description: "Play a track by index",
                 input_schema: json!({ "type": "object", "properties": { "index": { "type": "integer", "description": "Index of the track to play" } }, "required": ["index"] }),
             },
+            ToolDef {
+                name: "set_crossfade",
+                description: "Set crossfade settings",
+                input_schema: json!({
+                    "type": "object",
+                    "properties": {
+                        "enabled": { "type": "boolean" },
+                        "duration_ms": { "type": "integer", "minimum": 0, "maximum": 30000 },
+                        "curve": { "type": "string", "enum": ["Linear", "EqualPower", "SCurve"] }
+                    },
+                    "required": []
+                }),
+            },
         ],
     }
 }
@@ -285,6 +299,35 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
             riars_core::play_index_unlocked(&state.engine, index, false)?;
             Ok(text_result("Playing"))
         },
+        "set_crossfade" => {
+            let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+            let mut config = engine.crossfade_config().clone();
+            if let Some(enabled) = args["enabled"].as_bool() {
+                config.enabled = enabled;
+            }
+            if let Some(ms) = args["duration_ms"].as_u64() {
+                if ms > 30000 {
+                    return Err("duration_ms must be at most 30000".to_string());
+                }
+                config.duration = std::time::Duration::from_millis(ms);
+            }
+            if let Some(curve) = args["curve"].as_str() {
+                config.curve = match curve {
+                    "Linear" => FadeCurve::Linear,
+                    "EqualPower" => FadeCurve::EqualPower,
+                    "SCurve" => FadeCurve::SCurve,
+                    other => return Err(format!("Unknown curve: {other}")),
+                };
+            }
+            engine.set_crossfade(config);
+            let c = engine.crossfade_config();
+            Ok(text_result(&format!(
+                "Crossfade: {}, {} ms, {:?}",
+                if c.enabled { "on" } else { "off" },
+                c.duration.as_millis(),
+                c.curve
+            )))
+        }
         _ => Err(format!("{}: {name}", t("unknown_tool"))),
     }
 }

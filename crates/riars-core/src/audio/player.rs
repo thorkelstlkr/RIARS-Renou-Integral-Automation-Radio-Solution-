@@ -183,6 +183,15 @@ impl TrackPlayer {
     fn frames(&self) -> usize {
         self.samples.len() / self.channels
     }
+
+    pub fn total_frames(&self) -> usize {
+        self.frames()
+    }
+
+    /// Source frames left to play.
+    pub fn remaining_frames(&self) -> f64 {
+        (self.frames() as f64 - self.frame_pos).max(0.0)
+    }
 }
 
 #[cfg(test)]

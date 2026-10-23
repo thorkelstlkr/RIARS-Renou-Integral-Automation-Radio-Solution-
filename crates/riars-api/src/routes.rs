@@ -7,6 +7,7 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 
+use riars_core::audio::crossfade::{CrossfadeConfig, FadeCurve};
 use riars_core::{play_index_unlocked, EngineStateInfo, Playlist};
 
 use crate::AppState;
@@ -58,6 +59,7 @@ pub fn api_routes() -> Router<Arc<AppState>> {
         .route("/player/stop", post(stop))
         .route("/player/next", post(next))
         .route("/player/volume", post(set_volume))
+        .route("/player/crossfade", get(get_crossfade).post(set_crossfade))
         .route("/player/load", post(load_track))
         .route("/library/tracks", get(library_tracks))
         .route("/library/search", post(library_search))
@@ -141,6 +143,51 @@ async fn playlist_play(
     Json(req): Json<IndexRequest>,
 ) -> Result<&'static str, ApiError> {
     play_unlocked(state, req.index).await
+}
+
+
+#[derive(Serialize, Deserialize)]
+pub struct CrossfadeSettings {
+    pub enabled: bool,
+    pub duration_ms: u64,
+    pub curve: FadeCurve,
+}
+
+impl From<&CrossfadeConfig> for CrossfadeSettings {
+    fn from(config: &CrossfadeConfig) -> Self {
+        CrossfadeSettings {
+            enabled: config.enabled,
+            duration_ms: config.duration.as_millis() as u64,
+            curve: config.curve,
+        }
+    }
+}
+
+impl From<CrossfadeSettings> for CrossfadeConfig {
+    fn from(settings: CrossfadeSettings) -> Self {
+        CrossfadeConfig {
+            duration: std::time::Duration::from_millis(settings.duration_ms),
+            curve: settings.curve,
+            enabled: settings.enabled,
+        }
+    }
+}
+
+async fn get_crossfade(State(state): State<Arc<AppState>>) -> Result<Json<CrossfadeSettings>, ApiError> {
+    let engine = state.engine.lock().map_err(ApiError::internal)?;
+    Ok(Json(CrossfadeSettings::from(engine.crossfade_config())))
+}
+
+async fn set_crossfade(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<CrossfadeSettings>,
+) -> Result<Json<CrossfadeSettings>, ApiError> {
+    if req.duration_ms > 30000 {
+        return Err(ApiError::from("duration_ms must be at most 30000".to_string()));
+    }
+    let mut engine = state.engine.lock().map_err(ApiError::internal)?;
+    engine.set_crossfade(req.into());
+    Ok(Json(CrossfadeSettings::from(engine.crossfade_config())))
 }
 
 /// Error body for every endpoint: `{"error": "..."}` with a 4xx/5xx status, so clients

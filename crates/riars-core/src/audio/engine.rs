@@ -33,7 +33,8 @@ struct LoadedTrack {
     duration: Duration,
 }
 
-/// How long before the end of a track the next one is decoded and queued.
+/// How long before the end of a track (or of the crossfade into the next one) the next
+/// track is decoded and queued.
 const PRELOAD_MS: u64 = 5000;
 
 pub struct AudioEngine {
@@ -68,6 +69,10 @@ impl AudioEngine {
                 None
             }
         };
+        let crossfade = CrossfadeConfig::default();
+        if let Some(output) = &output {
+            output.shared.set_crossfade(&crossfade);
+        }
         let mut mixer = Mixer::new(sample_rate);
         mixer.set_master_volume(volume);
         Ok(Self {
@@ -81,7 +86,7 @@ impl AudioEngine {
             queued: None,
             switches_seen: 0,
             output,
-            crossfade: CrossfadeConfig::default(),
+            crossfade,
             sample_rate,
         })
     }
@@ -229,7 +234,8 @@ impl AudioEngine {
             .map(|t| t.duration.as_millis() as u64)
             .unwrap_or(0)
             .saturating_sub(position_ms);
-        if !finished && remaining_ms > PRELOAD_MS {
+        let fade_ms = if self.crossfade.enabled { self.crossfade.duration.as_millis() as u64 } else { 0 };
+        if !finished && remaining_ms > PRELOAD_MS + fade_ms {
             return None;
         }
         if self.advance_blocked {
@@ -363,6 +369,9 @@ impl AudioEngine {
     }
 
     pub fn set_crossfade(&mut self, config: CrossfadeConfig) {
+        if let Some(output) = &self.output {
+            output.shared.set_crossfade(&config);
+        }
         self.crossfade = config;
     }
 }
