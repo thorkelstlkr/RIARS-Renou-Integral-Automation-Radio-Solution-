@@ -114,6 +114,36 @@ pub fn list_tools() -> ToolList {
                 description: "List all scheduled automation events (programming schedule)",
                 input_schema: json!({ "type": "object", "properties": {} }),
             },
+            ToolDef {
+                name: "get_playlist",
+                description: "Get the current playlist",
+                input_schema: json!({ "type": "object", "properties": {}, "required": [] }),
+            },
+            ToolDef {
+                name: "playlist_add",
+                description: "Add a track to the playlist",
+                input_schema: json!({ "type": "object", "properties": { "path": { "type": "string", "description": "Absolute path to the audio file" }, "title": { "type": "string", "description": "Optional title of the track", "default": "" } }, "required": ["path"] }),
+            },
+            ToolDef {
+                name: "playlist_remove",
+                description: "Remove a track from the playlist by index",
+                input_schema: json!({ "type": "object", "properties": { "index": { "type": "integer", "description": "Index of the track to remove" } }, "required": ["index"] }),
+            },
+            ToolDef {
+                name: "playlist_move",
+                description: "Move a track in the playlist",
+                input_schema: json!({ "type": "object", "properties": { "from": { "type": "integer", "description": "Index of the track to move" }, "to": { "type": "integer", "description": "New index for the track" } }, "required": ["from", "to"] }),
+            },
+            ToolDef {
+                name: "playlist_clear",
+                description: "Clear the playlist",
+                input_schema: json!({ "type": "object", "properties": {}, "required": [] }),
+            },
+            ToolDef {
+                name: "playlist_play",
+                description: "Play a track by index",
+                input_schema: json!({ "type": "object", "properties": { "index": { "type": "integer", "description": "Index of the track to play" } }, "required": ["index"] }),
+            },
         ],
     }
 }
@@ -219,6 +249,42 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
                 }]
             }))
         }
+        "get_playlist" => {
+            let engine = state.engine.lock().map_err(|e| e.to_string())?;
+            Ok(text_result(&serde_json::to_string_pretty(engine.playlist()).unwrap_or_default()))
+        },
+        "playlist_add" => {
+            let path = args["path"].as_str().ok_or(t("missing_path"))?;
+            let title = args.get("title").and_then(|v| v.as_str()).unwrap_or_else(|| std::path::Path::new(path).file_stem().and_then(|s| s.to_str()).unwrap_or_default());
+            let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+            engine.playlist_mut().add_item(path.to_string(), title.to_string(), "".to_string(), 0);
+            Ok(text_result(&serde_json::to_string_pretty(engine.playlist()).unwrap_or_default()))
+        },
+        "playlist_remove" => {
+            let index = args["index"].as_u64().ok_or("Missing index")? as usize;
+            let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+            if engine.playlist_mut().remove_item(index).is_none() {
+                return Err(format!("No playlist item at {}", index));
+            }
+            Ok(text_result(&serde_json::to_string_pretty(engine.playlist()).unwrap_or_default()))
+        },
+        "playlist_move" => {
+            let from = args["from"].as_u64().ok_or("Missing from")? as usize;
+            let to = args["to"].as_u64().ok_or("Missing to")? as usize;
+            let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+            engine.playlist_mut().move_item(from, to);
+            Ok(text_result(&serde_json::to_string_pretty(engine.playlist()).unwrap_or_default()))
+        },
+        "playlist_clear" => {
+            let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+            engine.playlist_mut().clear();
+            Ok(text_result(&serde_json::to_string_pretty(engine.playlist()).unwrap_or_default()))
+        },
+        "playlist_play" => {
+            let index = args["index"].as_u64().ok_or("Missing index")? as usize;
+            riars_core::play_index_unlocked(&state.engine, index, false)?;
+            Ok(text_result("Playing"))
+        },
         _ => Err(format!("{}: {name}", t("unknown_tool"))),
     }
 }

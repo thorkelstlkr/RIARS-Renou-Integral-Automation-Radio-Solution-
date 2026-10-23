@@ -86,6 +86,7 @@ impl JsonRpcResponse {
 }
 
 pub async fn run_stdio(state: McpState) -> Result<(), Box<dyn std::error::Error>> {
+    tokio::spawn(auto_advance(Arc::clone(&state.engine)));
     let stdin = tokio::io::stdin();
     let mut stdout = tokio::io::stdout();
     let mut reader = BufReader::new(stdin);
@@ -150,7 +151,18 @@ pub async fn run_stdio(state: McpState) -> Result<(), Box<dyn std::error::Error>
                 let arguments = &request.params["arguments"];
                 match handle_tool_call(tool_name, arguments, &state) {
                     Ok(result) => JsonRpcResponse::success(id, result),
-                    Err(e) => JsonRpcResponse::error(id, -32000, e),
+                    Err(e) if e.starts_with(&riars_core::t("unknown_tool")) => {
+                        JsonRpcResponse::error(id, -32602, e)
+                    }
+                    // Tool failures are results with isError, per the MCP spec, so the
+                    // agent sees the reason and can recover.
+                    Err(e) => JsonRpcResponse::success(
+                        id,
+                        serde_json::json!({
+                            "content": [{ "type": "text", "text": e }],
+                            "isError": true
+                        }),
+                    ),
                 }
             }
             _ => JsonRpcResponse::error(id, -32601, format!("Unknown method: {}", request.method)),
@@ -163,4 +175,23 @@ pub async fn run_stdio(state: McpState) -> Result<(), Box<dyn std::error::Error>
     }
 
     Ok(())
+}
+
+/// Move to the next playlist item when the current track ends (same as riars-api).
+async fn auto_advance(engine: Arc<Mutex<AudioEngine>>) {
+    let mut tick = tokio::time::interval(tokio::time::Duration::from_millis(250));
+    loop {
+        tick.tick().await;
+        let next = engine.lock().ok().and_then(|mut e| e.poll());
+        if let Some(index) = next {
+            let engine = Arc::clone(&engine);
+            let result = tokio::task::spawn_blocking(move || {
+                riars_core::play_index_unlocked(&engine, index, true)
+            })
+            .await;
+            if let Ok(Err(e)) = result {
+                log::error!("Auto-advance failed: {e}");
+            }
+        }
+    }
 }

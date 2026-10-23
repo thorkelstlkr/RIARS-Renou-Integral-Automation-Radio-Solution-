@@ -80,8 +80,9 @@ npm run tauri dev
 # Solo necesita Rust — sin Node.js ni GUI
 cargo build -p riars-server --release
 
-# Ejecutar
-./target/release/riars-server --port 3100
+# Ejecutar (la API exige un token; si no se indica, se genera uno y se muestra al arrancar)
+./target/release/riars-server --port 3100 --api-token MI_TOKEN_SECRETO
+# o bien: RIARS_API_TOKEN=MI_TOKEN_SECRETO ./target/release/riars-server --port 3100
 ```
 
 ### Controlar con un agente IA
@@ -91,8 +92,9 @@ cargo build -p riars-server --release
 ./target/release/riars-server --mcp-stdio
 
 # O usar la API REST
-curl http://localhost:3100/api/v1/status
-curl -X POST http://localhost:3100/api/v1/player/play
+curl -H "Authorization: Bearer MI_TOKEN_SECRETO" http://localhost:3100/api/v1/status
+curl -X POST -H "Authorization: Bearer MI_TOKEN_SECRETO" http://localhost:3100/api/v1/player/play
+# WebSocket de eventos: ws://localhost:3100/ws/events?token=MI_TOKEN_SECRETO
 ```
 
 ## Compilar para Raspberry Pi

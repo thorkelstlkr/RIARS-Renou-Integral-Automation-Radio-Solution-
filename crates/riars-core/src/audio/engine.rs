@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::sync::atomic::Ordering;
+use std::sync::Mutex;
 use std::time::Duration;
 
 use serde::Serialize;
@@ -32,6 +33,9 @@ struct LoadedTrack {
     duration: Duration,
 }
 
+/// How long before the end of a track the next one is decoded and queued.
+const PRELOAD_MS: u64 = 5000;
+
 pub struct AudioEngine {
     state: PlaybackState,
     volume: f32,
@@ -40,6 +44,12 @@ pub struct AudioEngine {
     playlist: Playlist,
     /// Set while the caller of `poll` decodes the next track.
     advancing: bool,
+    /// Nothing after the current track could be decoded; stop when it ends.
+    advance_blocked: bool,
+    /// Next playlist item, already handed to the audio thread.
+    queued: Option<(usize, LoadedTrack)>,
+    /// Last value of `Shared::switches` seen, to notice the audio thread moving on.
+    switches_seen: u64,
     /// `None` when no sound card is available (e.g. a headless server); the engine
     /// then keeps track of state without producing sound.
     output: Option<AudioOutput>,
@@ -67,6 +77,9 @@ impl AudioEngine {
             current_track: None,
             playlist: Playlist::new("On air".to_string()),
             advancing: false,
+            advance_blocked: false,
+            queued: None,
+            switches_seen: 0,
             output,
             crossfade: CrossfadeConfig::default(),
             sample_rate,
@@ -152,6 +165,8 @@ impl AudioEngine {
     /// Make an already decoded playlist item current and play it. Fast: no decoding.
     pub fn start_index(&mut self, index: usize, player: TrackPlayer) {
         self.advancing = false;
+        self.advance_blocked = false;
+        self.queued = None;
         if index < self.playlist.len() {
             self.playlist.current_index = index;
         }
@@ -159,34 +174,97 @@ impl AudioEngine {
         self.play();
     }
 
-    /// Call periodically from the control side. When the current track has finished,
-    /// returns the playlist index to play next, once; the caller decodes it and calls
-    /// `start_index`, or `end_advance` if nothing could be played.
+    /// Hand the next playlist item, decoded after `poll`, to the audio thread. While the
+    /// current track is still playing it is queued and starts the instant this one ends.
+    pub fn queue_or_start(&mut self, index: usize, player: TrackPlayer) {
+        self.advancing = false;
+        let still_playing = self.playback_state() == PlaybackState::Playing;
+        if !still_playing || self.output.is_none() {
+            self.start_index(index, player);
+            return;
+        }
+        self.fill_duration(&player);
+        self.queued = Some((
+            index,
+            LoadedTrack {
+                name: player.file_name().to_string(),
+                duration: player.duration(),
+            },
+        ));
+        if let Some(output) = &self.output {
+            log::info!("Queued next track: {}", player.path().display());
+            output.send(Command::Queue(Box::new(player)));
+        }
+    }
+
+    /// Call periodically from the control side (every ~250 ms). Returns a playlist index
+    /// to decode, once per track: shortly before the current track ends (to queue it
+    /// gaplessly) or after it ended. The caller decodes it and calls `queue_or_start`,
+    /// or `end_advance` if nothing could be played.
     pub fn poll(&mut self) -> Option<usize> {
-        let finished = self.state == PlaybackState::Playing
-            && self
-                .output
-                .as_ref()
-                .is_some_and(|o| o.shared.finished.load(Ordering::Relaxed));
-        if !finished || self.advancing {
+        let (switches, finished, position_ms) = match &self.output {
+            Some(o) => (
+                o.shared.switches.load(Ordering::Relaxed),
+                o.shared.finished.load(Ordering::Relaxed),
+                o.shared.position_ms.load(Ordering::Relaxed),
+            ),
+            None => return None,
+        };
+        // The audio thread switched to the queued track: catch up.
+        if switches != self.switches_seen {
+            self.switches_seen = switches;
+            if let Some((index, track)) = self.queued.take() {
+                self.playlist.current_index = index;
+                log::info!("Now playing: {}", track.name);
+                self.current_track = Some(track);
+            }
+        }
+
+        if self.state != PlaybackState::Playing || self.advancing || self.queued.is_some() {
+            return None;
+        }
+        let remaining_ms = self
+            .current_track
+            .as_ref()
+            .map(|t| t.duration.as_millis() as u64)
+            .unwrap_or(0)
+            .saturating_sub(position_ms);
+        if !finished && remaining_ms > PRELOAD_MS {
+            return None;
+        }
+        if self.advance_blocked {
+            if finished {
+                self.stop();
+            }
             return None;
         }
         match self.playlist.next_index() {
             Some(index) => {
+                log::debug!("Preparing playlist item {index}");
                 self.advancing = true;
                 Some(index)
             }
             None => {
-                self.stop();
+                if finished {
+                    self.stop();
+                }
                 None
             }
         }
     }
 
-    /// Give up an advance started by `poll`.
+    /// Give up an advance started by `poll`: nothing after the current track is playable.
+    /// The current track plays to its end, then playback stops.
     pub fn end_advance(&mut self) {
         self.advancing = false;
-        self.stop();
+        self.advance_blocked = true;
+        if self
+            .output
+            .as_ref()
+            .map_or(true, |o| o.shared.finished.load(Ordering::Relaxed))
+        {
+            self.stop();
+        }
     }
 
     pub fn playlist(&self) -> &Playlist {
@@ -220,16 +298,20 @@ impl AudioEngine {
         Ok(())
     }
 
-    /// Hand an already decoded track to the audio thread.
-    pub fn load_decoded(&mut self, player: TrackPlayer) {
-        let path = player.path().to_path_buf();
-        log::info!("Loaded track: {}", path.display());
-        // The library scan does not read durations, so fill them in once decoded.
-        let path_str = path.to_string_lossy();
+    /// The library scan may not know a duration; take it from the decoded track.
+    fn fill_duration(&mut self, player: &TrackPlayer) {
+        let path_str = player.path().to_string_lossy();
         let duration_ms = player.duration().as_millis() as u64;
         for item in self.playlist.items.iter_mut().filter(|i| i.track_path == path_str) {
             item.duration_ms = duration_ms;
         }
+    }
+
+    /// Hand an already decoded track to the audio thread.
+    pub fn load_decoded(&mut self, player: TrackPlayer) {
+        let path = player.path().to_path_buf();
+        log::info!("Loaded track: {}", path.display());
+        self.fill_duration(&player);
         self.current_track = Some(LoadedTrack {
             name: player.file_name().to_string(),
             duration: player.duration(),
@@ -283,4 +365,45 @@ impl AudioEngine {
     pub fn set_crossfade(&mut self, config: CrossfadeConfig) {
         self.crossfade = config;
     }
+}
+
+/// Decode the playlist item at `index` without holding the engine lock, then start it.
+/// With `skip_failures` (auto-advance), unplayable items are skipped and the engine
+/// stops if none can be played. Blocking: call it from a worker thread.
+pub fn play_index_unlocked(
+    engine: &Mutex<AudioEngine>,
+    index: usize,
+    skip_failures: bool,
+) -> Result<(), String> {
+    let lock = || engine.lock().map_err(|e| e.to_string());
+    let mut index = index;
+    // Separate statement: a guard in the `for` expression would live for the whole
+    // loop and deadlock on the next `lock()`.
+    let attempts = lock()?.playlist().len().max(1);
+    for _ in 0..attempts {
+        let path = lock()?.item_path(index)?;
+        match TrackPlayer::from_file(Path::new(&path), 44100) {
+            Ok(player) => {
+                let mut engine = lock()?;
+                if skip_failures {
+                    engine.queue_or_start(index, player);
+                } else {
+                    engine.start_index(index, player);
+                }
+                return Ok(());
+            }
+            Err(e) if skip_failures => {
+                log::warn!("Skipping unplayable playlist item {path}: {e}");
+                let mut engine = lock()?;
+                engine.playlist_mut().current_index = index;
+                match engine.next_index() {
+                    Some(next) => index = next,
+                    None => break,
+                }
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    lock()?.end_advance();
+    Ok(())
 }
