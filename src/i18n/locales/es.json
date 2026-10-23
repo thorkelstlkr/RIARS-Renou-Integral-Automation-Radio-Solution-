@@ -39,7 +39,9 @@
     "searchPlaceholder": "Buscar...",
     "loading": "Cargando...",
     "empty": "Sin canciones. Usa «Añadir carpeta» para escanear tu música.",
-    "unknownArtist": "Desconocido"
+    "unknownArtist": "Desconocido",
+    "count": "{{count}} pistas",
+    "count_one": "{{count}} pista"
   },
   "nowPlaying": {
     "onAir": "AL AIRE",

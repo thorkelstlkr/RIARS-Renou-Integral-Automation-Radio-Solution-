@@ -39,7 +39,9 @@
     "searchPlaceholder": "Suchen...",
     "loading": "Wird geladen...",
     "empty": "Keine Titel. Mit „Ordner hinzufügen“ Ihre Musik einlesen.",
-    "unknownArtist": "Unbekannt"
+    "unknownArtist": "Unbekannt",
+    "count": "{{count}} Titel",
+    "count_one": "{{count}} Titel"
   },
   "nowPlaying": {
     "onAir": "AUF SENDUNG",

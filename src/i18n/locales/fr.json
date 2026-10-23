@@ -39,7 +39,9 @@
     "searchPlaceholder": "Rechercher...",
     "loading": "Chargement...",
     "empty": "Aucune piste. Utilisez « Ajouter un dossier » pour analyser votre musique.",
-    "unknownArtist": "Inconnu"
+    "unknownArtist": "Inconnu",
+    "count": "{{count}} pistes",
+    "count_one": "{{count}} piste"
   },
   "nowPlaying": {
     "onAir": "À L'ANTENNE",
