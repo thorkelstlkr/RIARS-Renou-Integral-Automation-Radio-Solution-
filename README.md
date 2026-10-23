@@ -99,6 +99,9 @@ cargo build -p riars-server --release
 # Conectar Claude u otro agente via MCP
 ./target/release/riars-server --mcp-stdio
 
+# O abrir el panel web desde el móvil u otro ordenador: http://IP-DEL-SERVIDOR:3100/
+# (pide el token una vez y lo recuerda en ese navegador)
+
 # O usar la API REST
 curl -H "Authorization: Bearer MI_TOKEN_SECRETO" http://localhost:3100/api/v1/status
 curl -X POST -H "Authorization: Bearer MI_TOKEN_SECRETO" http://localhost:3100/api/v1/player/play

@@ -31,9 +31,28 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .nest("/api/v1", routes::api_routes())
         .nest("/ws", ws::ws_routes())
         .layer(middleware::from_fn_with_state(Arc::clone(&state), require_token))
+        // Added after the auth layer: the page itself is public, everything it does
+        // goes through the API with the token.
+        .route("/", axum::routing::get(panel))
         // Outermost, so CORS preflight requests are answered without a token.
         .layer(CorsLayer::permissive())
         .with_state(state)
+}
+
+/// The web control panel for headless servers: one static page, no dependencies.
+const PANEL_HTML: &str = include_str!("panel.html");
+
+async fn panel() -> Response {
+    (
+        [
+            (header::CONTENT_TYPE, "text/html; charset=utf-8"),
+            (header::CONTENT_SECURITY_POLICY, "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self' ws: wss:; frame-ancestors 'none'"),
+            (header::X_FRAME_OPTIONS, "DENY"),
+            (header::CACHE_CONTROL, "no-cache"),
+        ],
+        PANEL_HTML,
+    )
+        .into_response()
 }
 
 async fn require_token(State(state): State<Arc<AppState>>, req: Request, next: Next) -> Response {
