@@ -19,14 +19,17 @@ async fn ws_handler(
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
 
+/// Serialize the engine state, releasing the lock before the caller awaits on the socket.
+fn state_json(state: &AppState) -> Option<String> {
+    let engine = state.engine.lock().ok()?;
+    serde_json::to_string(&engine.state_info()).ok()
+}
+
 async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     log::info!("WebSocket client connected");
 
-    if let Ok(engine) = state.engine.lock() {
-        let info = engine.state_info();
-        if let Ok(json) = serde_json::to_string(&info) {
-            let _ = socket.send(Message::Text(json.into())).await;
-        }
+    if let Some(json) = state_json(&state) {
+        let _ = socket.send(Message::Text(json.into())).await;
     }
 
     let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(500));
@@ -34,12 +37,9 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     loop {
         tokio::select! {
             _ = interval.tick() => {
-                if let Ok(engine) = state.engine.lock() {
-                    let info = engine.state_info();
-                    if let Ok(json) = serde_json::to_string(&info) {
-                        if socket.send(Message::Text(json.into())).await.is_err() {
-                            break;
-                        }
+                if let Some(json) = state_json(&state) {
+                    if socket.send(Message::Text(json.into())).await.is_err() {
+                        break;
                     }
                 }
             }

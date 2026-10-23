@@ -1,4 +1,4 @@
-use chrono::{NaiveTime, Weekday};
+use chrono::{NaiveTime, Timelike, Weekday};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
