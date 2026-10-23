@@ -32,6 +32,8 @@ pub struct AppState {
     pub schedule_path: PathBuf,
     /// Saves playlist, position, volume, crossfade and streaming for restarts.
     pub session: Mutex<riars_core::session::SessionSaver>,
+    /// Long-term automation: playlist generator and proof-of-play log.
+    pub automation: Mutex<riars_core::automation::Automation>,
 }
 
 #[tauri::command]
@@ -253,6 +255,17 @@ fn run_engine_loop(app: AppHandle) {
             (engine.state_info(), engine.playlist_revision())
         };
 
+        // Automation: log what aired, top up the playlist (engine unlocked first).
+        let wants = state.automation.lock().is_ok_and(|a| {
+            a.wants_tick(revision, state.engine.lock().is_ok_and(|e| e.has_play_records()))
+        });
+        if wants {
+            let now = chrono::Local::now().naive_local();
+            if let Err(e) = riars_core::automation::tick(&state.engine, &state.library, &state.automation, now) {
+                log::warn!("Automation: {e}");
+            }
+        }
+
         // Engine state: on any change, which while playing is the position every tick.
         if last_state.as_ref() != Some(&info) {
             let _ = app.emit("engine-state", &info);
@@ -453,6 +466,7 @@ pub fn run() {
                 session: Mutex::new(riars_core::session::SessionSaver::new(session_path.clone())),
                 engine: Mutex::new(engine),
                 library: Mutex::new(library),
+                automation: Mutex::new(riars_core::automation::Automation::new()),
             });
             // Carry on where the last run stopped (decodes a track: off the main thread).
             let resume_app = app.handle().clone();

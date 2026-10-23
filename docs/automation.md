@@ -1,6 +1,6 @@
 # Automatización a largo plazo (diseño)
 
-Estado: **borrador para aprobar**. Las decisiones marcadas con ❓ esperan la respuesta del usuario.
+Estado: **aprobado** (23-10-2026) con las propuestas por defecto del apartado 8. Fase 1 (núcleo) implementada.
 
 ## 1. Objetivo
 
@@ -193,6 +193,7 @@ Cambiar a automático no corta lo que suena: añade por detrás.
 - REST `/api/v1/automation/...`: categorías, asignación de pistas (incluida en lote por regla), relojes y huecos, parrilla, campañas, anunciantes, `GET /automation/preview?from=&hours=` (lo que sonaría), `GET /logs/plays.csv?from=&to=&advertiser=`, y activar/desactivar el modo automático.
 - Eventos WebSocket: `automation_generated`, `automation_warning` (categoría vacía, cuñas que no caben), `ad_aired`.
 - MCP: las mismas operaciones como herramientas (`create_clock`, `set_grid_rule`, `create_campaign`, `preview_schedule`, `export_play_log`...). Pensado para que un agente pueda montar la programación de una semana.
+- **Guía visual**: la disposición de RadioBOSS Advanced, que el usuario tomó como referencia. Arriba: reloj, pista anterior, en el aire y siguiente. A la izquierda: biblioteca por carpetas y categorías, con un registro debajo. En el centro: playlist en pestañas con columnas de hora de inicio, duración, repeticiones, intro, outro, valoración y última emisión, y los controles debajo. Abajo del todo: barra de estado con el detector de silencio y el programador.
 - **Escritorio** (Tauri + React): pestañas *Categorías*, *Relojes* (editor de huecos con vista de "tarta" de la hora), *Parrilla* (semana tipo + calendario), *Publicidad* (anunciantes, campañas, estado de cumplimiento) y *Registro*.
 - **Panel web** (`/`): vista de la parrilla del día, lo que viene, estado de campañas y descarga del CSV. La edición completa queda en el escritorio y la API.
 
