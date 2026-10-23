@@ -7,7 +7,7 @@
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicU8, Ordering};
 use std::sync::Arc;
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{FromSample, SizedSample};
@@ -92,6 +92,9 @@ pub struct StreamTap {
     pub channels: u16,
 }
 
+/// Device name reported when running on the internal clock.
+pub const NO_DEVICE: &str = "none (internal clock)";
+
 pub(crate) struct AudioOutput {
     commands: Sender<Command>,
     /// Players replaced in the callback come back here to be freed off the audio thread.
@@ -106,7 +109,9 @@ pub(crate) struct AudioOutput {
 
 impl AudioOutput {
     /// Open the default output device and start a silent stream.
-    pub fn open(volume: f32) -> Result<Self, String> {
+    /// Open the default output device, or run on the internal clock when
+    /// `use_device` is false or no device works.
+    pub fn open(volume: f32, use_device: bool) -> Result<Self, String> {
         let (cmd_tx, cmd_rx) = bounded::<Command>(16);
         let (garbage_tx, garbage_rx) = bounded::<Box<TrackPlayer>>(16);
         let (shutdown_tx, shutdown_rx) = bounded::<()>(0);
@@ -114,17 +119,24 @@ impl AudioOutput {
         let shared = Arc::new(Shared::new(volume));
         let callback_shared = Arc::clone(&shared);
 
+        let parts = Parts { commands: cmd_rx, garbage: garbage_tx, shared: callback_shared };
         let thread = std::thread::Builder::new()
             .name("riars-audio-output".into())
-            .spawn(move || match start_stream(cmd_rx, garbage_tx, callback_shared) {
-                Ok((stream, device_name, tap)) => {
-                    let _ = ready_tx.send(Ok((device_name, tap)));
-                    let _ = shutdown_rx.recv();
-                    drop(stream);
+            .spawn(move || {
+                if use_device {
+                    match start_stream(parts.clone()) {
+                        Ok((stream, device_name, tap)) => {
+                            let _ = ready_tx.send(Ok((device_name, tap)));
+                            let _ = shutdown_rx.recv();
+                            drop(stream);
+                            return;
+                        }
+                        Err(e) => log::warn!("No sound card ({e}); using the internal clock"),
+                    }
                 }
-                Err(e) => {
-                    let _ = ready_tx.send(Err(e));
-                }
+                let (renderer, tap) = Renderer::new(parts, CLOCK_RATE, 2);
+                let _ = ready_tx.send(Ok((NO_DEVICE.to_string(), tap)));
+                run_clock(renderer, shutdown_rx);
             })
             .map_err(|e| format!("Cannot start audio thread: {e}"))?;
 
@@ -159,11 +171,7 @@ impl AudioOutput {
     }
 }
 
-fn start_stream(
-    commands: Receiver<Command>,
-    garbage: Sender<Box<TrackPlayer>>,
-    shared: Arc<Shared>,
-) -> Result<(cpal::Stream, String, StreamTap), String> {
+fn start_stream(parts: Parts) -> Result<(cpal::Stream, String, StreamTap), String> {
     let host = cpal::default_host();
     let device = host
         .default_output_device()
@@ -174,20 +182,13 @@ fn start_stream(
         .map_err(|e| format!("Cannot query output config: {e}"))?;
     let format = supported.sample_format();
     let config: cpal::StreamConfig = supported.into();
-    // Two seconds of audio between the callback and the streaming encoder.
-    let (producer, consumer) =
-        rtrb::RingBuffer::new(config.sample_rate.0 as usize * config.channels as usize * 2);
-    let tap = StreamTap {
-        consumer,
-        sample_rate: config.sample_rate.0,
-        channels: config.channels,
-    };
+    let (renderer, tap) = Renderer::new(parts, config.sample_rate.0, config.channels);
 
     let stream = match format {
-        cpal::SampleFormat::F32 => build_stream::<f32>(&device, &config, commands, garbage, shared, producer),
-        cpal::SampleFormat::I16 => build_stream::<i16>(&device, &config, commands, garbage, shared, producer),
-        cpal::SampleFormat::U16 => build_stream::<u16>(&device, &config, commands, garbage, shared, producer),
-        cpal::SampleFormat::I32 => build_stream::<i32>(&device, &config, commands, garbage, shared, producer),
+        cpal::SampleFormat::F32 => build_stream::<f32>(&device, &config, renderer),
+        cpal::SampleFormat::I16 => build_stream::<i16>(&device, &config, renderer),
+        cpal::SampleFormat::U16 => build_stream::<u16>(&device, &config, renderer),
+        cpal::SampleFormat::I32 => build_stream::<i32>(&device, &config, renderer),
         other => Err(format!("Unsupported output sample format: {other}")),
     }?;
     stream
@@ -202,88 +203,152 @@ fn start_stream(
     Ok((stream, device_name, tap))
 }
 
-fn build_stream<T>(
-    device: &cpal::Device,
-    config: &cpal::StreamConfig,
+/// What the audio callback needs: the commands from the engine, where to send retired
+/// players, the shared state, the decks and the stream tap. Used by the cpal callback
+/// and by the internal clock when there is no sound card.
+struct Renderer {
+    parts: Parts,
+    decks: Decks,
+    tap: rtrb::Producer<f32>,
+    out_channels: usize,
+    out_rate: f64,
+}
+
+/// The engine-side handles, cloneable so a failed device can fall back to the clock.
+#[derive(Clone)]
+struct Parts {
     commands: Receiver<Command>,
     garbage: Sender<Box<TrackPlayer>>,
     shared: Arc<Shared>,
-    mut tap: rtrb::Producer<f32>,
+}
+
+impl Renderer {
+    fn new(parts: Parts, sample_rate: u32, channels: u16) -> (Self, StreamTap) {
+        // Two seconds of audio between the callback and the streaming encoder.
+        let (producer, consumer) =
+            rtrb::RingBuffer::new(sample_rate as usize * channels as usize * 2);
+        let renderer = Self {
+            parts,
+            decks: Decks::default(),
+            tap: producer,
+            out_channels: channels as usize,
+            out_rate: sample_rate as f64,
+        };
+        (renderer, StreamTap { consumer, sample_rate, channels })
+    }
+
+    /// Fill one buffer. Real-time safe.
+    fn process<T>(&mut self, data: &mut [T])
+    where
+        T: SizedSample + FromSample<f32>,
+        f32: FromSample<T>,
+    {
+        let Parts { commands, garbage, shared } = &self.parts;
+        let decks = &mut self.decks;
+        while let Ok(command) = commands.try_recv() {
+            match command {
+                Command::Load(new_player) => {
+                    decks.fade_len = None;
+                    if let Some(old) = decks.current.replace(new_player) {
+                        let _ = garbage.try_send(old);
+                    }
+                    if let Some(old) = decks.next.take() {
+                        let _ = garbage.try_send(old);
+                    }
+                    shared.finished.store(false, Ordering::Relaxed);
+                }
+                Command::Queue(next) => {
+                    if let Some(old) = decks.next.replace(next) {
+                        let _ = garbage.try_send(old);
+                    }
+                }
+                Command::Seek(position) => {
+                    if let Some(p) = decks.current.as_mut() {
+                        p.seek(position);
+                    }
+                    shared.finished.store(false, Ordering::Relaxed);
+                }
+            }
+        }
+
+        let playing = shared.playing.load(Ordering::Relaxed);
+        if !playing || decks.current.is_none() {
+            data.fill(T::EQUILIBRIUM);
+        } else {
+            let fade = shared.crossfade();
+            let mut retire = |old| {
+                let _ = garbage.try_send(old);
+            };
+            let outcome = decks.render(
+                data,
+                self.out_channels,
+                self.out_rate,
+                shared.volume(),
+                &fade,
+                &mut retire,
+            );
+            if outcome.switches > 0 {
+                shared.switches.fetch_add(outcome.switches as u64, Ordering::Relaxed);
+            }
+            if outcome.finished {
+                shared.playing.store(false, Ordering::Relaxed);
+                shared.finished.store(true, Ordering::Relaxed);
+            }
+        }
+
+        // Silence included, so a stream stays alive while paused.
+        for sample in data.iter() {
+            if self.tap.push(f32::from_sample_(*sample)).is_err() {
+                break;
+            }
+        }
+
+        if let Some(p) = decks.current.as_ref() {
+            shared
+                .position_ms
+                .store(p.position().as_millis() as u64, Ordering::Relaxed);
+        }
+    }
+}
+
+fn build_stream<T>(
+    device: &cpal::Device,
+    config: &cpal::StreamConfig,
+    mut renderer: Renderer,
 ) -> Result<cpal::Stream, String>
 where
     T: SizedSample + FromSample<f32>,
     f32: FromSample<T>,
 {
-    let out_channels = config.channels as usize;
-    let out_rate = config.sample_rate.0 as f64;
-    let mut decks = Decks::default();
-
     device
         .build_output_stream(
             config,
-            move |data: &mut [T], _| {
-                while let Ok(command) = commands.try_recv() {
-                    match command {
-                        Command::Load(new_player) => {
-                            decks.fade_len = None;
-                            if let Some(old) = decks.current.replace(new_player) {
-                                let _ = garbage.try_send(old);
-                            }
-                            if let Some(old) = decks.next.take() {
-                                let _ = garbage.try_send(old);
-                            }
-                            shared.finished.store(false, Ordering::Relaxed);
-                        }
-                        Command::Queue(next) => {
-                            if let Some(old) = decks.next.replace(next) {
-                                let _ = garbage.try_send(old);
-                            }
-                        }
-                        Command::Seek(position) => {
-                            if let Some(p) = decks.current.as_mut() {
-                                p.seek(position);
-                            }
-                            shared.finished.store(false, Ordering::Relaxed);
-                        }
-                    }
-                }
-
-                let playing = shared.playing.load(Ordering::Relaxed);
-                if !playing || decks.current.is_none() {
-                    data.fill(T::EQUILIBRIUM);
-                } else {
-                    let fade = shared.crossfade();
-                    let mut retire = |old| {
-                        let _ = garbage.try_send(old);
-                    };
-                    let outcome =
-                        decks.render(data, out_channels, out_rate, shared.volume(), &fade, &mut retire);
-                    if outcome.switches > 0 {
-                        shared.switches.fetch_add(outcome.switches as u64, Ordering::Relaxed);
-                    }
-                    if outcome.finished {
-                        shared.playing.store(false, Ordering::Relaxed);
-                        shared.finished.store(true, Ordering::Relaxed);
-                    }
-                }
-
-                // Silence included, so a stream stays alive while paused.
-                for sample in data.iter() {
-                    if tap.push(f32::from_sample_(*sample)).is_err() {
-                        break;
-                    }
-                }
-
-                if let Some(p) = decks.current.as_ref() {
-                    shared
-                        .position_ms
-                        .store(p.position().as_millis() as u64, Ordering::Relaxed);
-                }
-            },
+            move |data: &mut [T], _| renderer.process(data),
             |err| log::error!("Audio output error: {err}"),
             None,
         )
         .map_err(|e| format!("Cannot build output stream: {e}"))
+}
+
+/// Sample rate of the internal clock used without a sound card.
+const CLOCK_RATE: u32 = 44_100;
+
+/// Without a sound card, drive the renderer from a timer at real-time pace, so playback,
+/// auto-advance and streaming work on headless machines. Paced against the start time,
+/// so sleep jitter does not accumulate as drift.
+fn run_clock(mut renderer: Renderer, shutdown: Receiver<()>) {
+    const FRAMES: usize = CLOCK_RATE as usize / 100; // 10 ms
+    let mut buffer = vec![0.0f32; FRAMES * 2];
+    let start = Instant::now();
+    let mut frames_done: u64 = 0;
+    while !matches!(shutdown.try_recv(), Err(crossbeam_channel::TryRecvError::Disconnected)) {
+        renderer.process(&mut buffer);
+        frames_done += FRAMES as u64;
+        let due = start + Duration::from_secs_f64(frames_done as f64 / CLOCK_RATE as f64);
+        if let Some(wait) = due.checked_duration_since(Instant::now()) {
+            std::thread::sleep(wait);
+        }
+    }
 }
 
 /// The current track and the one queued after it, like the two decks of a DJ mixer.

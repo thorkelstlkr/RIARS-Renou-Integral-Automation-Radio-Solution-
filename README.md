@@ -83,6 +83,9 @@ cargo build -p riars-server --release
 # Ejecutar (la API exige un token; si no se indica, se genera uno y se muestra al arrancar)
 ./target/release/riars-server --port 3100 --api-token MI_TOKEN_SECRETO
 # o bien: RIARS_API_TOKEN=MI_TOKEN_SECRETO ./target/release/riars-server --port 3100
+
+# Sin tarjeta de sonido (p. ej. un servidor que solo emite a Icecast): reloj interno
+./target/release/riars-server --port 3100 --no-sound-card
 ```
 
 ### Controlar con un agente IA
