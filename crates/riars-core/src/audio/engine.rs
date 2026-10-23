@@ -19,7 +19,7 @@ pub enum PlaybackState {
     Paused,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct EngineStateInfo {
     pub state: PlaybackState,
     pub volume: f32,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 interface Levels {
   peak_left: number;
@@ -12,7 +12,6 @@ const MIN_DB = -60;
 const DECAY_DB_PER_S = 24; // bars fall like a PPM meter
 const HOLD_MS = 1500; // peak marker
 const CLIP_MS = 2000; // clip light
-const POLL_MS = 50;
 const SCALE = [0, -3, -6, -12, -24, -48];
 
 const toDb = (linear: number) => (linear > 0 ? Math.max(MIN_DB, 20 * Math.log10(linear)) : MIN_DB);
@@ -32,30 +31,42 @@ export default function VuMeter() {
   const [clipUntil, setClipUntil] = useState(0);
   const [now, setNow] = useState(0);
 
+  // Levels arrive as events (only while there is sound); the fall-off is animated
+  // with requestAnimationFrame, which stops once the bars are down.
   useEffect(() => {
+    let frame = 0;
     let last = performance.now();
-    const id = setInterval(async () => {
-      if (document.hidden) return; // no meter work while minimised
-      let levels: Levels = { peak_left: 0, peak_right: 0, clipped: 0 };
-      try { levels = await invoke<Levels>("engine_levels"); } catch { /* not ready */ }
+    const animate = () => {
       const t = performance.now();
       const fall = (DECAY_DB_PER_S * (t - last)) / 1000;
       last = t;
-      [levels.peak_left, levels.peak_right].forEach((peak, i) => {
+      let busy = false;
+      for (const side of sides.current) {
+        side.db = Math.max(MIN_DB, side.db - fall);
+        if (t > side.holdUntil) side.holdDb = Math.max(side.db, side.holdDb - fall);
+        busy ||= side.db > MIN_DB || side.holdDb > MIN_DB;
+      }
+      setReadout([sides.current[0].holdDb, sides.current[1].holdDb]);
+      setNow(t);
+      draw();
+      frame = busy ? requestAnimationFrame(animate) : 0;
+    };
+    const kick = () => { if (!frame) { last = performance.now(); frame = requestAnimationFrame(animate); } };
+    const unlisten = listen<Levels>("levels", (e) => {
+      const t = performance.now();
+      [e.payload.peak_left, e.payload.peak_right].forEach((peak, i) => {
         const side = sides.current[i];
-        // Rise at once, fall slowly.
-        side.db = Math.max(toDb(peak), side.db - fall);
-        if (side.db >= side.holdDb || t > side.holdUntil) {
+        side.db = Math.max(toDb(peak), side.db); // rise at once
+        if (side.db >= side.holdDb) {
           side.holdDb = side.db;
           side.holdUntil = t + HOLD_MS;
         }
       });
-      if (levels.clipped > 0) setClipUntil(t + CLIP_MS);
-      setReadout([sides.current[0].holdDb, sides.current[1].holdDb]);
-      setNow(t);
-      draw();
-    }, POLL_MS);
-    return () => clearInterval(id);
+      if (e.payload.clipped > 0) setClipUntil(t + CLIP_MS);
+      kick();
+    });
+    draw();
+    return () => { unlisten.then((f) => f()); cancelAnimationFrame(frame); };
   }, []);
 
   const draw = () => {

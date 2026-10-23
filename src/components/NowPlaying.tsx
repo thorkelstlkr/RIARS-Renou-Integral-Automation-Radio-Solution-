@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 interface EngineState {
   state: "Stopped" | "Playing" | "Paused";
@@ -26,12 +27,11 @@ export default function NowPlaying() {
     state: "Stopped", volume: 0.8, current_track: null, position_ms: 0, duration_ms: 0,
   });
 
+  // One read on mount, then the backend pushes changes.
   useEffect(() => {
-    const id = setInterval(async () => {
-      if (document.hidden) return;
-      try { setEs(await invoke<EngineState>("engine_get_state")); } catch { /**/ }
-    }, 250);
-    return () => clearInterval(id);
+    invoke<EngineState>("engine_get_state").then(setEs).catch(() => {});
+    const unlisten = listen<EngineState>("engine-state", (e) => setEs(e.payload));
+    return () => { unlisten.then((f) => f()); };
   }, []);
 
   const fmt = (ms: number) => {

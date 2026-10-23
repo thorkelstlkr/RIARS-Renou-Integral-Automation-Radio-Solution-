@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 interface PlaylistItem {
   id: string;
@@ -105,7 +106,6 @@ export default function PlaylistPanel() {
   // Revision of the playlist on screen: the poll only transfers it when it changed.
   const revision = useRef<number | null>(null);
   const refresh = useCallback(async () => {
-    if (document.hidden) return;
     try {
       const change = await invoke<{ revision: number; playlist: Playlist } | null>(
         "playlist_changes", { since: revision.current });
@@ -116,12 +116,12 @@ export default function PlaylistPanel() {
     } catch { /* not ready */ }
   }, []);
 
-  // Poll so auto-advance and additions from the library show up.
+  // The backend announces every playlist change (auto-advance, additions...).
   useEffect(() => {
     refresh();
-    const id = setInterval(refresh, 1000);
+    const unlisten = listen("playlist-revision", () => refresh());
     window.addEventListener("playlist-changed", refresh);
-    return () => { clearInterval(id); window.removeEventListener("playlist-changed", refresh); };
+    return () => { unlisten.then((f) => f()); window.removeEventListener("playlist-changed", refresh); };
   }, [refresh]);
 
   const run = useCallback(async (cmd: string, args?: Record<string, unknown>) => {
