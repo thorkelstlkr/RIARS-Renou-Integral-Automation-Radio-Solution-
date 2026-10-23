@@ -56,7 +56,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     log::info!("{} v{}", t("server_starting"), env!("CARGO_PKG_VERSION"));
 
-    let engine = AudioEngine::new().expect(&t("engine_init_failed"));
+    let mut engine = AudioEngine::new().expect(&t("engine_init_failed"));
+    let stream = engine.take_stream_tap().map(riars_stream::StreamService::new);
     let mut library = MediaLibrary::open(&cli.db_path).expect(&t("library_init_failed"));
     let scheduler = Scheduler::new();
 
@@ -87,6 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         let state = Arc::new(AppState {
             api_token,
+            stream,
             engine: Mutex::new(engine),
             library: Mutex::new(library),
             scheduler: Mutex::new(scheduler),

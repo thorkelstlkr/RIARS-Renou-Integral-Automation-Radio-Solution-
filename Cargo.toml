@@ -5,6 +5,7 @@ members = [
     "crates/riars-api",
     "crates/riars-mcp",
     "crates/riars-server",
+    "crates/riars-stream",
     "src-tauri",
 ]
 

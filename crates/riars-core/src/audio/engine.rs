@@ -7,7 +7,7 @@ use serde::Serialize;
 
 use super::crossfade::CrossfadeConfig;
 use super::mixer::Mixer;
-use super::output::{AudioOutput, Command};
+use super::output::{AudioOutput, Command, StreamTap};
 use super::player::TrackPlayer;
 use crate::playlist::playlist::Playlist;
 
@@ -89,6 +89,11 @@ impl AudioEngine {
             crossfade,
             sample_rate,
         })
+    }
+
+    /// The audio sent to the sound card, for streaming. Can be taken once.
+    pub fn take_stream_tap(&mut self) -> Option<StreamTap> {
+        self.output.as_mut().and_then(|o| o.take_tap())
     }
 
     /// Name of the sound card in use, if any.
@@ -271,6 +276,20 @@ impl AudioEngine {
         {
             self.stop();
         }
+    }
+
+    /// "Artist - Title" for the track playing now, for stream metadata.
+    pub fn now_playing_title(&self) -> Option<String> {
+        let track = self.current_track.as_ref()?;
+        let item = self
+            .playlist
+            .current_item()
+            .filter(|item| item.track_path.ends_with(&track.name));
+        Some(match item {
+            Some(item) if !item.artist.is_empty() => format!("{} - {}", item.artist, item.title),
+            Some(item) => item.title.clone(),
+            None => track.name.clone(),
+        })
     }
 
     pub fn playlist(&self) -> &Playlist {

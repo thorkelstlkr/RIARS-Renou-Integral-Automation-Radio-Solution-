@@ -83,12 +83,22 @@ impl Shared {
     }
 }
 
+/// A copy of everything sent to the sound card, for streaming. Interleaved f32 at the
+/// device's rate and channel count. Whoever reads it should keep up: when it is full,
+/// new audio is dropped.
+pub struct StreamTap {
+    pub consumer: rtrb::Consumer<f32>,
+    pub sample_rate: u32,
+    pub channels: u16,
+}
+
 pub(crate) struct AudioOutput {
     commands: Sender<Command>,
     /// Players replaced in the callback come back here to be freed off the audio thread.
     garbage: Receiver<Box<TrackPlayer>>,
     pub shared: Arc<Shared>,
     device_name: String,
+    tap: Option<StreamTap>,
     // Dropping the sender wakes the output thread so it drops the stream and exits.
     _shutdown: Sender<()>,
     _thread: JoinHandle<()>,
@@ -100,15 +110,15 @@ impl AudioOutput {
         let (cmd_tx, cmd_rx) = bounded::<Command>(16);
         let (garbage_tx, garbage_rx) = bounded::<Box<TrackPlayer>>(16);
         let (shutdown_tx, shutdown_rx) = bounded::<()>(0);
-        let (ready_tx, ready_rx) = bounded::<Result<String, String>>(1);
+        let (ready_tx, ready_rx) = bounded::<Result<(String, StreamTap), String>>(1);
         let shared = Arc::new(Shared::new(volume));
         let callback_shared = Arc::clone(&shared);
 
         let thread = std::thread::Builder::new()
             .name("riars-audio-output".into())
             .spawn(move || match start_stream(cmd_rx, garbage_tx, callback_shared) {
-                Ok((stream, device_name)) => {
-                    let _ = ready_tx.send(Ok(device_name));
+                Ok((stream, device_name, tap)) => {
+                    let _ = ready_tx.send(Ok((device_name, tap)));
                     let _ = shutdown_rx.recv();
                     drop(stream);
                 }
@@ -118,7 +128,7 @@ impl AudioOutput {
             })
             .map_err(|e| format!("Cannot start audio thread: {e}"))?;
 
-        let device_name = ready_rx
+        let (device_name, tap) = ready_rx
             .recv()
             .map_err(|_| "Audio thread exited during start-up".to_string())??;
 
@@ -127,6 +137,7 @@ impl AudioOutput {
             garbage: garbage_rx,
             shared,
             device_name,
+            tap: Some(tap),
             _shutdown: shutdown_tx,
             _thread: thread,
         })
@@ -134,6 +145,10 @@ impl AudioOutput {
 
     pub fn device_name(&self) -> &str {
         &self.device_name
+    }
+
+    pub fn take_tap(&mut self) -> Option<StreamTap> {
+        self.tap.take()
     }
 
     pub fn send(&self, command: Command) {
@@ -148,7 +163,7 @@ fn start_stream(
     commands: Receiver<Command>,
     garbage: Sender<Box<TrackPlayer>>,
     shared: Arc<Shared>,
-) -> Result<(cpal::Stream, String), String> {
+) -> Result<(cpal::Stream, String, StreamTap), String> {
     let host = cpal::default_host();
     let device = host
         .default_output_device()
@@ -159,12 +174,20 @@ fn start_stream(
         .map_err(|e| format!("Cannot query output config: {e}"))?;
     let format = supported.sample_format();
     let config: cpal::StreamConfig = supported.into();
+    // Two seconds of audio between the callback and the streaming encoder.
+    let (producer, consumer) =
+        rtrb::RingBuffer::new(config.sample_rate.0 as usize * config.channels as usize * 2);
+    let tap = StreamTap {
+        consumer,
+        sample_rate: config.sample_rate.0,
+        channels: config.channels,
+    };
 
     let stream = match format {
-        cpal::SampleFormat::F32 => build_stream::<f32>(&device, &config, commands, garbage, shared),
-        cpal::SampleFormat::I16 => build_stream::<i16>(&device, &config, commands, garbage, shared),
-        cpal::SampleFormat::U16 => build_stream::<u16>(&device, &config, commands, garbage, shared),
-        cpal::SampleFormat::I32 => build_stream::<i32>(&device, &config, commands, garbage, shared),
+        cpal::SampleFormat::F32 => build_stream::<f32>(&device, &config, commands, garbage, shared, producer),
+        cpal::SampleFormat::I16 => build_stream::<i16>(&device, &config, commands, garbage, shared, producer),
+        cpal::SampleFormat::U16 => build_stream::<u16>(&device, &config, commands, garbage, shared, producer),
+        cpal::SampleFormat::I32 => build_stream::<i32>(&device, &config, commands, garbage, shared, producer),
         other => Err(format!("Unsupported output sample format: {other}")),
     }?;
     stream
@@ -176,7 +199,7 @@ fn start_stream(
         config.sample_rate.0,
         config.channels
     );
-    Ok((stream, device_name))
+    Ok((stream, device_name, tap))
 }
 
 fn build_stream<T>(
@@ -185,9 +208,11 @@ fn build_stream<T>(
     commands: Receiver<Command>,
     garbage: Sender<Box<TrackPlayer>>,
     shared: Arc<Shared>,
+    mut tap: rtrb::Producer<f32>,
 ) -> Result<cpal::Stream, String>
 where
     T: SizedSample + FromSample<f32>,
+    f32: FromSample<T>,
 {
     let out_channels = config.channels as usize;
     let out_rate = config.sample_rate.0 as f64;
@@ -239,6 +264,13 @@ where
                     if outcome.finished {
                         shared.playing.store(false, Ordering::Relaxed);
                         shared.finished.store(true, Ordering::Relaxed);
+                    }
+                }
+
+                // Silence included, so a stream stays alive while paused.
+                for sample in data.iter() {
+                    if tap.push(f32::from_sample_(*sample)).is_err() {
+                        break;
                     }
                 }
 
