@@ -223,6 +223,26 @@ pub fn list_tools() -> ToolList {
                     "required": ["id"]
                 }),
             },
+            ToolDef {
+                name: "list_saved_playlists",
+                description: "List all saved playlists",
+                input_schema: json!({ "type": "object", "properties": {}, "required": [] }),
+            },
+            ToolDef {
+                name: "save_playlist",
+                description: "Save the on-air playlist under a name (replaces a saved playlist with the same name)",
+                input_schema: json!({ "type": "object", "properties": { "name": { "type": "string", "description": "Name of the playlist", "required": true } }, "required": ["name"] }),
+            },
+            ToolDef {
+                name: "load_playlist",
+                description: "Put a saved playlist on air, by id or name",
+                input_schema: json!({ "type": "object", "properties": { "id": { "type": "string", "description": "ID or name of the playlist", "required": true }, "play": { "type": "boolean", "description": "Play the playlist immediately", "default": false } }, "required": ["id"] }),
+            },
+            ToolDef {
+                name: "delete_saved_playlist",
+                description: "Delete a saved playlist",
+                input_schema: json!({ "type": "object", "properties": { "id": { "type": "string", "description": "ID of the playlist", "required": true } }, "required": ["id"] }),
+            },
         ],
     }
 }
@@ -472,6 +492,31 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
             } else {
                 Err(format!("No scheduled event {}", id))
             }
+        }
+        "list_saved_playlists" => {
+            let list = state.library.lock().map_err(|e| e.to_string())?.list_playlists()?;
+            Ok(text_result(&serde_json::to_string_pretty(&list).unwrap_or_default()))
+        },
+        "save_playlist" => {
+            let name = args["name"].as_str().ok_or("Missing name")?;
+            let playlist = state.engine.lock().map_err(|e| e.to_string())?.playlist().clone();
+            state.library.lock().map_err(|e| e.to_string())?.save_playlist(name, &playlist)?;
+            Ok(text_result(&format!("Saved as {name}")))
+        },
+        "load_playlist" => {
+            let id = args["id"].as_str().ok_or("Missing id")?;
+            let play = args.get("play").and_then(|v| v.as_bool()).unwrap_or(false);
+            let playlist = state.library.lock().map_err(|e| e.to_string())?.load_playlist(id)?;
+            state.engine.lock().map_err(|e| e.to_string())?.set_playlist(playlist.clone());
+            if play {
+                riars_core::play_index_unlocked(&state.engine, 0, false)?;
+            }
+            Ok(text_result(&format!("Loaded {} ({} tracks)", playlist.name, playlist.items.len())))
+        },
+        "delete_saved_playlist" => {
+            let id = args["id"].as_str().ok_or("Missing id")?;
+            state.library.lock().map_err(|e| e.to_string())?.delete_playlist(id)?;
+            Ok(text_result("Deleted"))
         }
         _ => Err(format!("{}: {name}", t("unknown_tool"))),
     }

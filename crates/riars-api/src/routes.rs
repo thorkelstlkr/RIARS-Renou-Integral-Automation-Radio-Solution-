@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use riars_core::audio::crossfade::{CrossfadeConfig, FadeCurve};
 use riars_core::playlist::scheduler::{EventAction, EventTrigger, ScheduledEvent};
-use riars_core::{play_index_unlocked, EngineStateInfo, IcecastConfig, Playlist};
+use riars_core::{play_index_unlocked, EngineStateInfo, IcecastConfig, Playlist, SavedPlaylist};
 use riars_stream::{StreamService, StreamStatus};
 
 use crate::AppState;
@@ -73,6 +73,10 @@ pub fn api_routes() -> Router<Arc<AppState>> {
         .route("/schedule/add", post(schedule_add))
         .route("/schedule/remove", post(schedule_remove))
         .route("/schedule/toggle", post(schedule_toggle))
+        .route("/playlists", get(playlists_list))
+        .route("/playlists/save", post(playlists_save))
+        .route("/playlists/load", post(playlists_load))
+        .route("/playlists/delete", post(playlists_delete))
         .route("/playlist", get(playlist_get))
         .route("/playlist/add", post(playlist_add))
         .route("/playlist/remove", post(playlist_remove))
@@ -282,6 +286,37 @@ async fn schedule_toggle(State(state): State<Arc<AppState>>, Json(req): Json<Eve
     } else {
         Err(ApiError::from(format!("No scheduled event {}", req.id)))
     }
+}
+
+#[derive(Deserialize)]
+struct SavePlaylistRequest { name: String }
+
+#[derive(Deserialize)]
+struct LoadPlaylistRequest { id: String, #[serde(default)] play: bool }
+
+async fn playlists_list(State(state): State<Arc<AppState>>) -> Result<Json<Vec<SavedPlaylist>>, ApiError> {
+    let playlists = state.library.lock().map_err(ApiError::internal)?.list_playlists()?;
+    Ok(Json(playlists))
+}
+
+async fn playlists_save(State(state): State<Arc<AppState>>, Json(req): Json<SavePlaylistRequest>) -> Result<Json<Vec<SavedPlaylist>>, ApiError> {
+    let playlist = state.engine.lock().map_err(ApiError::internal)?.playlist().clone();
+    state.library.lock().map_err(ApiError::internal)?.save_playlist(&req.name, &playlist)?;
+    playlists_list(State(state)).await
+}
+
+async fn playlists_load(State(state): State<Arc<AppState>>, Json(req): Json<LoadPlaylistRequest>) -> Result<Json<Playlist>, ApiError> {
+    let playlist = state.library.lock().map_err(ApiError::internal)?.load_playlist(&req.id)?;
+    state.engine.lock().map_err(ApiError::internal)?.set_playlist(playlist.clone());
+    if req.play {
+        play_unlocked(Arc::clone(&state), 0).await?;
+    }
+    Ok(Json(playlist))
+}
+
+async fn playlists_delete(State(state): State<Arc<AppState>>, Json(req): Json<EventIdRequest>) -> Result<Json<Vec<SavedPlaylist>>, ApiError> {
+    state.library.lock().map_err(ApiError::internal)?.delete_playlist(&req.id)?;
+    playlists_list(State(state)).await
 }
 
 /// Error body for every endpoint: `{"error": "..."}` with a 4xx/5xx status, so clients

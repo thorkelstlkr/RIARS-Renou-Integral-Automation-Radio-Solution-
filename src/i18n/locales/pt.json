@@ -22,7 +22,12 @@
     "empty": "Lista de reprodução vazia. Faça duplo clique numa faixa da biblioteca para a adicionar.",
     "moveUp": "Mover para cima",
     "moveDown": "Mover para baixo",
-    "remove": "Remover"
+    "remove": "Remover",
+    "open": "Abrir",
+    "save": "Guardar",
+    "saveName": "Nome da lista",
+    "noSaved": "Ainda não há listas guardadas.",
+    "deleteSaved": "Apagar lista guardada"
   },
   "library": {
     "title": "Biblioteca",
@@ -113,6 +118,8 @@
       "Fri": "Sexta-feira",
       "Sat": "Sábado",
       "Sun": "Domingo"
-    }
+    },
+    "playlist": "Lista",
+    "pickPlaylist": "Escolha uma lista guardada."
   }
 }

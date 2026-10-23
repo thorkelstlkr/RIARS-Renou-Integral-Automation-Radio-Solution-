@@ -22,7 +22,12 @@
     "empty": "Llista de reproducció buida. Fes doble clic en una pista de la biblioteca per afegir-la.",
     "moveUp": "Moure amunt",
     "moveDown": "Moure avall",
-    "remove": "Eliminar"
+    "remove": "Eliminar",
+    "open": "Obre",
+    "save": "Desa",
+    "saveName": "Nom de la llista",
+    "noSaved": "Encara no hi ha llistes desades.",
+    "deleteSaved": "Esborra la llista desada"
   },
   "library": {
     "title": "Biblioteca",
@@ -113,6 +118,8 @@
       "Fri": "Divendres",
       "Sat": "Dissabte",
       "Sun": "Diumenge"
-    }
+    },
+    "playlist": "Llista",
+    "pickPlaylist": "Tria una llista desada."
   }
 }

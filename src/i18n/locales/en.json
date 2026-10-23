@@ -22,7 +22,12 @@
     "empty": "Empty playlist. Double-click a track in the library to add it.",
     "moveUp": "Move up",
     "moveDown": "Move down",
-    "remove": "Remove"
+    "remove": "Remove",
+    "open": "Open",
+    "save": "Save",
+    "saveName": "Playlist name",
+    "noSaved": "No saved playlists yet.",
+    "deleteSaved": "Delete saved playlist"
   },
   "library": {
     "title": "Library",
@@ -113,6 +118,8 @@
       "Fri": "Friday",
       "Sat": "Saturday",
       "Sun": "Sunday"
-    }
+    },
+    "playlist": "Playlist",
+    "pickPlaylist": "Choose a saved playlist."
   }
 }

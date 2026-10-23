@@ -107,7 +107,7 @@ pub async fn run_stdio(state: McpState) -> Result<(), Box<dyn std::error::Error>
                 (None, _) => Err("Streaming needs an audio output".to_string()),
             }
         };
-        riars_core::automation::scheduler_loop(&state.engine, &state.scheduler, &state.schedule_path, &mut stream)
+        riars_core::automation::scheduler_loop(&state.engine, &state.library, &state.scheduler, &state.schedule_path, &mut stream)
     })?;
     let stdin = tokio::io::stdin();
     let mut stdout = tokio::io::stdout();
