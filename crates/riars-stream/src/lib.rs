@@ -129,6 +129,12 @@ impl StreamService {
         self.inner.status.lock().map(|s| s.clone()).unwrap_or_else(|e| e.into_inner().clone())
     }
 
+    /// The active config including its password, for the session file only (so a
+    /// restart can resume streaming). Never send this to clients.
+    pub fn config_for_session(&self) -> Option<IcecastConfig> {
+        self.inner.control.lock().ok()?.config.clone()
+    }
+
     /// The active config, with the password blanked.
     pub fn config(&self) -> Option<IcecastConfig> {
         let control = self.inner.control.lock().ok()?;

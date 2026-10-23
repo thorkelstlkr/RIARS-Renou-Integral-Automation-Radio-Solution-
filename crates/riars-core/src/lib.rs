@@ -3,6 +3,7 @@ pub mod automation;
 pub mod library;
 pub mod locale;
 pub mod playlist;
+pub mod session;
 pub mod streaming;
 
 pub use audio::engine::{play_index_unlocked, AudioEngine, EngineStateInfo, PlaybackState};

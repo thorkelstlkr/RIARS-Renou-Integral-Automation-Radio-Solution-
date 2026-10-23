@@ -30,6 +30,8 @@ pub struct AppState {
     pub scheduler: Mutex<Scheduler>,
     /// Where the schedule is saved after every change.
     pub schedule_path: PathBuf,
+    /// Saves playlist, position, volume, crossfade and streaming for restarts.
+    pub session: Mutex<riars_core::session::SessionSaver>,
 }
 
 #[tauri::command]
@@ -202,6 +204,14 @@ fn run_engine_loop(app: AppHandle) {
     loop {
         std::thread::sleep(std::time::Duration::from_millis(250));
         let state = app.state::<AppState>();
+        let config = state.stream.as_ref().and_then(|s| s.config_for_session());
+        let due = match (state.session.lock(), state.engine.lock()) {
+            (Ok(mut saver), Ok(engine)) => saver.due(&engine, config),
+            _ => None,
+        };
+        if let (Some(session), Ok(saver)) = (due, state.session.lock()) {
+            saver.write(&session); // engine unlocked: slow disks do not stall it
+        }
         let Ok(mut engine) = state.engine.lock() else { continue };
         if let Some(index) = engine.poll() {
             let app = app.clone();
@@ -353,6 +363,7 @@ pub fn run() {
             let db_path = data_dir.join("riars_library.db");
             let library = MediaLibrary::open(&db_path.to_string_lossy())?;
             let schedule_path = data_dir.join("riars_schedule.json");
+            let session_path = data_dir.join("riars_session.json");
             let scheduler = Scheduler::load(&schedule_path).unwrap_or_else(|e| {
                 log::warn!("{e}; starting with an empty schedule");
                 Scheduler::new()
@@ -364,9 +375,21 @@ pub fn run() {
                 stream_title: Mutex::new(String::new()),
                 scheduler: Mutex::new(scheduler),
                 schedule_path,
+                session: Mutex::new(riars_core::session::SessionSaver::new(session_path.clone())),
                 engine: Mutex::new(engine),
                 library: Mutex::new(library),
             });
+            // Carry on where the last run stopped (decodes a track: off the main thread).
+            let resume_app = app.handle().clone();
+            std::thread::Builder::new().name("riars-resume".into()).spawn(move || {
+                let state = resume_app.state::<AppState>();
+                let config = riars_core::session::resume_from_file(&state.engine, &session_path);
+                if let (Some(config), Some(stream)) = (config, &state.stream) {
+                    if let Err(e) = stream.start(config) {
+                        log::warn!("Cannot resume streaming: {e}");
+                    }
+                }
+            })?;
             let engine_app = app.handle().clone();
             std::thread::Builder::new()
                 .name("riars-engine-loop".into())
