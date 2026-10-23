@@ -26,7 +26,7 @@ interface ScheduledEvent {
 }
 
 type TriggerKind = "Time" | "Daily" | "Weekly" | "Interval";
-type ActionKind = "PlayTrack" | "SetVolume" | "FadeToVolume" | "StartStreaming" | "StopStreaming";
+type ActionKind = "PlayTrack" | "PlayPlaylist" | "SetVolume" | "FadeToVolume" | "StartStreaming" | "StopStreaming";
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const S: Record<string, React.CSSProperties> = {
@@ -64,6 +64,16 @@ export default function SchedulePanel() {
   const [path, setPath] = useState("");
   const [level, setLevel] = useState(80);
   const [seconds, setSeconds] = useState(5);
+  const [playlists, setPlaylists] = useState<{ id: string; name: string }[]>([]);
+  const [playlistId, setPlaylistId] = useState("");
+
+  useEffect(() => {
+    // Names for the list, and choices for the form.
+    invoke<{ id: string; name: string }[]>("playlists_list").then((list) => {
+      setPlaylists(list);
+      setPlaylistId((id) => id || list[0]?.id || "");
+    }).catch((e) => setError(String(e)));
+  }, [actionKind]);
 
   const run = useCallback(async (cmd: string, args?: Record<string, unknown>) => {
     try {
@@ -92,6 +102,10 @@ export default function SchedulePanel() {
   const describeAction = (a: Action) => {
     if (a === "StartStreaming") return t("schedule.startStreaming");
     if (a === "StopStreaming") return t("schedule.stopStreaming");
+    if ("PlayPlaylist" in a) {
+      const saved = playlists.find((p) => p.id === a.PlayPlaylist.playlist_id);
+      return `${t("schedule.playPlaylist")}: ${saved?.name ?? a.PlayPlaylist.playlist_id}`;
+    }
     if ("PlayTrack" in a) return `${t("schedule.playTrack")}: ${a.PlayTrack.track_path.split(/[\\/]/).pop()}`;
     if ("SetVolume" in a) return `${t("schedule.setVolume")}: ${Math.round(a.SetVolume.level * 100)}%`;
     if ("FadeToVolume" in a) return `${t("schedule.fadeToVolume")}: ${Math.round(a.FadeToVolume.level * 100)}% / ${a.FadeToVolume.duration_ms / 1000} s`;
@@ -108,9 +122,14 @@ export default function SchedulePanel() {
       : { Interval: { minutes } };
     const action: Action =
       actionKind === "PlayTrack" ? { PlayTrack: { track_path: path } }
+      : actionKind === "PlayPlaylist" ? { PlayPlaylist: { playlist_id: playlistId } }
       : actionKind === "SetVolume" ? { SetVolume: { level: level / 100 } }
       : actionKind === "FadeToVolume" ? { FadeToVolume: { level: level / 100, duration_ms: seconds * 1000 } }
       : actionKind;
+    if (actionKind === "PlayPlaylist" && !playlistId) {
+      setError(t("schedule.pickPlaylist"));
+      return;
+    }
     if (actionKind === "PlayTrack" && !path) {
       setError(t("schedule.pickTrack"));
       return;
@@ -170,6 +189,7 @@ export default function SchedulePanel() {
         <label style={S.field}>{t("schedule.action")}
           <select style={S.input} value={actionKind} onChange={(e) => setActionKind(e.target.value as ActionKind)}>
             <option value="PlayTrack">{t("schedule.playTrack")}</option>
+            <option value="PlayPlaylist">{t("schedule.playPlaylist")}</option>
             <option value="SetVolume">{t("schedule.setVolume")}</option>
             <option value="FadeToVolume">{t("schedule.fadeToVolume")}</option>
             <option value="StartStreaming">{t("schedule.startStreaming")}</option>
@@ -180,6 +200,13 @@ export default function SchedulePanel() {
           <button style={S.btn} onClick={pickTrack} title={path}>
             {path ? path.split(/[\\/]/).pop() : t("schedule.chooseFile")}
           </button>
+        )}
+        {actionKind === "PlayPlaylist" && (
+          <label style={S.field}>{t("schedule.playlist")}
+            <select style={S.input} value={playlistId} onChange={(e) => setPlaylistId(e.target.value)}>
+              {playlists.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </label>
         )}
         {(actionKind === "SetVolume" || actionKind === "FadeToVolume") && (
           <label style={S.field}>{t("schedule.level")}

@@ -22,7 +22,12 @@
     "empty": "Wiedergabeliste leer. Doppelklicken Sie auf einen Titel in der Bibliothek, um ihn hinzuzufügen.",
     "moveUp": "Nach oben verschieben",
     "moveDown": "Nach unten verschieben",
-    "remove": "Entfernen"
+    "remove": "Entfernen",
+    "open": "Öffnen",
+    "save": "Speichern",
+    "saveName": "Name der Playlist",
+    "noSaved": "Noch keine gespeicherten Playlists.",
+    "deleteSaved": "Gespeicherte Playlist löschen"
   },
   "library": {
     "title": "Bibliothek",
@@ -113,6 +118,8 @@
       "Fri": "Freitag",
       "Sat": "Samstag",
       "Sun": "Sonntag"
-    }
+    },
+    "playlist": "Playlist",
+    "pickPlaylist": "Wählen Sie eine gespeicherte Playlist."
   }
 }

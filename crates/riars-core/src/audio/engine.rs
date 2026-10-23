@@ -307,6 +307,16 @@ impl AudioEngine {
         &self.playlist
     }
 
+    /// Replace the on-air playlist (e.g. with a saved one). Playback is not touched:
+    /// the current track plays on, and auto-advance continues in the new list.
+    pub fn set_playlist(&mut self, mut playlist: Playlist) {
+        playlist.current_index = 0;
+        self.playlist = playlist;
+        self.queued = None;
+        self.advancing = false;
+        self.advance_blocked = false;
+    }
+
     pub fn playlist_mut(&mut self) -> &mut Playlist {
         &mut self.playlist
     }

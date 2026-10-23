@@ -6,6 +6,7 @@ use std::sync::Mutex;
 use chrono::NaiveDateTime;
 
 use crate::audio::engine::{play_index_unlocked, AudioEngine};
+use crate::library::db::MediaLibrary;
 use crate::playlist::scheduler::{EventAction, ScheduledEvent, Scheduler};
 
 /// Actions handled outside riars-core (streaming lives in riars-stream).
@@ -24,6 +25,7 @@ pub struct Fired {
 /// decoded): call it from a worker thread, about once a second.
 pub fn run_due(
     engine: &Mutex<AudioEngine>,
+    library: &Mutex<MediaLibrary>,
     scheduler: &Mutex<Scheduler>,
     now: NaiveDateTime,
     stream: &mut dyn FnMut(StreamCommand) -> Result<(), String>,
@@ -34,7 +36,7 @@ pub fn run_due(
     };
     due.into_iter()
         .map(|event| {
-            let result = run_action(engine, &event.action, stream);
+            let result = run_action(engine, library, &event.action, stream);
             match &result {
                 Ok(()) => log::info!("Scheduled event \"{}\" ran", event.name),
                 Err(e) => log::warn!("Scheduled event \"{}\" failed: {e}", event.name),
@@ -46,6 +48,7 @@ pub fn run_due(
 
 fn run_action(
     engine: &Mutex<AudioEngine>,
+    library: &Mutex<MediaLibrary>,
     action: &EventAction,
     stream: &mut dyn FnMut(StreamCommand) -> Result<(), String>,
 ) -> Result<(), String> {
@@ -75,8 +78,14 @@ fn run_action(
         }
         EventAction::StartStreaming => stream(StreamCommand::Start),
         EventAction::StopStreaming => stream(StreamCommand::Stop),
-        EventAction::PlayPlaylist { .. } => {
-            Err("Saved playlists are not supported yet".to_string())
+        EventAction::PlayPlaylist { playlist_id } => {
+            // Id or name of a saved playlist: put it on air and play it from the top.
+            let playlist = library.lock().map_err(|e| e.to_string())?.load_playlist(playlist_id)?;
+            if playlist.is_empty() {
+                return Err(format!("Saved playlist {playlist_id} is empty"));
+            }
+            lock()?.set_playlist(playlist);
+            play_index_unlocked(engine, 0, false)
         }
     }
 }
@@ -85,13 +94,14 @@ fn run_action(
 /// events fired (one-shots disable themselves). Run it on its own thread.
 pub fn scheduler_loop(
     engine: &Mutex<AudioEngine>,
+    library: &Mutex<MediaLibrary>,
     scheduler: &Mutex<Scheduler>,
     schedule_path: &Path,
     stream: &mut dyn FnMut(StreamCommand) -> Result<(), String>,
 ) -> ! {
     loop {
         let now = chrono::Local::now().naive_local();
-        if !run_due(engine, scheduler, now, stream).is_empty() {
+        if !run_due(engine, library, scheduler, now, stream).is_empty() {
             if let Ok(scheduler) = scheduler.lock() {
                 if let Err(e) = scheduler.save(schedule_path) {
                     log::warn!("{e}");

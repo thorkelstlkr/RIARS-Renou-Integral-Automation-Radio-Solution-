@@ -22,7 +22,12 @@
     "empty": "Lista de reproducción vacía. Haz doble clic en una pista de la biblioteca para añadirla.",
     "moveUp": "Mover arriba",
     "moveDown": "Mover abajo",
-    "remove": "Eliminar"
+    "remove": "Eliminar",
+    "open": "Abrir",
+    "save": "Guardar",
+    "saveName": "Nombre de la playlist",
+    "noSaved": "Aún no hay playlists guardadas.",
+    "deleteSaved": "Borrar playlist guardada"
   },
   "library": {
     "title": "Biblioteca",
@@ -113,6 +118,8 @@
       "Fri": "Viernes",
       "Sat": "Sábado",
       "Sun": "Domingo"
-    }
+    },
+    "playlist": "Playlist",
+    "pickPlaylist": "Elige una playlist guardada."
   }
 }

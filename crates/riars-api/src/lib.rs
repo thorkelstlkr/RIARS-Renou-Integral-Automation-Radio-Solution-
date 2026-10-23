@@ -126,7 +126,7 @@ mod tests {
 /// Scheduled events, on a blocking thread because an action may decode a track.
 fn run_scheduler(state: &AppState) {
     let mut stream = |command| stream_command(state.stream.as_ref(), command);
-    riars_core::automation::scheduler_loop(&state.engine, &state.scheduler, &state.schedule_path, &mut stream)
+    riars_core::automation::scheduler_loop(&state.engine, &state.library, &state.scheduler, &state.schedule_path, &mut stream)
 }
 
 pub fn stream_command(

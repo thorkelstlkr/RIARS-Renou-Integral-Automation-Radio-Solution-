@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use rusqlite::{params, Connection};
+
+use crate::playlist::playlist::Playlist;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,9 +43,27 @@ impl MediaLibrary {
             );
             CREATE INDEX IF NOT EXISTS idx_tracks_artist ON tracks(artist);
             CREATE INDEX IF NOT EXISTS idx_tracks_genre ON tracks(genre);
-            CREATE INDEX IF NOT EXISTS idx_tracks_title ON tracks(title);",
+            CREATE INDEX IF NOT EXISTS idx_tracks_title ON tracks(title);
+            CREATE TABLE IF NOT EXISTS playlists (
+                id          TEXT PRIMARY KEY,
+                name        TEXT NOT NULL,
+                -- Lowercased in Rust: SQLite's NOCASE only folds ASCII (not Ñ, Ç, À...).
+                name_key    TEXT NOT NULL DEFAULT '',
+                updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS playlist_items (
+                playlist_id TEXT NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
+                position    INTEGER NOT NULL,
+                track_path  TEXT NOT NULL,
+                title       TEXT NOT NULL DEFAULT '',
+                artist      TEXT NOT NULL DEFAULT '',
+                duration_ms INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (playlist_id, position)
+            );
+            PRAGMA foreign_keys = ON;",
         )
         .map_err(|e| format!("DB init error: {e}"))?;
+        migrate(&db)?;
         Ok(Self { db })
     }
 
@@ -224,6 +244,104 @@ impl MediaLibrary {
         Ok(track)
     }
 
+    /// Save `playlist` under `name`, replacing a saved playlist of the same name
+    /// (case-insensitive). Returns the saved playlist's id.
+    pub fn save_playlist(&mut self, name: &str, playlist: &Playlist) -> Result<String, String> {
+        let name = name.trim();
+        if name.is_empty() {
+            return Err("Playlist name is required".to_string());
+        }
+        let tx = self.db.transaction().map_err(|e| format!("DB error: {e}"))?;
+        let existing: Option<String> = tx
+            .query_row("SELECT id FROM playlists WHERE name_key = ?1", params![name.to_lowercase()], |r| r.get(0))
+            .ok();
+        let id = existing.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+        tx.execute(
+            "INSERT INTO playlists (id, name, name_key) VALUES (?1, ?2, ?3)
+             ON CONFLICT(id) DO UPDATE SET name = excluded.name, name_key = excluded.name_key,
+                                           updated_at = datetime('now')",
+            params![id, name, name.to_lowercase()],
+        )
+        .map_err(|e| format!("DB error: {e}"))?;
+        tx.execute("DELETE FROM playlist_items WHERE playlist_id = ?1", params![id])
+            .map_err(|e| format!("DB error: {e}"))?;
+        for (position, item) in playlist.items.iter().enumerate() {
+            tx.execute(
+                "INSERT INTO playlist_items (playlist_id, position, track_path, title, artist, duration_ms)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![id, position as i64, item.track_path, item.title, item.artist, item.duration_ms as i64],
+            )
+            .map_err(|e| format!("DB error: {e}"))?;
+        }
+        tx.commit().map_err(|e| format!("DB error: {e}"))?;
+        Ok(id)
+    }
+
+    pub fn list_playlists(&self) -> Result<Vec<SavedPlaylist>, String> {
+        let mut stmt = self
+            .db
+            .prepare(
+                "SELECT p.id, p.name, p.updated_at, COUNT(i.position), COALESCE(SUM(i.duration_ms), 0)
+                 FROM playlists p LEFT JOIN playlist_items i ON i.playlist_id = p.id
+                 GROUP BY p.id ORDER BY p.name_key",
+            )
+            .map_err(|e| format!("Query error: {e}"))?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(SavedPlaylist {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    updated_at: row.get(2)?,
+                    items: row.get::<_, i64>(3)? as usize,
+                    duration_ms: row.get::<_, i64>(4)? as u64,
+                })
+            })
+            .map_err(|e| format!("Query error: {e}"))?;
+        rows.collect::<Result<_, _>>().map_err(|e| format!("Query error: {e}"))
+    }
+
+    /// Load a saved playlist by id or by name (case-insensitive).
+    pub fn load_playlist(&self, id_or_name: &str) -> Result<Playlist, String> {
+        let (id, name): (String, String) = self
+            .db
+            .query_row(
+                "SELECT id, name FROM playlists WHERE id = ?1 OR name_key = ?2",
+                params![id_or_name, id_or_name.trim().to_lowercase()],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .map_err(|_| format!("No saved playlist {id_or_name}"))?;
+        let mut playlist = Playlist::new(name);
+        playlist.id = id.clone();
+        let mut stmt = self
+            .db
+            .prepare(
+                "SELECT track_path, title, artist, duration_ms FROM playlist_items
+                 WHERE playlist_id = ?1 ORDER BY position",
+            )
+            .map_err(|e| format!("Query error: {e}"))?;
+        let rows = stmt
+            .query_map(params![id], |r| {
+                Ok((r.get::<_, String>(0)?, r.get(1)?, r.get(2)?, r.get::<_, i64>(3)?))
+            })
+            .map_err(|e| format!("Query error: {e}"))?;
+        for row in rows {
+            let (path, title, artist, duration) = row.map_err(|e| format!("Query error: {e}"))?;
+            playlist.add_item(path, title, artist, duration as u64);
+        }
+        Ok(playlist)
+    }
+
+    pub fn delete_playlist(&mut self, id: &str) -> Result<(), String> {
+        let rows = self
+            .db
+            .execute("DELETE FROM playlists WHERE id = ?1", params![id])
+            .map_err(|e| format!("DB error: {e}"))?;
+        if rows == 0 {
+            return Err(format!("No saved playlist {id}"));
+        }
+        Ok(())
+    }
+
     pub fn track_count(&self) -> Result<usize, String> {
         self.db
             .query_row("SELECT COUNT(*) FROM tracks", [], |row| row.get(0))
@@ -237,6 +355,39 @@ impl MediaLibrary {
             .map_err(|e| format!("Delete error: {e}"))?;
         Ok(rows > 0)
     }
+}
+
+/// Bring databases created by older versions up to the current schema.
+fn migrate(db: &Connection) -> Result<(), String> {
+    let has_name_key = db
+        .prepare("SELECT 1 FROM pragma_table_info('playlists') WHERE name = 'name_key'")
+        .and_then(|mut stmt| stmt.exists([]))
+        .map_err(|e| format!("DB migration error: {e}"))?;
+    if !has_name_key {
+        db.execute_batch("ALTER TABLE playlists ADD COLUMN name_key TEXT NOT NULL DEFAULT ''")
+            .map_err(|e| format!("DB migration error: {e}"))?;
+    }
+    // Fill keys left empty (lowercased in Rust, see the schema), then enforce them.
+    let rows: Vec<(String, String)> = db
+        .prepare("SELECT id, name FROM playlists WHERE name_key = ''")
+        .and_then(|mut stmt| stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?.collect())
+        .map_err(|e| format!("DB migration error: {e}"))?;
+    for (id, name) in rows {
+        db.execute("UPDATE playlists SET name_key = ?1 WHERE id = ?2", params![name.to_lowercase(), id])
+            .map_err(|e| format!("DB migration error: {e}"))?;
+    }
+    db.execute_batch("CREATE UNIQUE INDEX IF NOT EXISTS idx_playlists_name_key ON playlists(name_key);")
+        .map_err(|e| format!("DB migration error: {e}"))
+}
+
+/// A saved playlist as listed (without its items).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SavedPlaylist {
+    pub id: String,
+    pub name: String,
+    pub updated_at: String,
+    pub items: usize,
+    pub duration_ms: u64,
 }
 
 #[derive(Default)]
@@ -313,6 +464,58 @@ fn read_tags(path: &Path) -> TrackTags {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn save_load_list_delete_playlists() {
+        let mut lib = MediaLibrary::open(":memory:").unwrap();
+        let mut pl = Playlist::new("tmp".into());
+        pl.add_item("/m/a.mp3".into(), "A".into(), "X".into(), 1000);
+        pl.add_item("/m/b.mp3".into(), "B".into(), "".into(), 2500);
+
+        assert!(lib.save_playlist("  ", &pl).is_err());
+        let id = lib.save_playlist("Mañanas", &pl).unwrap();
+        let listed = lib.list_playlists().unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!((listed[0].items, listed[0].duration_ms), (2, 3500));
+
+        // Same name (any case) replaces it, keeping the id.
+        pl.remove_item(0);
+        assert_eq!(lib.save_playlist("MAÑANAS", &pl).unwrap(), id);
+        assert_eq!(lib.list_playlists().unwrap()[0].items, 1);
+
+        let loaded = lib.load_playlist(&id).unwrap();
+        assert_eq!(loaded.name, "MAÑANAS");
+        assert_eq!(loaded.items[0].track_path, "/m/b.mp3");
+        assert_eq!(loaded.items[0].duration_ms, 2500);
+        assert_eq!(lib.load_playlist("mañanas").unwrap().id, id); // by name
+        assert!(lib.load_playlist("nope").is_err());
+
+        lib.delete_playlist(&id).unwrap();
+        assert!(lib.list_playlists().unwrap().is_empty());
+        assert!(lib.delete_playlist(&id).is_err());
+    }
+
+    #[test]
+    fn migrates_playlists_without_name_key() {
+        let path = std::env::temp_dir().join(format!("riars-migrate-{}.db", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        {
+            // The schema of the first saved-playlists build.
+            let db = Connection::open(&path).unwrap();
+            db.execute_batch(
+                "CREATE TABLE playlists (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                     updated_at TEXT NOT NULL DEFAULT (datetime('now')));
+                 INSERT INTO playlists (id, name) VALUES ('p1', 'Mañanas');",
+            )
+            .unwrap();
+        }
+        let mut lib = MediaLibrary::open(&path.to_string_lossy()).unwrap();
+        assert_eq!(lib.list_playlists().unwrap()[0].name, "Mañanas");
+        assert_eq!(lib.load_playlist("MAÑANAS").unwrap().id, "p1");
+        assert_eq!(lib.save_playlist("mañanas", &Playlist::new("x".into())).unwrap(), "p1");
+        drop(lib);
+        std::fs::remove_file(&path).unwrap();
+    }
 
     #[test]
     fn rescan_with_other_separators_adds_nothing() {

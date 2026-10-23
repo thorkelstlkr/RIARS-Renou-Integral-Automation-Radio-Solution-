@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use riars_core::automation::StreamCommand;
 use riars_core::playlist::scheduler::{EventAction, EventTrigger, ScheduledEvent};
-use riars_core::{IcecastConfig, Scheduler};
+use riars_core::{IcecastConfig, SavedPlaylist, Scheduler};
 use riars_stream::{StreamService, StreamStatus};
 use tauri::{AppHandle, Manager, State};
 
@@ -268,6 +268,36 @@ async fn playlist_play(index: usize, app: AppHandle) -> Result<(), String> {
     decode_and_start(app, index, false).await
 }
 
+#[tauri::command]
+fn playlists_list(state: State<AppState>) -> Result<Vec<SavedPlaylist>, String> {
+    let playlists = state.library.lock().map_err(|e| e.to_string())?.list_playlists()?;
+    Ok(playlists)
+}
+
+#[tauri::command]
+fn playlists_save(name: String, state: State<AppState>) -> Result<Vec<SavedPlaylist>, String> {
+    let playlist = state.engine.lock().map_err(|e| e.to_string())?.playlist().clone();
+    state.library.lock().map_err(|e| e.to_string())?.save_playlist(&name, &playlist)?;
+    playlists_list(state)
+}
+
+#[tauri::command]
+fn playlists_delete(id: String, state: State<AppState>) -> Result<Vec<SavedPlaylist>, String> {
+    state.library.lock().map_err(|e| e.to_string())?.delete_playlist(&id)?;
+    playlists_list(state)
+}
+
+#[tauri::command]
+async fn playlists_load(id: String, play: bool, app: AppHandle) -> Result<Playlist, String> {
+    let state = app.state::<AppState>();
+    let playlist = state.library.lock().map_err(|e| e.to_string())?.load_playlist(&id)?;
+    state.engine.lock().map_err(|e| e.to_string())?.set_playlist(playlist.clone());
+    if play {
+        decode_and_start(app.clone(), 0, false).await?;
+    }
+    Ok(playlist)
+}
+
 pub fn run() {
     env_logger::init();
 
@@ -312,6 +342,7 @@ pub fn run() {
                 };
                 riars_core::automation::scheduler_loop(
                     &state.engine,
+                    &state.library,
                     &state.scheduler,
                     &state.schedule_path,
                     &mut stream,
@@ -327,6 +358,10 @@ pub fn run() {
             engine_set_volume,
             engine_get_state,
             schedule_get,
+            playlists_list,
+            playlists_save,
+            playlists_load,
+            playlists_delete,
             schedule_add,
             schedule_remove,
             schedule_toggle,

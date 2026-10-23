@@ -22,7 +22,12 @@
     "empty": "Liste de lecture vide. Double-cliquez sur une piste de la bibliothèque pour l'ajouter.",
     "moveUp": "Déplacer vers le haut",
     "moveDown": "Déplacer vers le bas",
-    "remove": "Supprimer"
+    "remove": "Supprimer",
+    "open": "Ouvrir",
+    "save": "Enregistrer",
+    "saveName": "Nom de la playlist",
+    "noSaved": "Aucune playlist enregistrée.",
+    "deleteSaved": "Supprimer la playlist enregistrée"
   },
   "library": {
     "title": "Bibliothèque",
@@ -113,6 +118,8 @@
       "Fri": "Vendredi",
       "Sat": "Samedi",
       "Sun": "Dimanche"
-    }
+    },
+    "playlist": "Playlist",
+    "pickPlaylist": "Choisissez une playlist enregistrée."
   }
 }
