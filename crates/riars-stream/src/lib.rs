@@ -11,7 +11,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use mp3lame_encoder::{Bitrate, Builder, Encoder, FlushNoGap, InterleavedPcm, Quality};
 use riars_core::audio::StreamTap;
-use riars_core::streaming::icecast::{IcecastConfig, StreamFormat};
+use riars_core::streaming::icecast::{EncoderQuality, IcecastConfig, StreamFormat};
 use serde::Serialize;
 
 use util::{base64_encode, url_encode};
@@ -294,12 +294,17 @@ fn read_status_line(socket: &mut TcpStream) -> Result<String, String> {
         .ok_or_else(|| "Empty reply from Icecast".to_string())
 }
 
-fn new_encoder(sample_rate: u32, kbps: u32) -> Result<Encoder, String> {
+fn new_encoder(sample_rate: u32, kbps: u32, quality: EncoderQuality) -> Result<Encoder, String> {
     let mut builder = Builder::new().ok_or("Cannot create MP3 encoder")?;
     builder.set_num_channels(2).map_err(|e| e.to_string())?;
     builder.set_sample_rate(sample_rate).map_err(|e| e.to_string())?;
     builder.set_brate(bitrate(kbps)?).map_err(|e| e.to_string())?;
-    builder.set_quality(Quality::Good).map_err(|e| e.to_string())?;
+    let quality = match quality {
+        EncoderQuality::Fast => Quality::Ok,
+        EncoderQuality::Balanced => Quality::Good,
+        EncoderQuality::High => Quality::NearBest,
+    };
+    builder.set_quality(quality).map_err(|e| e.to_string())?;
     builder.build().map_err(|e| e.to_string())
 }
 
@@ -313,7 +318,7 @@ fn stream(
 ) -> Result<(), String> {
     // Start from live audio, not from what piled up while connecting.
     drain(tap);
-    let mut encoder = new_encoder(tap.sample_rate, config.bitrate)?;
+    let mut encoder = new_encoder(tap.sample_rate, config.bitrate, config.encoder_quality)?;
     let channels = tap.channels.max(1) as usize;
     let since = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).ok();
     set_status(inner, |s| {
@@ -326,14 +331,22 @@ fn stream(
     let mut pcm: Vec<i16> = Vec::new();
     let mut mp3: Vec<u8> = Vec::new();
     let mut sent_title: Option<String> = None;
+    let mut encoded_any = false;
     loop {
         let (wanted, title) = match inner.control.lock() {
             Ok(c) => (c.generation == generation, c.title.clone()),
             Err(_) => (false, None),
         };
         if !wanted {
-            let _ = encoder.flush_to_vec::<FlushNoGap>(&mut mp3);
-            let _ = socket.write_all(&mp3);
+            // Flush LAME's last frames, if it got any audio at all: flushing an unused
+            // encoder fails (and, with no buffer room, brought the process down).
+            if encoded_any {
+                mp3.clear();
+                mp3.reserve(16 * 1024);
+                if encoder.flush_to_vec::<FlushNoGap>(&mut mp3).is_ok() {
+                    let _ = socket.write_all(&mp3);
+                }
+            }
             log::info!("Stopped streaming");
             return Ok(());
         }
@@ -343,9 +356,10 @@ fn stream(
             set_status(inner, |s| s.title = sent_title.clone());
         }
 
+        // Encode about 100 ms at a time: fewer wakeups, and listeners buffer seconds anyway.
         let frames = tap.consumer.slots() / channels;
-        if frames < 1152 {
-            std::thread::sleep(Duration::from_millis(10));
+        if frames < tap.sample_rate as usize / 10 {
+            std::thread::sleep(Duration::from_millis(40));
             continue;
         }
         let chunk = tap
@@ -374,6 +388,7 @@ fn stream(
         encoder
             .encode_to_vec(InterleavedPcm(&pcm), &mut mp3)
             .map_err(|e| format!("MP3 encoding failed: {e}"))?;
+        encoded_any = true;
         socket
             .write_all(&mp3)
             .map_err(|e| format!("Connection to Icecast lost: {e}"))?;

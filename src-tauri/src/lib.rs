@@ -159,6 +159,23 @@ fn engine_set_volume(volume: f32, state: State<AppState>) -> Result<(), String> 
     Ok(())
 }
 
+#[derive(serde::Serialize)]
+struct PlaylistChange {
+    revision: u64,
+    playlist: Playlist,
+}
+
+/// The playlist if it changed since `since`, else null: the panel polls this cheaply.
+#[tauri::command]
+fn playlist_changes(since: Option<u64>, state: State<AppState>) -> Result<Option<PlaylistChange>, String> {
+    let engine = state.engine.lock().map_err(|e| e.to_string())?;
+    let revision = engine.playlist_revision();
+    if since == Some(revision) {
+        return Ok(None);
+    }
+    Ok(Some(PlaylistChange { revision, playlist: engine.playlist().clone() }))
+}
+
 #[tauri::command]
 fn engine_seek(position_ms: u64, state: State<AppState>) -> Result<(), String> {
     state
@@ -175,27 +192,34 @@ fn engine_levels(state: State<AppState>) -> Result<riars_core::audio::Levels, St
 }
 
 #[tauri::command]
-fn engine_get_state(app: AppHandle, state: State<AppState>) -> Result<EngineStateInfo, String> {
-    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
-    // The UI polls this every 250 ms, which also drives auto-advance in the background.
-    if let Some(index) = engine.poll() {
-        let app = app.clone();
-        tauri::async_runtime::spawn(async move {
-            if let Err(e) = decode_and_start(app, index, true).await {
-                log::error!("Auto-advance failed: {e}");
-            }
-        });
-    }
-    // Keep the stream's song title in step with what is playing.
-    if let (Some(stream), Some(title)) = (&state.stream, engine.now_playing_title()) {
-        if let Ok(mut last) = state.stream_title.lock() {
-            if *last != title {
-                stream.set_title(&title);
-                *last = title;
+fn engine_get_state(state: State<AppState>) -> Result<EngineStateInfo, String> {
+    Ok(state.engine.lock().map_err(|e| e.to_string())?.state_info())
+}
+
+/// Auto-advance and the stream title, on a backend thread: playback must go on while
+/// the window is minimised and the UI stops polling.
+fn run_engine_loop(app: AppHandle) {
+    loop {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        let state = app.state::<AppState>();
+        let Ok(mut engine) = state.engine.lock() else { continue };
+        if let Some(index) = engine.poll() {
+            let app = app.clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = decode_and_start(app, index, true).await {
+                    log::error!("Auto-advance failed: {e}");
+                }
+            });
+        }
+        if let (Some(stream), Some(title)) = (&state.stream, engine.now_playing_title()) {
+            if let Ok(mut last) = state.stream_title.lock() {
+                if *last != title {
+                    stream.set_title(&title);
+                    *last = title;
+                }
             }
         }
     }
-    Ok(engine.state_info())
 }
 
 #[tauri::command]
@@ -343,6 +367,10 @@ pub fn run() {
                 engine: Mutex::new(engine),
                 library: Mutex::new(library),
             });
+            let engine_app = app.handle().clone();
+            std::thread::Builder::new()
+                .name("riars-engine-loop".into())
+                .spawn(move || run_engine_loop(engine_app))?;
             // Run the schedule on its own thread (an action may decode a track).
             let handle = app.handle().clone();
             std::thread::Builder::new().name("riars-scheduler".into()).spawn(move || {
@@ -374,6 +402,7 @@ pub fn run() {
             engine_get_state,
             engine_levels,
             engine_seek,
+            playlist_changes,
             schedule_get,
             playlists_list,
             playlists_save,

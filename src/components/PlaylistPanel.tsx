@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -102,8 +102,18 @@ export default function PlaylistPanel() {
     try { setSaved(await invoke<SavedPlaylist[]>("playlists_delete", { id })); } catch (e) { setError(String(e)); }
   }, []);
 
+  // Revision of the playlist on screen: the poll only transfers it when it changed.
+  const revision = useRef<number | null>(null);
   const refresh = useCallback(async () => {
-    try { setPlaylist(await invoke<Playlist>("playlist_get")); } catch { /* not ready */ }
+    if (document.hidden) return;
+    try {
+      const change = await invoke<{ revision: number; playlist: Playlist } | null>(
+        "playlist_changes", { since: revision.current });
+      if (change) {
+        revision.current = change.revision;
+        setPlaylist(change.playlist);
+      }
+    } catch { /* not ready */ }
   }, []);
 
   // Poll so auto-advance and additions from the library show up.

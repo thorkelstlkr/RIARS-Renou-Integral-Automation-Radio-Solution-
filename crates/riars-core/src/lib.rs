@@ -10,4 +10,4 @@ pub use library::db::{MediaLibrary, SavedPlaylist, Track};
 pub use locale::{current_language, set_language, t, SUPPORTED_LANGUAGES};
 pub use playlist::playlist::Playlist;
 pub use playlist::scheduler::Scheduler;
-pub use streaming::icecast::{IcecastConfig, StreamFormat};
+pub use streaming::icecast::{EncoderQuality, IcecastConfig, StreamFormat};

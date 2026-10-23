@@ -45,7 +45,8 @@
     "onAir": "ON AIR",
     "paused": "PAUSED",
     "stopped": "STOPPED",
-    "noTrack": "No track loaded"
+    "noTrack": "No track loaded",
+    "seekHint": "Click to jump"
   },
   "stream": {
     "streaming": "STREAMING",

@@ -243,6 +243,11 @@ pub fn list_tools() -> ToolList {
                 description: "Delete a saved playlist",
                 input_schema: json!({ "type": "object", "properties": { "id": { "type": "string", "description": "ID of the playlist", "required": true } }, "required": ["id"] }),
             },
+            ToolDef {
+                name: "seek",
+                description: "Jump to a position in the current track",
+                input_schema: json!({ "type": "object", "properties": { "position_ms": { "type": "integer", "minimum": 0, "description": "Position from the start, in milliseconds" } }, "required": ["position_ms"] }),
+            },
         ],
     }
 }
@@ -279,6 +284,15 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
         "next_track" => {
             state.engine.lock().map_err(|e| e.to_string())?.next_track()?;
             Ok(text_result(&t("skipped_next")))
+        }
+        "seek" => {
+            let ms = args["position_ms"].as_u64().ok_or("Missing position_ms")?;
+            state
+                .engine
+                .lock()
+                .map_err(|e| e.to_string())?
+                .seek(std::time::Duration::from_millis(ms))?;
+            Ok(text_result(&format!("Position {}:{:02}", ms / 60_000, ms / 1000 % 60)))
         }
         "set_volume" => {
             let level = args["level"].as_f64().ok_or(t("missing_level"))? as f32;
@@ -438,6 +452,7 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
                 station_description: "".to_string(),
                 station_genre: station_genre.map_or_else(|| "".to_string(), |s| s.to_string()),
                 station_url: "".to_string(),
+                encoder_quality: Default::default(),
             };
 
             let stream = state.stream.as_ref().ok_or("Streaming needs an audio output device")?;

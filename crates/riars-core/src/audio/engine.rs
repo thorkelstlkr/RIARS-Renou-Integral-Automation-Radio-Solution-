@@ -45,6 +45,9 @@ pub struct AudioEngine {
     playlist: Playlist,
     /// Set while the caller of `poll` decodes the next track.
     advancing: bool,
+    /// Bumped on every playlist change (items, order, current item, durations), so
+    /// UIs can skip fetching an unchanged playlist.
+    playlist_revision: u64,
     /// Nothing after the current track could be decoded; stop when it ends.
     advance_blocked: bool,
     /// Next playlist item, already handed to the audio thread.
@@ -93,6 +96,7 @@ impl AudioEngine {
             current_track: None,
             playlist: Playlist::new("On air".to_string()),
             advancing: false,
+            playlist_revision: 0,
             advance_blocked: false,
             queued: None,
             switches_seen: 0,
@@ -207,6 +211,7 @@ impl AudioEngine {
         if index < self.playlist.len() {
             self.playlist.current_index = index;
         }
+        self.playlist_revision += 1;
         self.load_decoded(player);
         self.play();
     }
@@ -255,6 +260,7 @@ impl AudioEngine {
             self.switches_seen = switches;
             if let Some((index, track)) = self.queued.take() {
                 self.playlist.current_index = index;
+                self.playlist_revision += 1;
                 log::info!("Now playing: {}", track.name);
                 self.current_track = Some(track);
             }
@@ -331,12 +337,18 @@ impl AudioEngine {
     pub fn set_playlist(&mut self, mut playlist: Playlist) {
         playlist.current_index = 0;
         self.playlist = playlist;
+        self.playlist_revision += 1;
         self.queued = None;
         self.advancing = false;
         self.advance_blocked = false;
     }
 
+    pub fn playlist_revision(&self) -> u64 {
+        self.playlist_revision
+    }
+
     pub fn playlist_mut(&mut self) -> &mut Playlist {
+        self.playlist_revision += 1;
         &mut self.playlist
     }
 
@@ -384,7 +396,10 @@ impl AudioEngine {
         let path_str = player.path().to_string_lossy();
         let duration_ms = player.duration().as_millis() as u64;
         for item in self.playlist.items.iter_mut().filter(|i| i.track_path == path_str) {
-            item.duration_ms = duration_ms;
+            if item.duration_ms != duration_ms {
+                item.duration_ms = duration_ms;
+                self.playlist_revision += 1;
+            }
         }
     }
 

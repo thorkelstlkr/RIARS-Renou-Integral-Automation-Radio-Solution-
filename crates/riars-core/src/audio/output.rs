@@ -378,10 +378,21 @@ impl Renderer {
             shared.clipped.fetch_add(clipped, Ordering::Relaxed);
         }
 
-        // Silence included, so a stream stays alive while paused.
-        for sample in data.iter() {
-            if self.tap.push(f32::from_sample_(*sample)).is_err() {
-                break;
+        // Silence included, so a stream stays alive while paused. When nobody reads
+        // the tap it is full and this copies nothing.
+        let free = self.tap.slots().min(data.len());
+        if free > 0 {
+            if let Ok(mut chunk) = self.tap.write_chunk_uninit(free) {
+                let (first, second) = chunk.as_mut_slices();
+                let split = first.len();
+                for (slot, sample) in first.iter_mut().zip(&data[..split]) {
+                    slot.write(f32::from_sample_(*sample));
+                }
+                for (slot, sample) in second.iter_mut().zip(&data[split..free]) {
+                    slot.write(f32::from_sample_(*sample));
+                }
+                // SAFETY: all `free` slots were written just above.
+                unsafe { chunk.commit_all() };
             }
         }
 

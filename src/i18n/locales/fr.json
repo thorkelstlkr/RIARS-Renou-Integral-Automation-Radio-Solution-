@@ -45,7 +45,8 @@
     "onAir": "À L'ANTENNE",
     "paused": "EN PAUSE",
     "stopped": "ARRÊTÉ",
-    "noTrack": "Aucune piste chargée"
+    "noTrack": "Aucune piste chargée",
+    "seekHint": "Cliquez pour aller à cette position"
   },
   "stream": {
     "streaming": "EN DIRECT",

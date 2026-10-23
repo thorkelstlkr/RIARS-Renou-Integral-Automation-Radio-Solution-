@@ -35,6 +35,7 @@ export default function VuMeter() {
   useEffect(() => {
     let last = performance.now();
     const id = setInterval(async () => {
+      if (document.hidden) return; // no meter work while minimised
       let levels: Levels = { peak_left: 0, peak_right: 0, clipped: 0 };
       try { levels = await invoke<Levels>("engine_levels"); } catch { /* not ready */ }
       const t = performance.now();

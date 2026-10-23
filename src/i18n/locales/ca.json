@@ -45,7 +45,8 @@
     "onAir": "EN ANTENA",
     "paused": "EN PAUSA",
     "stopped": "ATURAT",
-    "noTrack": "Cap pista carregada"
+    "noTrack": "Cap pista carregada",
+    "seekHint": "Fes clic per saltar"
   },
   "stream": {
     "streaming": "EN DIRECTE",
