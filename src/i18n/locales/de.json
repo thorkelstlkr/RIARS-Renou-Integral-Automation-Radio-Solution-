@@ -68,7 +68,9 @@
     "disconnect": "Trennen"
   },
   "vuMeter": {
-    "title": "VU-Meter"
+    "title": "VU-Meter",
+    "clip": "CLIP",
+    "clipHint": "Der Ausgang hat in den letzten 2 Sekunden Vollaussteuerung (0 dBFS) erreicht"
   },
   "language": {
     "label": "Sprache",

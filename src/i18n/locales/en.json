@@ -68,7 +68,9 @@
     "disconnect": "Disconnect"
   },
   "vuMeter": {
-    "title": "VU Meter"
+    "title": "VU Meter",
+    "clip": "CLIP",
+    "clipHint": "The output reached full scale (0 dBFS) in the last 2 seconds"
   },
   "language": {
     "label": "Language",

@@ -61,6 +61,7 @@ pub fn api_routes() -> Router<Arc<AppState>> {
         .route("/player/stop", post(stop))
         .route("/player/next", post(next))
         .route("/player/volume", post(set_volume))
+        .route("/player/levels", get(levels))
         .route("/player/crossfade", get(get_crossfade).post(set_crossfade))
         .route("/player/load", post(load_track))
         .route("/library/tracks", get(library_tracks))
@@ -339,6 +340,11 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> axum::response::Response {
         (self.0, Json(serde_json::json!({ "error": self.1 }))).into_response()
     }
+}
+
+/// Output peaks since the previous call (each read resets them).
+async fn levels(State(state): State<Arc<AppState>>) -> Result<Json<riars_core::audio::Levels>, ApiError> {
+    Ok(Json(state.engine.lock().map_err(ApiError::internal)?.take_levels()))
 }
 
 async fn info() -> Json<ApiInfo> {

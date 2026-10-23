@@ -7,7 +7,7 @@ use serde::Serialize;
 
 use super::crossfade::CrossfadeConfig;
 use super::mixer::Mixer;
-use super::output::{AudioOutput, Command, StreamTap};
+use super::output::{AudioOutput, Command, Levels, StreamTap};
 use super::player::TrackPlayer;
 use crate::playlist::playlist::Playlist;
 
@@ -100,6 +100,11 @@ impl AudioEngine {
             crossfade,
             sample_rate,
         })
+    }
+
+    /// Output peaks since the previous call (silence without an output).
+    pub fn take_levels(&self) -> Levels {
+        self.output.as_ref().map(|o| o.shared.take_levels()).unwrap_or_default()
     }
 
     /// The audio sent to the sound card, for streaming. Can be taken once.

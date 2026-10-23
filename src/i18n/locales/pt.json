@@ -68,7 +68,9 @@
     "disconnect": "Desligar"
   },
   "vuMeter": {
-    "title": "Medidor VU"
+    "title": "Medidor VU",
+    "clip": "SATUR.",
+    "clipHint": "A saída atingiu o máximo (0 dBFS) nos últimos 2 segundos"
   },
   "language": {
     "label": "Idioma",

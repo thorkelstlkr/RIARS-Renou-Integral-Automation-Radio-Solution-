@@ -38,6 +38,25 @@ pub(crate) struct Shared {
     /// Crossfade length in ms between queued tracks; 0 disables it.
     crossfade_ms: AtomicU64,
     crossfade_curve: AtomicU8,
+    /// Highest |sample| per side (left, right) since the last `take_levels`, as f32
+    /// bits: for non-negative floats the bit patterns order like the values, so
+    /// `fetch_max` on the bits keeps the loudest peak.
+    peak_bits: [AtomicU32; 2],
+    /// Samples at or beyond full scale since the last `take_levels`.
+    clipped: AtomicU32,
+}
+
+/// Counted as clipping: the loudest 16-bit sample (32767/32768), since material at
+/// full scale never reaches exactly 1.0.
+const CLIP_LEVEL: f32 = 32767.0 / 32768.0;
+
+/// Output levels since the previous read: linear peaks (1.0 = full scale).
+#[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize)]
+pub struct Levels {
+    pub peak_left: f32,
+    pub peak_right: f32,
+    /// Samples that hit full scale.
+    pub clipped: u32,
 }
 
 impl Shared {
@@ -51,6 +70,17 @@ impl Shared {
             switches: AtomicU64::new(0),
             crossfade_ms: AtomicU64::new(0),
             crossfade_curve: AtomicU8::new(0),
+            peak_bits: [AtomicU32::new(0), AtomicU32::new(0)],
+            clipped: AtomicU32::new(0),
+        }
+    }
+
+    /// Read and reset the levels measured since the last call.
+    pub fn take_levels(&self) -> Levels {
+        Levels {
+            peak_left: f32::from_bits(self.peak_bits[0].swap(0, Ordering::Relaxed)),
+            peak_right: f32::from_bits(self.peak_bits[1].swap(0, Ordering::Relaxed)),
+            clipped: self.clipped.swap(0, Ordering::Relaxed),
         }
     }
 
@@ -321,6 +351,28 @@ impl Renderer {
             }
         }
 
+        // Levels of what actually goes out (after volume). Channels past the first two
+        // count as right; mono feeds both sides.
+        let mut peaks = [0.0f32; 2];
+        let mut clipped = 0u32;
+        for (i, sample) in data.iter().enumerate() {
+            let value = f32::from_sample_(*sample).abs();
+            let side = (i % self.out_channels).min(1);
+            peaks[side] = peaks[side].max(value);
+            if value >= CLIP_LEVEL {
+                clipped += 1;
+            }
+        }
+        if self.out_channels == 1 {
+            peaks[1] = peaks[0];
+        }
+        for (slot, peak) in shared.peak_bits.iter().zip(peaks) {
+            slot.fetch_max(peak.to_bits(), Ordering::Relaxed);
+        }
+        if clipped > 0 {
+            shared.clipped.fetch_add(clipped, Ordering::Relaxed);
+        }
+
         // Silence included, so a stream stays alive while paused.
         for sample in data.iter() {
             if self.tap.push(f32::from_sample_(*sample)).is_err() {
@@ -583,6 +635,43 @@ mod tests {
         let mut block = [0.0f32; 10];
         renderer.process(&mut block);
         assert!((block[0] - 0.2).abs() < 1e-6);
+    }
+
+    #[test]
+    fn levels_track_peaks_and_clipping() {
+        let (_cmd_tx, commands) = crossbeam_channel::bounded(4);
+        let (garbage, _garbage_rx) = crossbeam_channel::bounded(4);
+        let shared = Arc::new(Shared::new(1.0));
+        let parts = Parts { commands, garbage, shared: Arc::clone(&shared) };
+        let (mut renderer, _tap) = Renderer::new(parts, 1000, 2);
+        // Stereo source: left 0.5, right 0.25.
+        let samples = [0.5f32, 0.25].repeat(100);
+        renderer.decks.current =
+            Some(Box::new(TrackPlayer::from_samples(PathBuf::from("s.wav"), samples, 2, 1000)));
+        shared.playing.store(true, Ordering::Relaxed);
+
+        let mut block = [0.0f32; 20];
+        renderer.process(&mut block);
+        renderer.process(&mut block);
+        let levels = shared.take_levels();
+        assert_eq!((levels.peak_left, levels.peak_right, levels.clipped), (0.5, 0.25, 0));
+        // Reading resets them.
+        assert_eq!(shared.take_levels(), Levels::default());
+
+        // Volume applies, and full scale counts as clipping.
+        shared.set_volume(2.0);
+        renderer.process(&mut block);
+        let levels = shared.take_levels();
+        assert_eq!((levels.peak_left, levels.peak_right), (1.0, 0.5));
+        assert_eq!(levels.clipped, 10);
+
+        // A 16-bit full-scale sample counts too; just below it does not.
+        shared.set_volume(32767.0 / 32768.0 / 0.5);
+        renderer.process(&mut block);
+        assert_eq!(shared.take_levels().clipped, 10);
+        shared.set_volume(0.999 / 0.5);
+        renderer.process(&mut block);
+        assert_eq!(shared.take_levels().clipped, 0);
     }
 
     #[test]
