@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RIARS</title>
+<style>
+  :root { --bg:#0d1117; --panel:#161b22; --input:#21262d; --border:#30363d; --text:#e6edf3; --muted:#8b949e; --accent:#f78c26; --green:#3fb950; --yellow:#d29922; --red:#f85149; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
+  header, section { max-width: 760px; margin: 0 auto; padding: 12px 16px; }
+  header { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+  h1 { margin: 0; font-size: 16px; color: var(--accent); flex: 1; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0 0 8px; }
+  button, input { font: inherit; color: var(--text); background: var(--input); border: 1px solid var(--border); border-radius: 6px; }
+  button { padding: 8px 12px; cursor: pointer; }
+  input { padding: 8px; width: 100%; }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: var(--input); color: var(--muted); }
+  .on { background: var(--green); color: #000; } .warn { background: var(--yellow); color: #000; } .bad { background: var(--red); color: #fff; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+  .track { font-size: 17px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar { height: 10px; background: var(--input); border-radius: 5px; overflow: hidden; margin: 10px 0 4px; cursor: pointer; }
+  .fill { height: 100%; width: 0; background: var(--accent); }
+  .times { display: flex; justify-content: space-between; font: 12px monospace; color: var(--muted); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .row input[type=range] { flex: 1; min-width: 120px; padding: 0; }
+  ul { list-style: none; margin: 0; padding: 0; max-height: 40vh; overflow-y: auto; }
+  li { display: flex; gap: 8px; align-items: center; padding: 7px 4px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  li span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  li small { color: var(--muted); font-family: monospace; }
+  li.current { border-left: 3px solid var(--accent); padding-left: 6px; }
+  #login { max-width: 360px; margin: 15vh auto; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .error { color: var(--red); font-size: 12px; min-height: 16px; }
+</style>
+</head>
+<body>
+<div id="login" hidden>
+  <div class="card">
+    <h2>RIARS</h2>
+    <p class="muted" data-t="tokenHelp"></p>
+    <form id="loginForm"><input id="token" type="password" autocomplete="current-password"><div class="row"><button data-t="enter"></button></div></form>
+    <div class="error" id="loginError"></div>
+  </div>
+</div>
+<div id="app" hidden>
+<header><h1>RIARS</h1><span class="badge" id="stream"></span><span class="badge bad" id="deadair" hidden data-t="deadAir"></span><span class="badge" id="state"></span></header>
+<section>
+  <div class="card">
+    <div class="track" id="track">—</div>
+    <div class="bar" id="bar"><div class="fill" id="fill"></div></div>
+    <div class="times"><span id="pos">0:00</span><span id="dur">0:00</span></div>
+    <div class="row">
+      <button data-cmd="play">&#9654;</button><button data-cmd="pause">&#10074;&#10074;</button>
+      <button data-cmd="stop">&#9724;</button><button data-cmd="next">&#9197;</button>
+      <input type="range" id="volume" min="0" max="1" step="0.01"><small id="volPct"></small>
+    </div>
+    <div class="error" id="error"></div>
+  </div>
+  <div class="card"><h2 data-t="playlist"></h2><ul id="playlist"></ul></div>
+  <div class="card"><h2 data-t="library"></h2><input id="search" data-tp="search"><p class="muted" id="count"></p><ul id="results"></ul></div>
+</section>
+</div>
+<script>
+"use strict";
+// Small, dependency-free control panel for headless RIARS servers. State comes over
+// the WebSocket, which only sends changes; the playlist is refetched when the track
+// changes, and the stream status is checked every 5 s while the page is visible.
+const L = {
+  en: { tokenHelp: "Enter the API token (riars-server --api-token, or the one printed at startup).", enter: "Enter",
+        playlist: "Playlist", library: "Library", search: "Search…", tracks: "tracks", track: "track", badToken: "Wrong token",
+        Playing: "ON AIR", Paused: "PAUSED", Stopped: "STOPPED", Connected: "STREAMING", Connecting: "CONNECTING",
+        Error: "STREAM ERROR", Disconnected: "OFFLINE", deadAir: "SILENCE", empty: "Empty", lost: "Connection lost, retrying…" },
+  es: { tokenHelp: "Introduce el token de la API (riars-server --api-token, o el que se muestra al arrancar).", enter: "Entrar",
+        playlist: "Lista de reproducción", library: "Biblioteca", search: "Buscar…", tracks: "pistas", track: "pista", badToken: "Token incorrecto",
+        Playing: "AL AIRE", Paused: "PAUSA", Stopped: "DETENIDO", Connected: "EMITIENDO", Connecting: "CONECTANDO",
+        Error: "ERROR DE STREAM", Disconnected: "DESCONECTADO", deadAir: "SILENCIO", empty: "Vacía", lost: "Conexión perdida, reintentando…" },
+};
+const T = L[(navigator.language || "en").slice(0, 2)] || L.en;
+document.querySelectorAll("[data-t]").forEach((el) => (el.textContent = T[el.dataset.t]));
+document.querySelectorAll("[data-tp]").forEach((el) => (el.placeholder = T[el.dataset.tp]));
+const $ = (id) => document.getElementById(id);
+const store = { get() { try { return localStorage.getItem("riars.token"); } catch { return null; } },
+                set(v) { try { v ? localStorage.setItem("riars.token", v) : localStorage.removeItem("riars.token"); } catch {} } };
+// undefined: the first state always loads the playlist, even with nothing playing.
+let token = store.get(), state = null, lastTrack = undefined, ws = null;
+const fmt = (ms) => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+
+async function api(path, body) {
+  const r = await fetch("/api/v1" + path, { method: body === undefined ? "GET" : "POST",
+    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body) });
+  if (r.status === 401) { logout(T.badToken); throw new Error("unauthorized"); }
+  const text = await r.text();
+  if (!r.ok) { let m = text; try { m = JSON.parse(text).error; } catch {} $("error").textContent = m; throw new Error(m); }
+  $("error").textContent = "";
+  try { return JSON.parse(text); } catch { return text; }
+}
+
+function render(s) {
+  state = s;
+  $("track").textContent = s.current_track || "—";
+  $("state").textContent = T[s.state] || s.state;
+  $("state").className = "badge" + (s.state === "Playing" ? " on" : s.state === "Paused" ? " warn" : "");
+  $("deadair").hidden = !s.dead_air;
+  $("fill").style.width = s.duration_ms ? (100 * s.position_ms / s.duration_ms) + "%" : "0";
+  $("pos").textContent = fmt(s.position_ms); $("dur").textContent = fmt(s.duration_ms);
+  if (document.activeElement !== $("volume")) { $("volume").value = s.volume; }
+  $("volPct").textContent = Math.round(s.volume * 100) + "%";
+  if (s.current_track !== lastTrack) { lastTrack = s.current_track; loadPlaylist(); }
+}
+
+async function loadPlaylist() {
+  const pl = await api("/playlist").catch(() => null);
+  if (!pl) return;
+  $("playlist").replaceChildren(...(pl.items.length ? pl.items.map((it, i) => {
+    const li = document.createElement("li");
+    if (i === pl.current_index) li.className = "current";
+    const name = document.createElement("span"); name.textContent = it.artist ? `${it.artist} — ${it.title}` : it.title;
+    const dur = document.createElement("small"); dur.textContent = it.duration_ms ? fmt(it.duration_ms) : "";
+    const play = document.createElement("button"); play.textContent = "▶";
+    play.onclick = () => api("/playlist/play", { index: i }).then(loadPlaylist).catch(() => {});
+    li.append(name, dur, play);
+    return li;
+  }) : [Object.assign(document.createElement("li"), { textContent: T.empty })]));
+}
+
+let searchTimer = 0;
+async function search() {
+  const q = encodeURIComponent($("search").value);
+  const page = await api(`/library/query?search=${q}&limit=30`).catch(() => null);
+  if (!page) return;
+  $("count").textContent = `${page.total} ${page.total === 1 ? T.track : T.tracks}`;
+  $("results").replaceChildren(...page.tracks.map((tr) => {
+    const li = document.createElement("li");
+    const name = document.createElement("span"); name.textContent = tr.artist ? `${tr.artist} — ${tr.title}` : tr.title;
+    const add = document.createElement("button"); add.textContent = "+";
+    add.onclick = () => api("/playlist/add", { path: tr.file_path, title: tr.title, artist: tr.artist }).then(loadPlaylist).catch(() => {});
+    li.append(name, add);
+    return li;
+  }));
+}
+
+async function streamStatus() {
+  if (document.hidden) return;
+  const s = await api("/stream").catch(() => null);
+  const st = s && s.status ? s.status.state : "Disconnected";
+  $("stream").textContent = T[st] || st;
+  $("stream").className = "badge" + (st === "Connected" ? " on" : st === "Error" ? " bad" : st === "Connecting" ? " warn" : "");
+}
+
+function connect() {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}/ws/events?token=${encodeURIComponent(token)}`);
+  ws.onmessage = (m) => { try { render(JSON.parse(m.data)); } catch {} };
+  ws.onclose = () => { if (token) { $("error").textContent = T.lost; setTimeout(connect, 2000); } };
+  ws.onopen = () => { $("error").textContent = ""; };
+}
+
+async function start() {
+  try { await api("/status"); } catch { return; }
+  $("login").hidden = true; $("app").hidden = false;
+  connect(); search(); streamStatus();
+  setInterval(streamStatus, 5000);
+}
+function logout(msg) {
+  token = null; store.set(null); if (ws) ws.close();
+  $("app").hidden = true; $("login").hidden = false; $("loginError").textContent = msg || "";
+}
+
+$("loginForm").onsubmit = (e) => { e.preventDefault(); token = $("token").value.trim(); store.set(token); start(); };
+document.querySelectorAll("[data-cmd]").forEach((b) => (b.onclick = () => api("/player/" + b.dataset.cmd, {}).catch(() => {})));
+$("volume").oninput = (e) => api("/player/volume", { level: Number(e.target.value) }).catch(() => {});
+$("bar").onclick = (e) => {
+  if (!state || !state.duration_ms) return;
+  const r = e.currentTarget.getBoundingClientRect();
+  api("/player/seek", { position_ms: Math.round((e.clientX - r.left) / r.width * state.duration_ms) }).catch(() => {});
+};
+$("search").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(search, 300); };
+if (token) start(); else logout();
+</script>
+</body>
+</html>
