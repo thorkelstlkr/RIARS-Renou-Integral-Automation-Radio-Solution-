@@ -28,8 +28,10 @@ fn state_json(state: &AppState) -> Option<String> {
 async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     log::info!("WebSocket client connected");
 
-    if let Some(json) = state_json(&state) {
-        let _ = socket.send(Message::Text(json.into())).await;
+    // The state on connect, then only changes (while playing, that is the position).
+    let mut last = state_json(&state);
+    if let Some(json) = &last {
+        let _ = socket.send(Message::Text(json.clone().into())).await;
     }
 
     let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(500));
@@ -37,10 +39,12 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     loop {
         tokio::select! {
             _ = interval.tick() => {
-                if let Some(json) = state_json(&state) {
-                    if socket.send(Message::Text(json.into())).await.is_err() {
+                let json = state_json(&state);
+                if json.is_some() && json != last {
+                    if socket.send(Message::Text(json.clone().unwrap_or_default().into())).await.is_err() {
                         break;
                     }
+                    last = json;
                 }
             }
             msg = socket.recv() => {

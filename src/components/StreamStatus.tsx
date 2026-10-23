@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 type StreamState = "Disconnected" | "Connecting" | "Connected" | "Error";
 
@@ -83,8 +84,8 @@ export default function StreamStatus() {
 
   useEffect(() => {
     refresh();
-    const id = setInterval(refresh, 1000);
-    return () => clearInterval(id);
+    const unlisten = listen<StreamInfo>("stream-status", (e) => setInfo(e.payload));
+    return () => { unlisten.then((f) => f()); };
   }, [refresh]);
 
   const set = <K extends keyof IcecastConfig>(key: K, value: IcecastConfig[K]) =>

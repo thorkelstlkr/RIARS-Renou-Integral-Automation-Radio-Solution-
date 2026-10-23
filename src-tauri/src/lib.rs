@@ -6,8 +6,8 @@ use std::path::PathBuf;
 use riars_core::automation::StreamCommand;
 use riars_core::playlist::scheduler::{EventAction, EventTrigger, ScheduledEvent};
 use riars_core::{IcecastConfig, SavedPlaylist, Scheduler};
-use riars_stream::{StreamService, StreamStatus};
-use tauri::{AppHandle, Manager, State};
+use riars_stream::{StreamService, StreamState, StreamStatus};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 #[tauri::command]
 fn set_locale(lang: String) -> Result<(), String> {
@@ -198,11 +198,17 @@ fn engine_get_state(state: State<AppState>) -> Result<EngineStateInfo, String> {
     Ok(state.engine.lock().map_err(|e| e.to_string())?.state_info())
 }
 
-/// Auto-advance and the stream title, on a backend thread: playback must go on while
-/// the window is minimised and the UI stops polling.
+/// Auto-advance, stream title, session saving and UI events, on a backend thread:
+/// playback must go on while the window is minimised, and the UI is told about
+/// changes instead of polling for them.
 fn run_engine_loop(app: AppHandle) {
+    let mut last_state: Option<EngineStateInfo> = None;
+    let mut last_revision = u64::MAX;
+    let mut last_stream: Option<String> = None;
+    let mut ticks: u64 = 0;
     loop {
         std::thread::sleep(std::time::Duration::from_millis(250));
+        ticks += 1;
         let state = app.state::<AppState>();
         let config = state.stream.as_ref().and_then(|s| s.config_for_session());
         let due = match (state.session.lock(), state.engine.lock()) {
@@ -212,23 +218,67 @@ fn run_engine_loop(app: AppHandle) {
         if let (Some(session), Ok(saver)) = (due, state.session.lock()) {
             saver.write(&session); // engine unlocked: slow disks do not stall it
         }
-        let Ok(mut engine) = state.engine.lock() else { continue };
-        if let Some(index) = engine.poll() {
-            let app = app.clone();
-            tauri::async_runtime::spawn(async move {
-                if let Err(e) = decode_and_start(app, index, true).await {
-                    log::error!("Auto-advance failed: {e}");
-                }
-            });
-        }
-        if let (Some(stream), Some(title)) = (&state.stream, engine.now_playing_title()) {
-            if let Ok(mut last) = state.stream_title.lock() {
-                if *last != title {
-                    stream.set_title(&title);
-                    *last = title;
+        let (info, revision) = {
+            let Ok(mut engine) = state.engine.lock() else { continue };
+            if let Some(index) = engine.poll() {
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(e) = decode_and_start(app, index, true).await {
+                        log::error!("Auto-advance failed: {e}");
+                    }
+                });
+            }
+            if let (Some(stream), Some(title)) = (&state.stream, engine.now_playing_title()) {
+                if let Ok(mut last) = state.stream_title.lock() {
+                    if *last != title {
+                        stream.set_title(&title);
+                        *last = title;
+                    }
                 }
             }
+            (engine.state_info(), engine.playlist_revision())
+        };
+
+        // Engine state: on any change, which while playing is the position every tick.
+        if last_state.as_ref() != Some(&info) {
+            let _ = app.emit("engine-state", &info);
+            last_state = Some(info);
         }
+        if revision != last_revision {
+            let _ = app.emit("playlist-revision", revision);
+            last_revision = revision;
+        }
+        // Stream: on state/title/error changes, and the byte count once a second.
+        let stream = stream_info(&state);
+        let key = stream.status.as_ref().map(|s| format!("{:?}|{:?}|{:?}", s.state, s.title, s.last_error));
+        let connected = stream.status.as_ref().is_some_and(|s| s.state == StreamState::Connected);
+        if key != last_stream || (connected && ticks % 4 == 0) {
+            let _ = app.emit("stream-status", &stream);
+            last_stream = key;
+        }
+    }
+}
+
+/// VU meter levels at 20 Hz, only while there is something to show and the window can
+/// be seen: a stopped or minimised station costs nothing here.
+fn run_meter_loop(app: AppHandle) {
+    let mut silent = true;
+    loop {
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        let visible = app
+            .get_webview_window("main")
+            .map(|w| w.is_visible().unwrap_or(true) && !w.is_minimized().unwrap_or(false))
+            .unwrap_or(false);
+        let state = app.state::<AppState>();
+        let Ok(engine) = state.engine.lock() else { continue };
+        let levels = engine.take_levels();
+        drop(engine);
+        let quiet = levels.peak_left == 0.0 && levels.peak_right == 0.0 && levels.clipped == 0;
+        // One last zero reading lets the meter fall; then nothing until sound returns.
+        if visible && !(quiet && silent) {
+            let _ = app.emit("levels", &levels);
+        }
+        silent = quiet;
     }
 }
 
@@ -394,6 +444,10 @@ pub fn run() {
             std::thread::Builder::new()
                 .name("riars-engine-loop".into())
                 .spawn(move || run_engine_loop(engine_app))?;
+            let meter_app = app.handle().clone();
+            std::thread::Builder::new()
+                .name("riars-meter-loop".into())
+                .spawn(move || run_meter_loop(meter_app))?;
             // Run the schedule on its own thread (an action may decode a track).
             let handle = app.handle().clone();
             std::thread::Builder::new().name("riars-scheduler".into()).spawn(move || {
