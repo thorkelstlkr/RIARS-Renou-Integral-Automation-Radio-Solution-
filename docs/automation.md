@@ -1,6 +1,6 @@
 # Automatización a largo plazo (diseño)
 
-Estado: **aprobado** (23-10-2026) con las propuestas por defecto del apartado 8. Fases 1 (núcleo) y 2 (publicidad) implementadas.
+Estado: **aprobado** (23-10-2026) con las propuestas por defecto del apartado 8. Fases 1 (núcleo), 2 (publicidad) y 3 (API, WebSocket y MCP) implementadas.
 
 ## 1. Objetivo
 
@@ -191,9 +191,36 @@ Cambiar a automático no corta lo que suena: añade por detrás.
 
 ## 6. API, MCP e interfaces
 
-- REST `/api/v1/automation/...`: categorías, asignación de pistas (incluida en lote por regla), relojes y huecos, parrilla, campañas, anunciantes, `GET /automation/preview?from=&hours=` (lo que sonaría), `GET /logs/plays.csv?from=&to=&advertiser=`, y activar/desactivar el modo automático.
-- Eventos WebSocket: `automation_generated`, `automation_warning` (categoría vacía, cuñas que no caben), `ad_aired`.
-- MCP: las mismas operaciones como herramientas (`create_clock`, `set_grid_rule`, `create_campaign`, `preview_schedule`, `export_play_log`...). Pensado para que un agente pueda montar la programación de una semana.
+### 6.1 REST (fase 3)
+
+Todo bajo `/api/v1/automation`, con el mismo token que el resto de la API. Errores de validación: 400 `{"error": "..."}`.
+
+| Qué | Rutas |
+|---|---|
+| Estado y ajustes | `GET status` (activo, periodo de reloj en curso, avisos recientes) · `GET/POST config` · `POST enable {enabled}` |
+| Categorías | `GET/POST categories` (id 0 crea) · `POST categories/delete` · `POST categories/tracks {category_id, track_ids, weight, remove}` · `GET tracks/{id}/categories` · `POST tracks/codes` · `POST tracks/enabled` · `GET codes` |
+| Reglas de autoasignación | `GET/POST rules` · `POST rules/delete` · `POST rules/apply` |
+| Relojes y parrilla | `GET/POST clocks` · `POST clocks/delete` · `GET/POST grid` · `POST grid/delete` |
+| Publicidad | `GET/POST advertisers` · `POST advertisers/delete` · `GET/POST campaigns` · `GET campaigns/{id}` · `POST campaigns/delete` |
+| Vista previa | `GET preview?from=&hours=`: lo que sonaría (hasta 48 h), sin escribir nada |
+| Registro y facturación | `GET log?from=&to=&limit=` · `GET log.csv` · `GET delivery?from=&to=` · `GET delivery.csv` · `GET campaign-log.csv?advertiser_id=&campaign_id=` |
+
+Cada cambio de categorías, relojes, parrilla, campañas o ajustes avisa al generador, que lo aplica a partir de la siguiente pista generada; lo que ya está en la playlist no se toca.
+
+### 6.2 WebSocket
+
+`/ws/events` sigue enviando el estado del motor y, además, mensajes `{"type": "automation", "generated", "logged", "cut_to", "warnings"}` cuando el generador añade pistas, se registran emisiones, una hora fija dura corta lo que suena o hay avisos. Los clientes deben ignorar los tipos que no conozcan.
+
+### 6.3 MCP
+
+Las mismas operaciones como herramientas: `automation_status`, `set_automation_enabled`, `get_automation_config`/`set_automation_config`, categorías (`list_categories`, `save_category`, `assign_tracks_to_category`...), reglas, relojes (`save_clock`), parrilla (`save_grid_rule`), anunciantes y campañas, `preview_schedule`, `get_play_log` y `delivery_report`. Las respuestas van compactas para no llenar el contexto del agente; los esquemas traen ejemplos de los tipos (huecos de reloj, objetivos de la parrilla, máscaras de días y meses).
+
+### 6.4 Crossfade por tipo
+
+`AutomationConfig.no_overlap_kinds` (por defecto, solo cuñas): los elementos de esos tipos nunca se funden con el anterior ni con el siguiente. El generador marca cada elemento (`PlaylistItem.no_overlap`) y el hilo de audio salta el fundido en esa transición.
+
+### 6.5 Interfaz (fase 4)
+
 - **Guía visual**: la disposición de RadioBOSS Advanced, que el usuario tomó como referencia. Arriba: reloj, pista anterior, en el aire y siguiente. A la izquierda: biblioteca por carpetas y categorías, con un registro debajo. En el centro: playlist en pestañas con columnas de hora de inicio, duración, repeticiones, intro, outro, valoración y última emisión, y los controles debajo. Abajo del todo: barra de estado con el detector de silencio y el programador.
 - **Escritorio** (Tauri + React): pestañas *Categorías*, *Relojes* (editor de huecos con vista de "tarta" de la hora), *Parrilla* (semana tipo + calendario), *Publicidad* (anunciantes, campañas, estado de cumplimiento) y *Registro*.
 - **Panel web** (`/`): vista de la parrilla del día, lo que viene, estado de campañas y descarga del CSV. La edición completa queda en el escritorio y la API.

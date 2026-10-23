@@ -5,24 +5,41 @@
 //! locks one at a time. Callers must never lock `Automation` while holding the engine
 //! or library lock.
 
+use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use chrono::NaiveDateTime;
+use serde::{Deserialize, Serialize};
 
-use super::generator::Generator;
+use super::generator::{Catalog, Generator, PeriodInfo};
+use super::model::{AutomationConfig, CandidateRow, Campaign, Category, Clock, GridRule};
+use crate::library::db::Track;
+use crate::playlist::playlist::{Playlist, PlaylistItem};
 use crate::audio::engine::{play_index_unlocked, AudioEngine, PlaybackState};
 use crate::library::db::MediaLibrary;
 
 /// With nothing else happening, the lookahead is checked this often (the clock moves
 /// on even when the playlist does not).
 const CHECK_EVERY: Duration = Duration::from_secs(10);
+/// Recent warnings kept for the status.
+const MAX_WARNINGS: usize = 50;
 
 pub struct Automation {
     generator: Generator,
     /// Engine playlist revision after the last tick.
     last_revision: Option<u64>,
     next_check: Instant,
+    warnings: VecDeque<(NaiveDateTime, String)>,
+}
+
+/// What the automation is doing, for UIs and agents.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutomationStatus {
+    pub enabled: bool,
+    pub period: Option<PeriodInfo>,
+    /// Recent problems, oldest first.
+    pub warnings: Vec<(NaiveDateTime, String)>,
 }
 
 impl Default for Automation {
@@ -46,7 +63,22 @@ pub struct TickReport {
 
 impl Automation {
     pub fn new() -> Self {
-        Self { generator: Generator::new(), last_revision: None, next_check: Instant::now() }
+        Self { generator: Generator::new(), last_revision: None, next_check: Instant::now(), warnings: VecDeque::new() }
+    }
+
+    fn push_warning(&mut self, at: NaiveDateTime, warning: String) {
+        if self.warnings.len() >= MAX_WARNINGS {
+            self.warnings.pop_front();
+        }
+        self.warnings.push_back((at, warning));
+    }
+
+    pub fn status(&self) -> AutomationStatus {
+        AutomationStatus {
+            enabled: self.generator.config().enabled,
+            period: self.generator.period(),
+            warnings: self.warnings.iter().cloned().collect(),
+        }
     }
 
     pub fn generator_mut(&mut self) -> &mut Generator {
@@ -78,22 +110,57 @@ fn lookahead(engine: &AudioEngine, now: NaiveDateTime) -> (NaiveDateTime, usize,
     let length = |ms: u64| if ms > 0 { ms } else { 180_000 };
     let ms_ahead: u64 = ahead.iter().map(|i| length(i.duration_ms)).sum();
     let remaining = if playing { info.duration_ms.saturating_sub(info.position_ms) } else { 0 };
-    let span = (remaining + ahead.iter().map(|i| length(i.duration_ms).saturating_sub(overlap)).sum::<u64>())
-        .saturating_sub(if playing && !ahead.is_empty() { overlap } else { 0 });
+    let overlap_of = |i: &PlaylistItem| if i.no_overlap { 0 } else { overlap };
+    let span = (remaining + ahead.iter().map(|i| length(i.duration_ms).saturating_sub(overlap_of(i))).sum::<u64>())
+        .saturating_sub(match (playing, ahead.first()) {
+            (true, Some(first)) => overlap_of(first),
+            _ => 0,
+        });
     (now + chrono::Duration::milliseconds(span as i64), ahead.len(), ms_ahead, overlap)
 }
 
-/// Log what came off air, cut in for a hard anchor, and top up the on-air playlist.
+/// Log what came off air, top up the on-air playlist, and cut in for a hard anchor.
 /// Blocking (SQLite, and decoding for a hard anchor): run it from a worker thread.
+/// Failures also go to the status warnings.
 pub fn tick(
     engine: &Mutex<AudioEngine>,
     library: &Mutex<MediaLibrary>,
     automation: &Mutex<Automation>,
     now: NaiveDateTime,
 ) -> Result<TickReport, String> {
+    let result = {
+        let mut auto = automation.lock().map_err(|e| e.to_string())?;
+        let result = tick_locked(engine, library, &mut auto, now);
+        if let Err(e) = &result {
+            auto.push_warning(now, format!("automation error: {e}"));
+        }
+        result
+    };
+    let (mut report, cut) = result?;
+    // Decoded without the automation lock, so status requests and edits do not wait.
+    if let Some((id, index)) = cut {
+        log::info!("Automation: hard anchor, cutting to playlist item {index}");
+        if let Err(e) = play_index_unlocked(engine, index, false) {
+            if let Ok(mut auto) = automation.lock() {
+                auto.push_warning(now, format!("hard anchor cut failed: {e}"));
+            }
+            return Err(e);
+        }
+        report.cut_to = Some(id);
+    }
+    Ok(report)
+}
+
+/// The part of `tick` that needs the automation; returns the hard-anchor cut to make.
+fn tick_locked(
+    engine: &Mutex<AudioEngine>,
+    library: &Mutex<MediaLibrary>,
+    auto: &mut Automation,
+    now: NaiveDateTime,
+) -> Result<(TickReport, Option<(String, usize)>), String> {
     let err = |e: &dyn std::fmt::Display| e.to_string();
-    let mut auto = automation.lock().map_err(|e| err(&e))?;
     let mut report = TickReport::default();
+    let mut cut = None;
     auto.next_check = Instant::now() + CHECK_EVERY;
 
     let records = engine.lock().map_err(|e| err(&e))?.take_play_records();
@@ -110,11 +177,7 @@ pub fn tick(
                 let engine = engine.lock().map_err(|e| err(&e))?;
                 engine.playlist().index_of(&id).filter(|&i| i != engine.playlist().current_index)
             };
-            if let Some(index) = index {
-                log::info!("Automation: hard anchor, cutting to playlist item {index}");
-                play_index_unlocked(engine, index, false)?;
-                report.cut_to = Some(id);
-            }
+            cut = index.map(|index| (id, index));
         }
 
         let (start, items_ahead, ms_ahead, overlap) = lookahead(&*engine.lock().map_err(|e| err(&e))?, now);
@@ -135,9 +198,100 @@ pub fn tick(
             engine.lock().map_err(|e| err(&e))?.append_generated(items, config.keep_played as usize);
         }
         report.warnings = auto.generator.take_warnings();
+        for warning in &report.warnings {
+            auto.push_warning(now, warning.clone());
+        }
     }
     auto.last_revision = Some(engine.lock().map_err(|e| err(&e))?.playlist_revision());
-    Ok(report)
+    Ok((report, cut))
+}
+
+/// The library, locked only for each query: a long preview does not hold it.
+/// Playlist positions are kept in memory, so a preview changes nothing.
+struct LockedCatalog<'a> {
+    library: &'a Mutex<crate::library::db::MediaLibrary>,
+    kv: HashMap<String, String>,
+}
+
+impl LockedCatalog<'_> {
+    fn with<T>(&self, f: impl FnOnce(&crate::library::db::MediaLibrary) -> Result<T, String>) -> Result<T, String> {
+        f(&*self.library.lock().map_err(|e| e.to_string())?)
+    }
+}
+
+impl Catalog for LockedCatalog<'_> {
+    fn revision(&self) -> u64 {
+        self.library.lock().map_or(0, |l| l.revision())
+    }
+    fn automation_config(&self) -> Result<AutomationConfig, String> {
+        self.with(|l| l.automation_config())
+    }
+    fn categories(&self) -> Result<Vec<Category>, String> {
+        self.with(|l| l.list_categories())
+    }
+    fn clocks(&self) -> Result<Vec<Clock>, String> {
+        self.with(|l| l.list_clocks())
+    }
+    fn grid_rules(&self) -> Result<Vec<GridRule>, String> {
+        self.with(|l| l.list_grid_rules())
+    }
+    fn candidates(&self, category_id: i64) -> Result<Vec<CandidateRow>, String> {
+        self.with(|l| l.category_candidates(category_id))
+    }
+    fn track(&self, id: i64) -> Result<Option<Track>, String> {
+        self.with(|l| l.get_track(id))
+    }
+    fn playlist(&self, id_or_name: &str) -> Result<Playlist, String> {
+        self.with(|l| l.load_playlist(id_or_name))
+    }
+    fn recent_plays(&self, since: NaiveDateTime) -> Result<Vec<(Option<i64>, String, NaiveDateTime)>, String> {
+        self.with(|l| Catalog::recent_plays(l, since))
+    }
+    fn kv_get(&self, key: &str) -> Result<Option<String>, String> {
+        match self.kv.get(key) {
+            Some(value) => Ok(Some(value.clone())),
+            None => self.with(|l| l.kv_get(key)),
+        }
+    }
+    fn kv_set(&mut self, key: &str, value: &str) -> Result<(), String> {
+        self.kv.insert(key.to_string(), value.to_string());
+        Ok(())
+    }
+    fn campaigns(&self) -> Result<Vec<Campaign>, String> {
+        self.with(|l| l.list_campaigns())
+    }
+    fn campaign_plays(&self, from: NaiveDateTime, to: NaiveDateTime) -> Result<Vec<(i64, NaiveDateTime)>, String> {
+        self.with(|l| l.campaign_plays(from, to))
+    }
+}
+
+/// Longest preview, in hours.
+pub const MAX_PREVIEW_HOURS: u32 = 48;
+
+/// What the automation would put on air from `from` for `hours` (at most
+/// `MAX_PREVIEW_HOURS`), whether or not it is enabled, with `overlap_ms` of crossfade
+/// between items. Writes nothing; the real playlist may differ in its random choices.
+/// Blocking: run it on a worker thread.
+pub fn preview(
+    library: &Mutex<crate::library::db::MediaLibrary>,
+    from: NaiveDateTime,
+    hours: u32,
+    overlap_ms: u64,
+) -> Result<Vec<PlaylistItem>, String> {
+    let mut catalog = LockedCatalog { library, kv: HashMap::new() };
+    let mut generator = Generator::with_seed(from.and_utc().timestamp() as u64 | 1);
+    let until = from + chrono::Duration::hours(hours.clamp(1, MAX_PREVIEW_HOURS) as i64);
+    let mut items = Vec::new();
+    let mut t = from;
+    while t < until {
+        let batch = generator.generate(&mut catalog, t, 50, 0, overlap_ms)?;
+        let Some(last) = batch.last() else { break };
+        let length = if last.duration_ms > 0 { last.duration_ms } else { 180_000 };
+        let overlap = if last.no_overlap { 0 } else { overlap_ms };
+        t = last.planned_at.unwrap_or(t) + chrono::Duration::milliseconds(length.saturating_sub(overlap).max(1000) as i64);
+        items.extend(batch.into_iter().filter(|i| i.planned_at.is_none_or(|at| at < until)));
+    }
+    Ok(items)
 }
 
 #[cfg(test)]
@@ -205,8 +359,12 @@ mod tests {
         assert_eq!(tick(&engine, &library, &automation, now).unwrap().generated, 0);
         let engine = engine.lock().unwrap();
         assert!(engine.playlist().items.iter().all(|i| i.generated && i.track_id.is_some()));
-        // Generated items do not trigger a session save on their own.
         drop(engine);
+        // A preview of two hours writes nothing and covers the span.
+        let items = preview(&library, now, 2, 0).unwrap();
+        let span = items.last().unwrap().planned_at.unwrap() - now;
+        assert!(span > chrono::Duration::minutes(110) && span <= chrono::Duration::hours(2), "{span}");
+        assert!(automation.lock().unwrap().status().enabled);
         drop(library);
         for ext in ["", "-wal", "-shm"] {
             let _ = std::fs::remove_file(format!("{}{ext}", path.display()));

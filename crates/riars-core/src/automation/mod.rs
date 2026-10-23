@@ -12,4 +12,5 @@ pub mod traffic;
 
 pub use events::{run_due, scheduler_loop, Fired, StreamCommand};
 pub use generator::{Catalog, Generator};
-pub use runner::{tick, Automation, TickReport};
+pub use model::{parse_api_date, parse_api_datetime};
+pub use runner::{preview, tick, Automation, AutomationStatus, TickReport};

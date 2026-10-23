@@ -51,6 +51,19 @@ const MAX_RELAX: u8 = 5;
 const MAX_ITEMS_PER_CALL: usize = 100;
 const MAX_WARNINGS: usize = 50;
 
+/// Where the generator is: the clock period it fills and what chose it.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct PeriodInfo {
+    pub start: NaiveDateTime,
+    pub end: NaiveDateTime,
+    pub clock_id: Option<String>,
+    /// A saved playlist played by the grid instead of a clock.
+    pub playlist_id: Option<String>,
+    pub rule_id: Option<String>,
+    /// Next clock slot to fill.
+    pub slot: usize,
+}
+
 /// A track as rotation sees it: small, so a whole library fits in little RAM.
 #[derive(Debug, Clone)]
 struct Candidate {
@@ -256,6 +269,24 @@ impl Generator {
         due.into_iter().rev().find(|(_, at)| now - *at < Duration::seconds(60)).map(|(id, _)| id)
     }
 
+    /// The clock period the generator is filling (it runs a little ahead of the air).
+    pub fn period(&self) -> Option<PeriodInfo> {
+        self.cursor.as_ref().map(|c| PeriodInfo {
+            start: c.start,
+            end: c.end,
+            clock_id: match &c.source {
+                Source::Clock(id) => Some(id.clone()),
+                _ => None,
+            },
+            playlist_id: match &c.source {
+                Source::Playlist(id) => Some(id.clone()),
+                _ => None,
+            },
+            rule_id: c.rule_id.clone(),
+            slot: c.slot,
+        })
+    }
+
     /// Make items starting at `start` until there are at least `min_items` and
     /// `min_ms` of audio. `overlap_ms` is the crossfade between items.
     pub fn generate(
@@ -274,9 +305,11 @@ impl Generator {
         let mut out = Vec::new();
         let mut total = 0;
         while (out.len() < min_items || total < min_ms) && out.len() < MAX_ITEMS_PER_CALL {
-            let Some(item) = self.next_item(catalog, t)? else { break };
+            let Some(mut item) = self.next_item(catalog, t)? else { break };
+            item.no_overlap = self.config.no_overlap_kinds.contains(&item.kind);
             let duration = item_ms(&item);
-            t = item.planned_at.unwrap_or(t) + ms(duration.saturating_sub(overlap_ms).max(1000));
+            let overlap = if item.no_overlap { 0 } else { overlap_ms };
+            t = item.planned_at.unwrap_or(t) + ms(duration.saturating_sub(overlap).max(1000));
             total += duration;
             out.push(item);
         }
