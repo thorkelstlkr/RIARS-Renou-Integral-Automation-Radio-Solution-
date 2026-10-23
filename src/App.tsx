@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import TransportControls from "./components/TransportControls";
 import PlaylistPanel from "./components/PlaylistPanel";
+import SchedulePanel from "./components/SchedulePanel";
 import MediaLibrary from "./components/MediaLibrary";
 import NowPlaying from "./components/NowPlaying";
 import VuMeter from "./components/VuMeter";
@@ -26,6 +27,12 @@ const APP_STYLES: Record<string, React.CSSProperties> = {
     width: 260, minWidth: 200, borderLeft: "1px solid var(--border)",
     overflowY: "auto" as const, background: "var(--bg-secondary)", display: "flex", flexDirection: "column" as const,
   },
+  tabs: { display: "flex", gap: 2, padding: "6px 12px 0", borderBottom: "1px solid var(--border)" },
+  tab: {
+    padding: "6px 14px", fontSize: 13, background: "transparent", color: "var(--text-secondary)",
+    borderBottom: "2px solid transparent", borderRadius: 0,
+  },
+  tabActive: { color: "var(--text-primary)", borderBottom: "2px solid var(--accent)" },
   footer: {
     display: "flex", alignItems: "center", justifyContent: "space-between",
     padding: "4px 16px", background: "var(--bg-secondary)", borderTop: "1px solid var(--border)",
@@ -36,6 +43,7 @@ const APP_STYLES: Record<string, React.CSSProperties> = {
 export default function App() {
   const { t } = useTranslation();
   const [volume, setVolume] = useState(0.8);
+  const [tab, setTab] = useState<"playlist" | "schedule">("playlist");
   const [clock, setClock] = useState(new Date().toLocaleTimeString());
 
   useEffect(() => {
@@ -59,8 +67,18 @@ export default function App() {
         <aside style={APP_STYLES.sidebar}>
           <MediaLibrary />
         </aside>
-        <section style={APP_STYLES.center}>
-          <PlaylistPanel />
+        <section style={{ ...APP_STYLES.center, display: "flex", flexDirection: "column" }}>
+          <nav style={APP_STYLES.tabs}>
+            {(["playlist", "schedule"] as const).map((id) => (
+              <button key={id} onClick={() => setTab(id)}
+                style={{ ...APP_STYLES.tab, ...(tab === id ? APP_STYLES.tabActive : {}) }}>
+                {t(id === "playlist" ? "playlist.title" : "schedule.title")}
+              </button>
+            ))}
+          </nav>
+          <div style={{ flex: 1, overflow: "hidden" }}>
+            {tab === "playlist" ? <PlaylistPanel /> : <SchedulePanel />}
+          </div>
         </section>
         <aside style={APP_STYLES.right}>
           <NowPlaying />
