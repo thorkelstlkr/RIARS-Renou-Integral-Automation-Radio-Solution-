@@ -3184,6 +3184,7 @@ dependencies = [
  "env_logger",
  "log",
  "riars-core",
+ "riars-stream",
  "serde",
  "serde_json",
  "tauri",
@@ -3198,6 +3199,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "riars-core",
+ "riars-stream",
  "serde",
  "serde_json",
  "thiserror 2.0.21",

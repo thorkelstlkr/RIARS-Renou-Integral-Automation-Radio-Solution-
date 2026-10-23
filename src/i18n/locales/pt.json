@@ -44,7 +44,23 @@
   },
   "stream": {
     "streaming": "EM DIRETO",
-    "offline": "OFFLINE"
+    "offline": "OFFLINE",
+    "connecting": "A LIGAR",
+    "error": "ERRO DE STREAM",
+    "unavailable": "SEM ÁUDIO",
+    "settings": "Definições de streaming",
+    "noDevice": "O streaming precisa de um dispositivo de saída de áudio.",
+    "host": "Servidor",
+    "port": "Porta",
+    "mount": "Ponto de montagem",
+    "bitrate": "Taxa de bits",
+    "username": "Utilizador",
+    "password": "Palavra-passe",
+    "stationName": "Nome da estação",
+    "genre": "Género",
+    "sent": "{{size}} enviados",
+    "connect": "Ligar",
+    "disconnect": "Desligar"
   },
   "vuMeter": {
     "title": "Medidor VU"

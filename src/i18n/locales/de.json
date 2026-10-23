@@ -44,7 +44,23 @@
   },
   "stream": {
     "streaming": "LIVE",
-    "offline": "OFFLINE"
+    "offline": "OFFLINE",
+    "connecting": "VERBINDE…",
+    "error": "STREAM-FEHLER",
+    "unavailable": "KEIN AUDIO",
+    "settings": "Streaming-Einstellungen",
+    "noDevice": "Für das Streaming wird ein Audio-Ausgabegerät benötigt.",
+    "host": "Server",
+    "port": "Port",
+    "mount": "Mountpoint",
+    "bitrate": "Bitrate",
+    "username": "Benutzer",
+    "password": "Passwort",
+    "stationName": "Sendername",
+    "genre": "Genre",
+    "sent": "{{size}} gesendet",
+    "connect": "Verbinden",
+    "disconnect": "Trennen"
   },
   "vuMeter": {
     "title": "VU-Meter"

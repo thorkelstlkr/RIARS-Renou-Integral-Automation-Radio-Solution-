@@ -2,6 +2,7 @@ use serde::Serialize;
 use serde_json::{json, Value};
 
 use riars_core::audio::crossfade::FadeCurve;
+use riars_core::streaming::icecast::{IcecastConfig, StreamFormat};
 use riars_core::t;
 
 use crate::McpState;
@@ -157,6 +158,34 @@ pub fn list_tools() -> ToolList {
                     },
                     "required": []
                 }),
+            },
+            ToolDef {
+                name: "stream_start",
+                description: "Start streaming the radio to an Icecast server",
+                input_schema: json!({
+                    "type": "object",
+                    "properties": {
+                        "host": { "type": "string", "description": "Icecast server host", "required": true },
+                        "port": { "type": "integer", "description": "Icecast server port", "required": true },
+                        "mount": { "type": "string", "description": "Mount point", "required": true },
+                        "password": { "type": "string", "description": "Icecast server password", "required": true },
+                        "username": { "type": "string", "description": "Icecast username", "default": "source" },
+                        "bitrate": { "type": "integer", "description": "Bitrate", "default": 128 },
+                        "station_name": { "type": "string", "description": "Station name" },
+                        "station_genre": { "type": "string", "description": "Station genre" }
+                    },
+                    "required": ["host", "port", "mount", "password"]
+                }),
+            },
+            ToolDef {
+                name: "stream_stop",
+                description: "Stop streaming",
+                input_schema: json!({ "type": "object", "properties": {}, "required": [] }),
+            },
+            ToolDef {
+                name: "stream_status",
+                description: "Get the streaming state, bytes sent, title and last error",
+                input_schema: json!({ "type": "object", "properties": {}, "required": [] }),
             },
         ],
     }
@@ -327,6 +356,54 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
                 c.duration.as_millis(),
                 c.curve
             )))
+        }
+        "stream_start" => {
+            let host = args["host"].as_str().ok_or("Missing host")?;
+            let port = args["port"]
+                .as_u64()
+                .and_then(|p| u16::try_from(p).ok())
+                .ok_or("Missing or invalid port")?;
+            let mount = args["mount"].as_str().ok_or("Missing mount")?;
+            let password = args["password"].as_str().ok_or("Missing password")?;
+            let username = args.get("username").and_then(|v| v.as_str()).unwrap_or("source");
+            let bitrate = args.get("bitrate").and_then(|v| v.as_u64()).map_or(128, |v| v as u32);
+            let station_name = args.get("station_name").and_then(|v| v.as_str());
+            let station_genre = args.get("station_genre").and_then(|v| v.as_str());
+
+            let config = IcecastConfig {
+                host: host.to_string(),
+                port,
+                mount: mount.to_string(),
+                password: password.to_string(),
+                username: username.to_string(),
+                bitrate,
+                format: StreamFormat::Mp3,
+                station_name: station_name.map_or_else(|| "".to_string(), |s| s.to_string()),
+                station_description: "".to_string(),
+                station_genre: station_genre.map_or_else(|| "".to_string(), |s| s.to_string()),
+                station_url: "".to_string(),
+            };
+
+            let stream = state.stream.as_ref().ok_or("Streaming needs an audio output device")?;
+            stream.start(config)?;
+
+            let status = stream.status();
+            Ok(text_result(&serde_json::to_string_pretty(&status).unwrap_or_default()))
+        },
+        "stream_stop" => {
+            let stream = state.stream.as_ref().ok_or("Streaming needs an audio output device")?;
+            stream.stop();
+            let status = stream.status();
+            Ok(text_result(&serde_json::to_string_pretty(&status).unwrap_or_default()))
+        },
+        "stream_status" => {
+            let stream = state.stream.as_ref().ok_or("Streaming needs an audio output device")?;
+            let status = stream.status();
+            let config = stream.config();
+            Ok(text_result(&serde_json::to_string_pretty(&json!({
+                "status": status,
+                "config": config
+            })).unwrap_or_default()))
         }
         _ => Err(format!("{}: {name}", t("unknown_tool"))),
     }

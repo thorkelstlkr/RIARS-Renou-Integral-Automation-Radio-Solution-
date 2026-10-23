@@ -12,6 +12,8 @@ pub struct McpState {
     pub engine: Arc<Mutex<AudioEngine>>,
     pub library: Arc<Mutex<MediaLibrary>>,
     pub scheduler: Arc<Mutex<Scheduler>>,
+    /// Icecast streaming; `None` without a sound card.
+    pub stream: Option<riars_stream::StreamService>,
 }
 
 #[derive(Deserialize)]
@@ -87,6 +89,8 @@ impl JsonRpcResponse {
 
 pub async fn run_stdio(state: McpState) -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(auto_advance(Arc::clone(&state.engine)));
+    let state = Arc::new(state);
+    tokio::spawn(follow_title(Arc::clone(&state)));
     let stdin = tokio::io::stdin();
     let mut stdout = tokio::io::stdout();
     let mut reader = BufReader::new(stdin);
@@ -192,6 +196,23 @@ async fn auto_advance(engine: Arc<Mutex<AudioEngine>>) {
             if let Ok(Err(e)) = result {
                 log::error!("Auto-advance failed: {e}");
             }
+        }
+    }
+}
+
+/// Keep the stream's song title in step with what is playing.
+async fn follow_title(state: Arc<McpState>) {
+    let Some(stream) = &state.stream else {
+        return;
+    };
+    let mut tick = tokio::time::interval(tokio::time::Duration::from_millis(500));
+    let mut last = String::new();
+    loop {
+        tick.tick().await;
+        let title = state.engine.lock().ok().and_then(|e| e.now_playing_title());
+        if let Some(title) = title.filter(|t| *t != last) {
+            stream.set_title(&title);
+            last = title;
         }
     }
 }

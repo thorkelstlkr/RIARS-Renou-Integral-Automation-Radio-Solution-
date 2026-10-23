@@ -1,6 +1,8 @@
 use std::sync::Mutex;
 
 use riars_core::{AudioEngine, EngineStateInfo, MediaLibrary, Playlist, Track};
+use riars_core::IcecastConfig;
+use riars_stream::{StreamService, StreamStatus};
 use tauri::{AppHandle, Manager, State};
 
 #[tauri::command]
@@ -17,6 +19,49 @@ fn get_supported_languages() -> Vec<&'static str> {
 pub struct AppState {
     pub engine: Mutex<AudioEngine>,
     pub library: Mutex<MediaLibrary>,
+    /// Icecast streaming; `None` without a sound card.
+    pub stream: Option<StreamService>,
+    /// Last title sent to the stream, to send it only when the track changes.
+    pub stream_title: Mutex<String>,
+}
+
+#[derive(serde::Serialize)]
+struct StreamInfo {
+    available: bool,
+    status: Option<StreamStatus>,
+    config: Option<IcecastConfig>,
+}
+
+fn stream_info(state: &AppState) -> StreamInfo {
+    StreamInfo {
+        available: state.stream.is_some(),
+        status: state.stream.as_ref().map(|s| s.status()),
+        config: state.stream.as_ref().and_then(|s| s.config()),
+    }
+}
+
+#[tauri::command]
+fn stream_get(state: State<AppState>) -> StreamInfo {
+    stream_info(&state)
+}
+
+#[tauri::command]
+fn stream_start(config: IcecastConfig, state: State<AppState>) -> Result<StreamInfo, String> {
+    let stream = state.stream.as_ref().ok_or("Streaming needs an audio output device")?;
+    stream.start(config)?;
+    // Send the current title again on the new connection.
+    if let Ok(mut title) = state.stream_title.lock() {
+        title.clear();
+    }
+    Ok(stream_info(&state))
+}
+
+#[tauri::command]
+fn stream_stop(state: State<AppState>) -> StreamInfo {
+    if let Some(stream) = &state.stream {
+        stream.stop();
+    }
+    stream_info(&state)
 }
 
 #[tauri::command]
@@ -79,6 +124,15 @@ fn engine_get_state(app: AppHandle, state: State<AppState>) -> Result<EngineStat
                 log::error!("Auto-advance failed: {e}");
             }
         });
+    }
+    // Keep the stream's song title in step with what is playing.
+    if let (Some(stream), Some(title)) = (&state.stream, engine.now_playing_title()) {
+        if let Ok(mut last) = state.stream_title.lock() {
+            if *last != title {
+                stream.set_title(&title);
+                *last = title;
+            }
+        }
     }
     Ok(engine.state_info())
 }
@@ -171,7 +225,8 @@ async fn playlist_play(index: usize, app: AppHandle) -> Result<(), String> {
 pub fn run() {
     env_logger::init();
 
-    let engine = AudioEngine::new().expect("Failed to initialize audio engine");
+    let mut engine = AudioEngine::new().expect("Failed to initialize audio engine");
+    let stream = engine.take_stream_tap().map(StreamService::new);
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -185,6 +240,8 @@ pub fn run() {
             log::info!("Media library: {}", db_path.display());
 
             app.manage(AppState {
+                stream,
+                stream_title: Mutex::new(String::new()),
                 engine: Mutex::new(engine),
                 library: Mutex::new(library),
             });
@@ -197,6 +254,9 @@ pub fn run() {
             engine_next,
             engine_set_volume,
             engine_get_state,
+            stream_get,
+            stream_start,
+            stream_stop,
             engine_load_track,
             library_scan_folder,
             library_get_tracks,

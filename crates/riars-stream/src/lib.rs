@@ -98,6 +98,12 @@ impl StreamService {
             control.config = None;
             control.generation += 1;
         }
+        // The worker closes the connection within a few ms; report it now so callers
+        // do not read a stale "Connected" right after stopping.
+        set_status(&self.inner, |s| {
+            s.state = StreamState::Disconnected;
+            s.connected_since = None;
+        });
     }
 
     /// Song title shown to listeners ("Artist - Title").

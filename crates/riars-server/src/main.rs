@@ -74,6 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             engine: Arc::new(Mutex::new(engine)),
             library: Arc::new(Mutex::new(library)),
             scheduler: Arc::new(Mutex::new(scheduler)),
+            stream,
         };
         riars_mcp::run_stdio(mcp_state).await?;
     } else {
