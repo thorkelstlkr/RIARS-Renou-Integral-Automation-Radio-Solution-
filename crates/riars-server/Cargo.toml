@@ -10,6 +10,7 @@ name = "riars-server"
 path = "src/main.rs"
 
 [dependencies]
+uuid = { workspace = true }
 riars-core = { path = "../riars-core" }
 riars-api = { path = "../riars-api" }
 riars-mcp = { path = "../riars-mcp" }

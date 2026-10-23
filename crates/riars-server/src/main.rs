@@ -20,6 +20,12 @@ struct Cli {
     #[arg(long, default_value = "riars_library.db")]
     db_path: String,
 
+    /// Token required by the REST API and WebSocket (`Authorization: Bearer <token>`).
+    /// Defaults to the RIARS_API_TOKEN environment variable; if neither is set, a
+    /// random token is generated and printed at startup.
+    #[arg(long)]
+    api_token: Option<String>,
+
     /// Folder to auto-scan on startup
     #[arg(long)]
     scan: Option<String>,
@@ -71,7 +77,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         riars_mcp::run_stdio(mcp_state).await?;
     } else {
         log::info!("{} 0.0.0.0:{}", t("api_listening"), cli.port);
+        let api_token = match cli.api_token.or_else(|| std::env::var("RIARS_API_TOKEN").ok()) {
+            Some(token) if !token.trim().is_empty() => token,
+            _ => {
+                let token = uuid::Uuid::new_v4().simple().to_string();
+                log::warn!("No --api-token given; generated one for this run: {token}");
+                token
+            }
+        };
         let state = Arc::new(AppState {
+            api_token,
             engine: Mutex::new(engine),
             library: Mutex::new(library),
             scheduler: Mutex::new(scheduler),
