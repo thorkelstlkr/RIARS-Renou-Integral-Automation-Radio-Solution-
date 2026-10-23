@@ -3,7 +3,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::crossfade::CrossfadeConfig;
 use super::mixer::Mixer;
@@ -19,6 +19,44 @@ pub enum PlaybackState {
     Paused,
 }
 
+/// What to do on dead air (silence while playing).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum DeadAirAction {
+    /// Jump to the next playlist item.
+    #[default]
+    Skip,
+    /// Only raise the alarm.
+    Alert,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeadAirConfig {
+    pub enabled: bool,
+    /// Level (dBFS, before volume) under which audio counts as silence.
+    pub threshold_db: f32,
+    /// How long silence must last to count as dead air.
+    pub seconds: u32,
+    pub action: DeadAirAction,
+}
+
+impl DeadAirConfig {
+    pub fn validate(&self) -> Result<(), String> {
+        if !(1..=600).contains(&self.seconds) {
+            return Err("seconds must be 1 to 600".to_string());
+        }
+        if !(-90.0..=0.0).contains(&self.threshold_db) {
+            return Err("threshold_db must be -90 to 0".to_string());
+        }
+        Ok(())
+    }
+}
+
+impl Default for DeadAirConfig {
+    fn default() -> Self {
+        Self { enabled: true, threshold_db: -50.0, seconds: 10, action: DeadAirAction::Skip }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct EngineStateInfo {
     pub state: PlaybackState,
@@ -26,12 +64,20 @@ pub struct EngineStateInfo {
     pub current_track: Option<String>,
     pub position_ms: u64,
     pub duration_ms: u64,
+    /// Silence has lasted longer than the dead-air limit right now.
+    pub dead_air: bool,
+    /// Dead-air incidents since start.
+    pub dead_air_count: u64,
 }
 
 /// What the control side knows about the track handed to the audio thread.
 struct LoadedTrack {
     name: String,
     duration: Duration,
+}
+
+fn db_to_linear(db: f32) -> f32 {
+    10f32.powf(db / 20.0)
 }
 
 /// How long before the end of a track (or of the crossfade into the next one) the next
@@ -51,6 +97,12 @@ pub struct AudioEngine {
     playlist_revision: u64,
     /// Bumped on every seek, so a jump is saved at once (see `session_key`).
     seek_count: u64,
+    dead_air: DeadAirConfig,
+    /// The current silence was already reported (one incident per silence).
+    dead_air_active: bool,
+    dead_air_count: u64,
+    /// The next item comes from a dead-air skip: start it at once, do not queue it.
+    skip_now: bool,
     /// Nothing after the current track could be decoded; stop when it ends.
     advance_blocked: bool,
     /// Next playlist item, already handed to the audio thread.
@@ -90,6 +142,9 @@ impl AudioEngine {
         if let Some(output) = &output {
             output.shared.set_crossfade(&crossfade);
         }
+        if let Some(output) = &output {
+            output.shared.set_silence_level(db_to_linear(DeadAirConfig::default().threshold_db));
+        }
         let mut mixer = Mixer::new(sample_rate);
         mixer.set_master_volume(volume);
         Ok(Self {
@@ -101,6 +156,10 @@ impl AudioEngine {
             advancing: false,
             playlist_revision: 0,
             seek_count: 0,
+            dead_air: DeadAirConfig::default(),
+            dead_air_active: false,
+            dead_air_count: 0,
+            skip_now: false,
             advance_blocked: false,
             queued: None,
             switches_seen: 0,
@@ -211,6 +270,7 @@ impl AudioEngine {
     /// Make an already decoded playlist item current and play it. Fast: no decoding.
     pub fn start_index(&mut self, index: usize, player: TrackPlayer) {
         self.advancing = false;
+        self.dead_air_active = false;
         self.advance_blocked = false;
         self.queued = None;
         if index < self.playlist.len() {
@@ -226,7 +286,7 @@ impl AudioEngine {
     pub fn queue_or_start(&mut self, index: usize, player: TrackPlayer) {
         self.advancing = false;
         let still_playing = self.playback_state() == PlaybackState::Playing;
-        if !still_playing || self.output.is_none() {
+        if !still_playing || self.output.is_none() || std::mem::take(&mut self.skip_now) {
             self.start_index(index, player);
             return;
         }
@@ -271,7 +331,13 @@ impl AudioEngine {
             }
         }
 
-        if self.state != PlaybackState::Playing || self.advancing || self.queued.is_some() {
+        if self.state != PlaybackState::Playing || self.advancing {
+            return None;
+        }
+        if let Some(index) = self.check_dead_air() {
+            return Some(index);
+        }
+        if self.queued.is_some() {
             return None;
         }
         let remaining_ms = self
@@ -303,6 +369,47 @@ impl AudioEngine {
                 None
             }
         }
+    }
+
+    /// Report dead air once per silence; with the Skip action, return the next item
+    /// to start at once.
+    fn check_dead_air(&mut self) -> Option<usize> {
+        let output = self.output.as_ref()?;
+        let rate = output.shared.out_rate.load(Ordering::Relaxed).max(1) as u64;
+        let silent_secs = output.shared.silent_frames.load(Ordering::Relaxed) / rate;
+        if !self.dead_air.enabled || silent_secs < self.dead_air.seconds as u64 {
+            self.dead_air_active = false;
+            return None;
+        }
+        if self.dead_air_active {
+            return None;
+        }
+        self.dead_air_active = true;
+        self.dead_air_count += 1;
+        let track = self.current_track.as_ref().map(|t| t.name.as_str()).unwrap_or("?");
+        log::warn!("Dead air: {silent_secs} s of silence in {track}");
+        if self.dead_air.action != DeadAirAction::Skip {
+            return None;
+        }
+        let next = self.playlist.next_index()?;
+        // Drop a queued crossfade partner: we jump now.
+        self.queued = None;
+        self.skip_now = true;
+        self.advancing = true;
+        Some(next)
+    }
+
+    pub fn dead_air_config(&self) -> &DeadAirConfig {
+        &self.dead_air
+    }
+
+    pub fn set_dead_air(&mut self, config: DeadAirConfig) {
+        if let Some(output) = &self.output {
+            let level = if config.enabled { db_to_linear(config.threshold_db) } else { 0.0 };
+            output.shared.set_silence_level(level);
+        }
+        self.dead_air_active = false;
+        self.dead_air = config;
     }
 
     /// Give up an advance started by `poll`: nothing after the current track is playable.
@@ -357,13 +464,18 @@ impl AudioEngine {
             volume: Some(self.volume),
             crossfade: Some(self.crossfade.clone()),
             stream: None,
+            dead_air: Some(self.dead_air.clone()),
         }
     }
 
     /// Changes worth saving at once (not the position, which moves all the time).
     pub fn session_key(&self) -> (u64, u32, u64, bool, bool) {
+        let dead_air = (self.dead_air.enabled as u64) << 63
+            ^ (self.dead_air.seconds as u64) << 40
+            ^ (self.dead_air.threshold_db.to_bits() as u64) << 8
+            ^ self.dead_air.action as u64;
         (
-            self.playlist_revision.wrapping_add(self.seek_count << 32),
+            self.playlist_revision.wrapping_add(self.seek_count << 32) ^ dead_air,
             self.volume.to_bits(),
             self.crossfade.duration.as_millis() as u64,
             self.crossfade.enabled,
@@ -379,6 +491,9 @@ impl AudioEngine {
         }
         if let Some(crossfade) = &state.crossfade {
             self.set_crossfade(crossfade.clone());
+        }
+        if let Some(dead_air) = &state.dead_air {
+            self.set_dead_air(dead_air.clone());
         }
         if let Some(playlist) = &state.playlist {
             self.playlist = playlist.clone();
@@ -479,6 +594,8 @@ impl AudioEngine {
             .unwrap_or(0);
 
         EngineStateInfo {
+            dead_air: self.dead_air_active,
+            dead_air_count: self.dead_air_count,
             state: self.playback_state(),
             volume: self.volume,
             current_track,

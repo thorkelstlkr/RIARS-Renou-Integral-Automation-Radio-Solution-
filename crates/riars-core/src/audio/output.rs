@@ -44,6 +44,13 @@ pub(crate) struct Shared {
     peak_bits: [AtomicU32; 2],
     /// Samples at or beyond full scale since the last `take_levels`.
     clipped: AtomicU32,
+    /// Consecutive output frames of silence while playing (dead air), measured before
+    /// the volume so turning it down is not silence. Reset by sound or by stopping.
+    pub silent_frames: AtomicU64,
+    /// Below this linear level (pre-volume) a block counts as silent; 0 disables.
+    silence_level_bits: AtomicU32,
+    /// Output sample rate, to turn `silent_frames` into seconds.
+    pub out_rate: AtomicU32,
 }
 
 /// Counted as clipping: the loudest 16-bit sample (32767/32768), since material at
@@ -72,7 +79,16 @@ impl Shared {
             crossfade_curve: AtomicU8::new(0),
             peak_bits: [AtomicU32::new(0), AtomicU32::new(0)],
             clipped: AtomicU32::new(0),
+            silent_frames: AtomicU64::new(0),
+            silence_level_bits: AtomicU32::new(0.0f32.to_bits()),
+            out_rate: AtomicU32::new(44_100),
         }
+    }
+
+    /// Linear level under which output counts as silence (0 turns detection off).
+    pub fn set_silence_level(&self, level: f32) {
+        self.silence_level_bits.store(level.max(0.0).to_bits(), Ordering::Relaxed);
+        self.silent_frames.store(0, Ordering::Relaxed);
     }
 
     /// Read and reset the levels measured since the last call.
@@ -276,6 +292,7 @@ impl Renderer {
         let (producer, consumer) =
             rtrb::RingBuffer::new(sample_rate as usize * channels as usize * 2);
         let volume_now = parts.shared.volume();
+        parts.shared.out_rate.store(sample_rate, Ordering::Relaxed);
         let renderer = Self {
             parts,
             decks: Decks::default(),
@@ -299,6 +316,7 @@ impl Renderer {
             match command {
                 Command::Load(new_player) => {
                     decks.fade_len = None;
+                    shared.silent_frames.store(0, Ordering::Relaxed); // a new track, a new count
                     if let Some(old) = decks.current.replace(new_player) {
                         let _ = garbage.try_send(old);
                     }
@@ -371,6 +389,21 @@ impl Renderer {
         if self.out_channels == 1 {
             peaks[1] = peaks[0];
         }
+        // Dead air: count silent frames while playing, judged before the volume.
+        let silence_level = f32::from_bits(shared.silence_level_bits.load(Ordering::Relaxed));
+        if playing && silence_level > 0.0 {
+            let loudest = peaks[0].max(peaks[1]);
+            let source = if self.volume_now > 0.0 { loudest / self.volume_now } else { f32::MAX };
+            if source < silence_level {
+                let frames = (data.len() / self.out_channels) as u64;
+                shared.silent_frames.fetch_add(frames, Ordering::Relaxed);
+            } else {
+                shared.silent_frames.store(0, Ordering::Relaxed);
+            }
+        } else {
+            shared.silent_frames.store(0, Ordering::Relaxed);
+        }
+
         for (slot, peak) in shared.peak_bits.iter().zip(peaks) {
             slot.fetch_max(peak.to_bits(), Ordering::Relaxed);
         }
@@ -688,6 +721,43 @@ mod tests {
         shared.set_volume(0.999 / 0.5);
         renderer.process(&mut block);
         assert_eq!(shared.take_levels().clipped, 0);
+    }
+
+    #[test]
+    fn counts_silence_before_volume() {
+        let (_cmd_tx, commands) = crossbeam_channel::bounded(4);
+        let (garbage, _garbage_rx) = crossbeam_channel::bounded(4);
+        let shared = Arc::new(Shared::new(1.0));
+        let parts = Parts { commands, garbage, shared: Arc::clone(&shared) };
+        let (mut renderer, _tap) = Renderer::new(parts, 1000, 1);
+        shared.set_silence_level(0.01);
+        shared.playing.store(true, Ordering::Relaxed);
+        let mut block = [0.0f32; 10];
+        let frames = || shared.silent_frames.load(Ordering::Relaxed);
+
+        renderer.decks.current = Some(track(0.001, 1000)); // under the threshold
+        renderer.process(&mut block);
+        renderer.process(&mut block);
+        assert_eq!(frames(), 20);
+
+        // Volume at zero is not silence of the programme.
+        shared.set_volume(0.0);
+        renderer.process(&mut block);
+        assert_eq!(frames(), 0);
+
+        // Quiet music turned down still counts by its source level: 0.5 x 0.1 is loud.
+        shared.set_volume(0.1);
+        renderer.decks.current = Some(track(0.5, 1000));
+        renderer.process(&mut block);
+        assert_eq!(frames(), 0);
+
+        // Paused is not dead air either.
+        renderer.decks.current = Some(track(0.0, 1000));
+        renderer.process(&mut block);
+        assert_eq!(frames(), 10);
+        shared.playing.store(false, Ordering::Relaxed);
+        renderer.process(&mut block);
+        assert_eq!(frames(), 0);
     }
 
     #[test]

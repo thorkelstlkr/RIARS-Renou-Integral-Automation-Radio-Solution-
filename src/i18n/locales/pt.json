@@ -48,7 +48,9 @@
     "paused": "EM PAUSA",
     "stopped": "PARADO",
     "noTrack": "Nenhuma faixa carregada",
-    "seekHint": "Clique para saltar"
+    "seekHint": "Clique para saltar",
+    "deadAir": "SILÊNCIO",
+    "deadAirHint": "Silêncio na emissão demasiado longo ({{count}} até agora)"
   },
   "stream": {
     "streaming": "EM DIRETO",

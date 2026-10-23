@@ -48,7 +48,9 @@
     "paused": "PAUSIERT",
     "stopped": "GESTOPPT",
     "noTrack": "Kein Titel geladen",
-    "seekHint": "Klicken, um zu springen"
+    "seekHint": "Klicken, um zu springen",
+    "deadAir": "STILLE",
+    "deadAirHint": "Sendeloch: zu lange Stille ({{count}} bisher)"
   },
   "stream": {
     "streaming": "LIVE",

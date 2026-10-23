@@ -4,6 +4,7 @@ use serde_json::{json, Value};
 use riars_core::audio::crossfade::FadeCurve;
 use riars_core::streaming::icecast::{IcecastConfig, StreamFormat};
 use riars_core::playlist::scheduler::{EventAction, EventTrigger, ScheduledEvent};
+use riars_core::DeadAirAction;
 use riars_core::t;
 
 use crate::McpState;
@@ -250,6 +251,16 @@ pub fn list_tools() -> ToolList {
                 name: "seek",
                 description: "Jump to a position in the current track",
                 input_schema: json!({ "type": "object", "properties": { "position_ms": { "type": "integer", "minimum": 0, "description": "Position from the start, in milliseconds" } }, "required": ["position_ms"] }),
+            },
+            ToolDef {
+                name: "set_dead_air",
+                description: "Configure dead-air (silence) detection: how long silence may last and what to do. Fields left out keep their value.",
+                input_schema: json!({ "type": "object", "properties": {
+                    "enabled": { "type": "boolean" },
+                    "threshold_db": { "type": "number", "description": "Silence level, dBFS before volume (-90 to 0, default -50)" },
+                    "seconds": { "type": "integer", "description": "How long silence may last (1 to 600, default 10)" },
+                    "action": { "type": "string", "enum": ["Skip", "Alert"], "description": "Skip to the next item, or only raise the alarm" }
+                } }),
             },
         ],
     }
@@ -519,6 +530,36 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
             let id = args["id"].as_str().ok_or("Missing id")?;
             state.library.lock().map_err(|e| e.to_string())?.delete_playlist(id)?;
             Ok(text_result("Deleted"))
+        }
+        "set_dead_air" => {
+            let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+            let mut config = engine.dead_air_config().clone();
+            if let Some(enabled) = args["enabled"].as_bool() {
+                config.enabled = enabled;
+            }
+            if let Some(db) = args["threshold_db"].as_f64() {
+                config.threshold_db = db as f32;
+            }
+            if let Some(seconds) = args["seconds"].as_u64() {
+                config.seconds = seconds.min(u32::MAX as u64) as u32;
+            }
+            if let Some(action) = args["action"].as_str() {
+                config.action = match action {
+                    "Skip" => DeadAirAction::Skip,
+                    "Alert" => DeadAirAction::Alert,
+                    other => return Err(format!("Unknown action: {other}")),
+                };
+            }
+            config.validate()?;
+            engine.set_dead_air(config);
+            let c = engine.dead_air_config();
+            Ok(text_result(&format!(
+                "Dead air: {}, {} s under {} dBFS, {:?}",
+                if c.enabled { "on" } else { "off" },
+                c.seconds,
+                c.threshold_db,
+                c.action
+            )))
         }
         _ => Err(format!("{}: {name}", t("unknown_tool"))),
     }

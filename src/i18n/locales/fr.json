@@ -48,7 +48,9 @@
     "paused": "EN PAUSE",
     "stopped": "ARRÊTÉ",
     "noTrack": "Aucune piste chargée",
-    "seekHint": "Cliquez pour aller à cette position"
+    "seekHint": "Cliquez pour aller à cette position",
+    "deadAir": "SILENCE",
+    "deadAirHint": "Blanc d'antenne trop long ({{count}} jusqu'ici)"
   },
   "stream": {
     "streaming": "EN DIRECT",
