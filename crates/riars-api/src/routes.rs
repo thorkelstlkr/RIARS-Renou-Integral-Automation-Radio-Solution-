@@ -97,7 +97,7 @@ async fn stop(State(state): State<Arc<AppState>>) -> Result<&'static str, String
 }
 
 async fn next(State(state): State<Arc<AppState>>) -> Result<&'static str, String> {
-    state.engine.lock().map_err(|e| e.to_string())?.next_track();
+    state.engine.lock().map_err(|e| e.to_string())?.next_track()?;
     Ok("ok")
 }
 

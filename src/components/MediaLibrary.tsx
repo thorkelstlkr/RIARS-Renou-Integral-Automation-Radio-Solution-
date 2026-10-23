@@ -60,15 +60,17 @@ export default function MediaLibrary() {
     }
   }, [loadTracks, t]);
 
-  const playTrack = useCallback(async (track: Track) => {
+  const addToPlaylist = useCallback(async (track: Track) => {
     try {
-      await invoke("engine_load_track", { path: track.file_path });
-      await invoke("engine_play");
+      await invoke("playlist_add", {
+        path: track.file_path, title: track.title, artist: track.artist, durationMs: track.duration_ms,
+      });
+      window.dispatchEvent(new Event("playlist-changed"));
       setNotice(null);
     } catch (e) {
-      setNotice({ text: t("library.loadError", { error: String(e) }), error: true });
+      setNotice({ text: String(e), error: true });
     }
-  }, [t]);
+  }, []);
 
   const handleSearch = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value;
@@ -107,7 +109,7 @@ export default function MediaLibrary() {
         {tracks.map((tr) => (
           <div key={tr.id} style={S.track}
             title={tr.file_path}
-            onDoubleClick={() => playTrack(tr)}>
+            onDoubleClick={() => addToPlaylist(tr)}>
             <div style={S.name}>{tr.title}</div>
             <div style={S.meta}>
               <span>{tr.artist || t("library.unknownArtist")}</span>

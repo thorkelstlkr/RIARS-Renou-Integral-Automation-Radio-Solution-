@@ -12,24 +12,17 @@
   },
   "playlist": {
     "title": "Llista de reproducció",
-    "add": "+ Afegir",
     "clear": "Netejar",
     "headerNumber": "#",
     "headerTitle": "Títol",
-    "headerType": "Tipus",
     "headerDuration": "Durada",
     "itemCount": "{{count}} elements",
     "itemCount_one": "{{count}} element",
-    "demo": {
-      "welcome": "Benvinguda",
-      "jingle": "Jingle",
-      "localNews": "Notícies locals",
-      "newsroom": "Redacció",
-      "morningMusic": "Bloc musical matinal",
-      "autoPlaylist": "Playlist Auto",
-      "adBreak": "Falca publicitària",
-      "sponsor": "Patrocinador"
-    }
+    "headerArtist": "Artista",
+    "empty": "Llista de reproducció buida. Fes doble clic en una pista de la biblioteca per afegir-la.",
+    "moveUp": "Moure amunt",
+    "moveDown": "Moure avall",
+    "remove": "Eliminar"
   },
   "library": {
     "title": "Biblioteca",

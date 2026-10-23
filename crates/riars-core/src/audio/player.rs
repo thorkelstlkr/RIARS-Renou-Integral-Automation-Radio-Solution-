@@ -110,6 +110,10 @@ impl TrackPlayer {
         }
     }
 
+    pub fn path(&self) -> &Path {
+        &self.file_path
+    }
+
     pub fn file_name(&self) -> &str {
         self.file_path
             .file_name()

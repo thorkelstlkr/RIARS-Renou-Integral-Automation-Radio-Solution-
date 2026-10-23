@@ -12,24 +12,17 @@
   },
   "playlist": {
     "title": "Wiedergabeliste",
-    "add": "+ Hinzufügen",
     "clear": "Leeren",
     "headerNumber": "#",
     "headerTitle": "Titel",
-    "headerType": "Typ",
     "headerDuration": "Dauer",
     "itemCount": "{{count}} Elemente",
     "itemCount_one": "{{count}} Element",
-    "demo": {
-      "welcome": "Begrüßung",
-      "jingle": "Jingle",
-      "localNews": "Lokalnachrichten",
-      "newsroom": "Redaktion",
-      "morningMusic": "Morgen-Musikblock",
-      "autoPlaylist": "Auto-Playlist",
-      "adBreak": "Werbespot",
-      "sponsor": "Sponsor"
-    }
+    "headerArtist": "Künstler",
+    "empty": "Wiedergabeliste leer. Doppelklicken Sie auf einen Titel in der Bibliothek, um ihn hinzuzufügen.",
+    "moveUp": "Nach oben verschieben",
+    "moveDown": "Nach unten verschieben",
+    "remove": "Entfernen"
   },
   "library": {
     "title": "Bibliothek",
