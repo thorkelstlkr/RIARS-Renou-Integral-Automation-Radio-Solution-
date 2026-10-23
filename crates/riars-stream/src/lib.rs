@@ -44,6 +44,8 @@ struct Control {
     /// Bumped on every start/stop so the worker drops its connection.
     generation: u64,
     title: Option<String>,
+    /// Settings of the last start, for `resume` (scheduled starts).
+    last_config: Option<IcecastConfig>,
 }
 
 struct Inner {
@@ -88,9 +90,19 @@ impl StreamService {
             return Err("mount must start with '/'".to_string());
         }
         let mut control = self.inner.control.lock().map_err(|e| e.to_string())?;
+        control.last_config = Some(config.clone());
         control.config = Some(config);
         control.generation += 1;
         Ok(())
+    }
+
+    /// Start again with the settings of the last `start`.
+    pub fn resume(&self) -> Result<(), String> {
+        let last = self.inner.control.lock().map_err(|e| e.to_string())?.last_config.clone();
+        match last {
+            Some(config) => self.start(config),
+            None => Err("No stream settings yet: start the stream once first".to_string()),
+        }
     }
 
     pub fn stop(&self) {

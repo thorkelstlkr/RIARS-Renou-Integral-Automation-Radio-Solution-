@@ -28,7 +28,10 @@ pub(crate) struct Shared {
     pub playing: AtomicBool,
     /// Set by the callback when the loaded track plays to the end.
     pub finished: AtomicBool,
+    /// Target volume; the callback moves towards it at `ramp_ms_per_unit`.
     volume_bits: AtomicU32,
+    /// Milliseconds to move the volume by 1.0; 0 jumps straight to the target.
+    ramp_ms_per_unit: AtomicU32,
     pub position_ms: AtomicU64,
     /// Incremented by the callback each time it switches to a queued track.
     pub switches: AtomicU64,
@@ -43,6 +46,7 @@ impl Shared {
             playing: AtomicBool::new(false),
             finished: AtomicBool::new(false),
             volume_bits: AtomicU32::new(volume.to_bits()),
+            ramp_ms_per_unit: AtomicU32::new(0),
             position_ms: AtomicU64::new(0),
             switches: AtomicU64::new(0),
             crossfade_ms: AtomicU64::new(0),
@@ -75,6 +79,13 @@ impl Shared {
     }
 
     pub fn set_volume(&self, volume: f32) {
+        self.ramp_ms_per_unit.store(0, Ordering::Relaxed);
+        self.volume_bits.store(volume.to_bits(), Ordering::Relaxed);
+    }
+
+    /// Glide to `volume` at `ms_per_unit` milliseconds per 1.0 of change.
+    pub fn ramp_volume(&self, volume: f32, ms_per_unit: u32) {
+        self.ramp_ms_per_unit.store(ms_per_unit, Ordering::Relaxed);
         self.volume_bits.store(volume.to_bits(), Ordering::Relaxed);
     }
 
@@ -212,6 +223,8 @@ struct Renderer {
     tap: rtrb::Producer<f32>,
     out_channels: usize,
     out_rate: f64,
+    /// Volume applied now, moving towards the shared target.
+    volume_now: f32,
 }
 
 /// The engine-side handles, cloneable so a failed device can fall back to the clock.
@@ -227,12 +240,14 @@ impl Renderer {
         // Two seconds of audio between the callback and the streaming encoder.
         let (producer, consumer) =
             rtrb::RingBuffer::new(sample_rate as usize * channels as usize * 2);
+        let volume_now = parts.shared.volume();
         let renderer = Self {
             parts,
             decks: Decks::default(),
             tap: producer,
             out_channels: channels as usize,
             out_rate: sample_rate as f64,
+            volume_now,
         };
         (renderer, StreamTap { consumer, sample_rate, channels })
     }
@@ -271,6 +286,16 @@ impl Renderer {
             }
         }
 
+        let target = shared.volume();
+        let ramp = shared.ramp_ms_per_unit.load(Ordering::Relaxed);
+        self.volume_now = if ramp == 0 {
+            target
+        } else {
+            let block_ms = (data.len() / self.out_channels) as f64 * 1000.0 / self.out_rate;
+            let step = (block_ms / ramp as f64) as f32;
+            self.volume_now + (target - self.volume_now).clamp(-step, step)
+        };
+
         let playing = shared.playing.load(Ordering::Relaxed);
         if !playing || decks.current.is_none() {
             data.fill(T::EQUILIBRIUM);
@@ -283,7 +308,7 @@ impl Renderer {
                 data,
                 self.out_channels,
                 self.out_rate,
-                shared.volume(),
+                self.volume_now,
                 &fade,
                 &mut retire,
             );
@@ -528,6 +553,36 @@ mod tests {
         let (out, outcome) = render(&mut decks, 3, &linear(4));
         assert_eq!(out, [1.0, 0.5, 0.0]);
         assert_eq!(outcome.switches, 1);
+    }
+
+    #[test]
+    fn volume_glides_to_target() {
+        // 1 kHz, mono, 10-frame blocks; glide from 0 to 1 at 100 ms per unit.
+        let (_cmd_tx, commands) = crossbeam_channel::bounded(4);
+        let (garbage, _garbage_rx) = crossbeam_channel::bounded(4);
+        let shared = Arc::new(Shared::new(0.0));
+        let parts = Parts { commands, garbage, shared: Arc::clone(&shared) };
+        let (mut renderer, _tap) = Renderer::new(parts, 1000, 1);
+        renderer.decks.current = Some(track(1.0, 1000));
+        shared.playing.store(true, Ordering::Relaxed);
+        shared.ramp_volume(1.0, 100);
+
+        let mut levels = Vec::new();
+        for _ in 0..12 {
+            let mut block = [0.0f32; 10];
+            renderer.process(&mut block);
+            levels.push(block[0]);
+        }
+        // +0.1 per 10 ms block, then holds at 1.0: no jump.
+        for (i, level) in levels.iter().enumerate() {
+            let want = ((i + 1) as f32 * 0.1).min(1.0);
+            assert!((level - want).abs() < 1e-4, "{levels:?}");
+        }
+        // A plain set_volume jumps.
+        shared.set_volume(0.2);
+        let mut block = [0.0f32; 10];
+        renderer.process(&mut block);
+        assert!((block[0] - 0.2).abs() < 1e-6);
     }
 
     #[test]

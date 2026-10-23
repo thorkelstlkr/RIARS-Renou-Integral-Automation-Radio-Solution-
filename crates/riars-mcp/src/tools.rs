@@ -3,6 +3,7 @@ use serde_json::{json, Value};
 
 use riars_core::audio::crossfade::FadeCurve;
 use riars_core::streaming::icecast::{IcecastConfig, StreamFormat};
+use riars_core::playlist::scheduler::{EventAction, EventTrigger, ScheduledEvent};
 use riars_core::t;
 
 use crate::McpState;
@@ -186,6 +187,41 @@ pub fn list_tools() -> ToolList {
                 name: "stream_status",
                 description: "Get the streaming state, bytes sent, title and last error",
                 input_schema: json!({ "type": "object", "properties": {}, "required": [] }),
+            },
+            ToolDef {
+                name: "add_scheduled_event",
+                description: "Schedule an automation event.",
+                input_schema: json!({
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string", "description": "Name of the event" },
+                        "trigger": { "type": "object", "description": "Trigger for the event" },
+                        "action": { "type": "object", "description": "Action to perform" }
+                    },
+                    "required": ["name", "trigger", "action"]
+                }),
+            },
+            ToolDef {
+                name: "remove_scheduled_event",
+                description: "Remove a scheduled event.",
+                input_schema: json!({
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "ID of the event" }
+                    },
+                    "required": ["id"]
+                }),
+            },
+            ToolDef {
+                name: "toggle_scheduled_event",
+                description: "Toggle a scheduled event.",
+                input_schema: json!({
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "ID of the event" }
+                    },
+                    "required": ["id"]
+                }),
             },
         ],
     }
@@ -404,6 +440,38 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
                 "status": status,
                 "config": config
             })).unwrap_or_default()))
+        }
+        "add_scheduled_event" => {
+            let name = args["name"].as_str().ok_or("Missing name".to_string())?.trim().to_string();
+            if name.is_empty() {
+                return Err("Missing name".to_string());
+            }
+            let trigger: EventTrigger = serde_json::from_value(args["trigger"].clone()).map_err(|e| format!("Invalid trigger: {e}"))?;
+            let action: EventAction = serde_json::from_value(args["action"].clone()).map_err(|e| format!("Invalid action: {e}"))?;
+            let event = ScheduledEvent::new(name, trigger, action);
+            let mut scheduler = state.scheduler.lock().map_err(|e| e.to_string())?;
+            scheduler.add_event(event.clone());
+            scheduler.save(&state.schedule_path)?;
+            Ok(text_result(&serde_json::to_string_pretty(&event).unwrap_or_default()))
+        },
+        "remove_scheduled_event" => {
+            let id = args["id"].as_str().ok_or("Missing id")?;
+            let mut scheduler = state.scheduler.lock().map_err(|e| e.to_string())?;
+            if !scheduler.remove_event(id) {
+                return Err(format!("No scheduled event {}", id));
+            }
+            scheduler.save(&state.schedule_path)?;
+            Ok(text_result("Removed"))
+        },
+        "toggle_scheduled_event" => {
+            let id = args["id"].as_str().ok_or("Missing id")?;
+            let mut scheduler = state.scheduler.lock().map_err(|e| e.to_string())?;
+            if let Some(enabled) = scheduler.toggle_event(id) {
+                scheduler.save(&state.schedule_path)?;
+                Ok(text_result(if enabled { "Enabled" } else { "Disabled" }))
+            } else {
+                Err(format!("No scheduled event {}", id))
+            }
         }
         _ => Err(format!("{}: {name}", t("unknown_tool"))),
     }

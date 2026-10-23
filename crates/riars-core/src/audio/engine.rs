@@ -319,6 +319,22 @@ impl AudioEngine {
         }
     }
 
+    /// Glide the volume to `level` over `duration_ms` (smoothly, in the audio thread).
+    pub fn fade_to_volume(&mut self, level: f32, duration_ms: u64) {
+        let level = level.clamp(0.0, 1.0);
+        let delta = (level - self.volume).abs();
+        if duration_ms == 0 || delta < 0.001 {
+            self.set_volume(level);
+            return;
+        }
+        self.volume = level;
+        self.mixer.set_master_volume(level);
+        if let Some(output) = &self.output {
+            let ms_per_unit = (duration_ms as f32 / delta).min(u32::MAX as f32) as u32;
+            output.shared.ramp_volume(self.mixer.master_volume(), ms_per_unit.max(1));
+        }
+    }
+
     pub fn volume(&self) -> f32 {
         self.volume
     }
