@@ -34,9 +34,13 @@
   "library": {
     "title": "Library",
     "load": "Load",
+    "addFolder": "Add folder",
+    "scanning": "Scanning folder...",
+    "added": "{{count}} new tracks added",
+    "loadError": "Cannot play this file: {{error}}",
     "searchPlaceholder": "Search...",
     "loading": "Loading...",
-    "empty": "No tracks. Scan a folder from the server.",
+    "empty": "No tracks. Use “Add folder” to scan your music.",
     "unknownArtist": "Unknown"
   },
   "nowPlaying": {

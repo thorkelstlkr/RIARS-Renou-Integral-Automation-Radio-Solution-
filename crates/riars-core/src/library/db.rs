@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
@@ -47,51 +47,67 @@ impl MediaLibrary {
         Ok(Self { db })
     }
 
+    /// Add every playable audio file under `folder_path`, including subfolders.
     pub fn scan_folder(&mut self, folder_path: &str) -> Result<usize, String> {
         let path = Path::new(folder_path);
         if !path.is_dir() {
             return Err(format!("Not a directory: {folder_path}"));
         }
 
-        let audio_extensions = ["mp3", "flac", "wav", "ogg", "aac", "m4a", "wma"];
+        // Formats the symphonia features enabled in Cargo.toml can decode.
+        let audio_extensions = ["mp3", "flac", "wav", "ogg", "aac", "m4a"];
         let mut count = 0;
 
-        let entries: Vec<_> = std::fs::read_dir(path)
-            .map_err(|e| format!("Cannot read directory: {e}"))?
-            .filter_map(|e| e.ok())
-            .collect();
+        let tx = self
+            .db
+            .transaction()
+            .map_err(|e| format!("DB error: {e}"))?;
+        let mut pending: Vec<PathBuf> = vec![path.to_path_buf()];
 
-        for entry in entries {
-            let file_path = entry.path();
-            let ext = file_path
-                .extension()
-                .and_then(|e| e.to_str())
-                .unwrap_or("")
-                .to_lowercase();
+        while let Some(dir) = pending.pop() {
+            let entries = match std::fs::read_dir(&dir) {
+                Ok(entries) => entries,
+                Err(e) => {
+                    log::warn!("Cannot read directory {}: {e}", dir.display());
+                    continue;
+                }
+            };
 
-            if !audio_extensions.contains(&ext.as_str()) {
-                continue;
-            }
+            for entry in entries.filter_map(|e| e.ok()) {
+                let file_path = entry.path();
+                if file_path.is_dir() {
+                    pending.push(file_path);
+                    continue;
+                }
 
-            let file_path_str = file_path.to_string_lossy().to_string();
-            let title = file_path
-                .file_stem()
-                .and_then(|n| n.to_str())
-                .unwrap_or("Unknown")
-                .to_string();
+                let ext = file_path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or("")
+                    .to_lowercase();
+                if !audio_extensions.contains(&ext.as_str()) {
+                    continue;
+                }
 
-            let result = self.db.execute(
-                "INSERT OR IGNORE INTO tracks (title, artist, file_path) VALUES (?1, '', ?2)",
-                params![title, file_path_str],
-            );
+                let file_path_str = file_path.to_string_lossy().to_string();
+                let title = file_path
+                    .file_stem()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("Unknown")
+                    .to_string();
 
-            if let Ok(rows) = result {
-                if rows > 0 {
-                    count += 1;
+                let result = tx.execute(
+                    "INSERT OR IGNORE INTO tracks (title, artist, file_path) VALUES (?1, '', ?2)",
+                    params![title, file_path_str],
+                );
+
+                if let Ok(rows) = result {
+                    count += rows;
                 }
             }
         }
 
+        tx.commit().map_err(|e| format!("DB error: {e}"))?;
         log::info!("Scanned {folder_path}: {count} new tracks added");
         Ok(count)
     }

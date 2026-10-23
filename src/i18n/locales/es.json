@@ -34,9 +34,13 @@
   "library": {
     "title": "Biblioteca",
     "load": "Cargar",
+    "addFolder": "Añadir carpeta",
+    "scanning": "Escaneando carpeta...",
+    "added": "{{count}} canciones nuevas añadidas",
+    "loadError": "No se puede reproducir este archivo: {{error}}",
     "searchPlaceholder": "Buscar...",
     "loading": "Cargando...",
-    "empty": "Sin canciones. Escanea una carpeta desde el servidor.",
+    "empty": "Sin canciones. Usa «Añadir carpeta» para escanear tu música.",
     "unknownArtist": "Desconocido"
   },
   "nowPlaying": {

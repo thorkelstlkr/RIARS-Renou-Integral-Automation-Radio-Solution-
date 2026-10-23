@@ -34,9 +34,13 @@
   "library": {
     "title": "Biblioteca",
     "load": "Carregar",
+    "addFolder": "Adicionar pasta",
+    "scanning": "A analisar a pasta...",
+    "added": "{{count}} novas faixas adicionadas",
+    "loadError": "Não é possível reproduzir este ficheiro: {{error}}",
     "searchPlaceholder": "Pesquisar...",
     "loading": "A carregar...",
-    "empty": "Sem faixas. Analise uma pasta a partir do servidor.",
+    "empty": "Sem faixas. Use «Adicionar pasta» para analisar a sua música.",
     "unknownArtist": "Desconhecido"
   },
   "nowPlaying": {

@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use riars_core::{AudioEngine, EngineStateInfo, MediaLibrary, Playlist, Track};
-use tauri::State;
+use tauri::{Manager, State};
 
 #[tauri::command]
 fn set_locale(lang: String) -> Result<(), String> {
@@ -103,14 +103,23 @@ pub fn run() {
     env_logger::init();
 
     let engine = AudioEngine::new().expect("Failed to initialize audio engine");
-    let library = MediaLibrary::new().expect("Failed to initialize media library");
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
-        .manage(AppState {
-            engine: Mutex::new(engine),
-            library: Mutex::new(library),
+        .setup(move |app| {
+            // Keep the library in the per-user app data folder, not the working directory.
+            let data_dir = app.path().app_data_dir()?;
+            std::fs::create_dir_all(&data_dir)?;
+            let db_path = data_dir.join("riars_library.db");
+            let library = MediaLibrary::open(&db_path.to_string_lossy())?;
+            log::info!("Media library: {}", db_path.display());
+
+            app.manage(AppState {
+                engine: Mutex::new(engine),
+                library: Mutex::new(library),
+            });
+            Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             engine_play,
