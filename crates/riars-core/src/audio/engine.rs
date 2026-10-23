@@ -59,10 +59,21 @@ pub struct AudioEngine {
 }
 
 impl AudioEngine {
+    /// Play through the default sound card, or the internal clock if there is none.
     pub fn new() -> Result<Self, String> {
+        Self::with_output(true)
+    }
+
+    /// Never touch a sound card: playback runs on the internal clock, for servers that
+    /// only stream.
+    pub fn new_headless() -> Result<Self, String> {
+        Self::with_output(false)
+    }
+
+    fn with_output(use_device: bool) -> Result<Self, String> {
         let sample_rate = 44100;
         let volume = 0.8;
-        let output = match AudioOutput::open(volume) {
+        let output = match AudioOutput::open(volume, use_device) {
             Ok(output) => Some(output),
             Err(e) => {
                 log::warn!("No audio output, running silent: {e}");
