@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use axum::extract::{Path, Query, State};
@@ -6,15 +5,14 @@ use axum::http::{header, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use chrono::{Local, NaiveDate, NaiveDateTime};
+use chrono::{Local, NaiveDateTime};
 use riars_core::automation::model::{
     Advertiser, AutomationConfig, Campaign, Category, CategoryRule, Clock, DeliveryRow, GridRule,
-    GridTarget, PlayLogEntry, SlotItem,
+    PlayLogEntry,
 };
 use riars_core::automation::preview;
-use riars_core::automation::runner::{AutomationStatus, MAX_PREVIEW_HOURS};
-use riars_core::automation::{parse_api_date, parse_api_datetime};
-use riars_core::library::db::MediaLibrary;
+use riars_core::automation::runner::AutomationStatus;
+use riars_core::automation::{parse_api_datetime, validate};
 use riars_core::playlist::playlist::PlaylistItem;
 use serde::{Deserialize, Serialize};
 
@@ -174,42 +172,6 @@ fn now() -> NaiveDateTime {
     Local::now().naive_local()
 }
 
-fn datetime_range(from: Option<String>, to: Option<String>) -> Result<(NaiveDateTime, NaiveDateTime), ApiError> {
-    let to = match to {
-        Some(text) => parse_api_datetime(&text).map_err(ApiError::from)?,
-        None => now(),
-    };
-    let from = match from {
-        Some(text) => parse_api_datetime(&text).map_err(ApiError::from)?,
-        None => to - chrono::Duration::hours(24),
-    };
-    if to < from {
-        return Err(ApiError::from("to must not be before from".to_string()));
-    }
-    if (to - from).num_days() > 366 {
-        return Err(ApiError::from("date span must be at most 366 days".to_string()));
-    }
-    Ok((from, to))
-}
-
-fn date_range(from: Option<String>, to: Option<String>) -> Result<(NaiveDate, NaiveDate), ApiError> {
-    let to = match to {
-        Some(text) => parse_api_date(&text).map_err(ApiError::from)?,
-        None => Local::now().date_naive(),
-    };
-    let from = match from {
-        Some(text) => parse_api_date(&text).map_err(ApiError::from)?,
-        None => to,
-    };
-    if to < from {
-        return Err(ApiError::from("to must not be before from".to_string()));
-    }
-    if (to - from).num_days() > 365 {
-        return Err(ApiError::from("date span must be at most 366 days".to_string()));
-    }
-    Ok((from, to))
-}
-
 fn date_stamp(value: NaiveDateTime) -> String {
     value.date().format("%Y-%m-%d").to_string()
 }
@@ -227,123 +189,6 @@ fn csv_response(body: String, filename: String) -> Response {
         .into_response()
 }
 
-fn validate_config(config: &AutomationConfig) -> Result<(), ApiError> {
-    if !(1..=50).contains(&config.min_items_ahead) {
-        return Err(ApiError::from("min_items_ahead must be between 1 and 50".to_string()));
-    }
-    if !(1..=240).contains(&config.min_minutes_ahead) {
-        return Err(ApiError::from("min_minutes_ahead must be between 1 and 240".to_string()));
-    }
-    if config.keep_played > 500 {
-        return Err(ApiError::from("keep_played must be at most 500".to_string()));
-    }
-    if !(10..=1800).contains(&config.ad_break_seconds) {
-        return Err(ApiError::from("ad_break_seconds must be between 10 and 1800".to_string()));
-    }
-    Ok(())
-}
-
-fn clock_category_ids(clock: &Clock) -> Vec<i64> {
-    let mut ids = Vec::new();
-    if let Some(id) = clock.fill_category {
-        ids.push(id);
-    }
-    for slot in &clock.slots {
-        match &slot.item {
-            SlotItem::Category { category_id, .. }
-            | SlotItem::Imaging { category_id }
-            | SlotItem::Fill { category_id } => ids.push(*category_id),
-            SlotItem::AdBreak { intro_category, outro_category, .. } => {
-                if let Some(id) = intro_category {
-                    ids.push(*id);
-                }
-                if let Some(id) = outro_category {
-                    ids.push(*id);
-                }
-            }
-            SlotItem::Playlist { .. } | SlotItem::Track { .. } => {}
-        }
-    }
-    ids
-}
-
-fn validate_clock(
-    clock: &Clock,
-    categories: &HashSet<i64>,
-    library: &MediaLibrary,
-) -> Result<(), ApiError> {
-    if clock.id.trim().is_empty() {
-        return Err(ApiError::from("clock id is required".to_string()));
-    }
-    if clock.name.trim().is_empty() {
-        return Err(ApiError::from("clock name is required".to_string()));
-    }
-    if !(5..=1440).contains(&clock.duration_minutes) {
-        return Err(ApiError::from("duration_minutes must be between 5 and 1440".to_string()));
-    }
-    for slot in &clock.slots {
-        if let Some(anchor) = &slot.at {
-            if anchor.minute >= clock.duration_minutes {
-                return Err(ApiError::from(format!(
-                    "anchor minute {} is outside a {}-minute clock",
-                    anchor.minute, clock.duration_minutes
-                )));
-            }
-            if anchor.second >= 60 {
-                return Err(ApiError::from("anchor second must be below 60".to_string()));
-            }
-        }
-    }
-    for id in clock_category_ids(clock) {
-        if !categories.contains(&id) {
-            return Err(ApiError::from(format!("No category {id}")));
-        }
-    }
-    for slot in &clock.slots {
-        match &slot.item {
-            SlotItem::Playlist { playlist_id, .. } => {
-                let playlist = library.load_playlist(playlist_id).map_err(|e| {
-                    ApiError::from(format!("No playlist {playlist_id}: {e}"))
-                })?;
-                if playlist.items.is_empty() {
-                    return Err(ApiError::from(format!("Playlist {playlist_id} is empty")));
-                }
-            }
-            SlotItem::Track { path } => {
-                if !std::path::Path::new(path).is_file() {
-                    return Err(ApiError::from(format!("No track file {path}")));
-                }
-            }
-            _ => {}
-        }
-    }
-    Ok(())
-}
-
-fn validate_grid_rule(rule: &GridRule, library: &MediaLibrary) -> Result<(), ApiError> {
-    if rule.id.trim().is_empty() {
-        return Err(ApiError::from("grid rule id is required".to_string()));
-    }
-    if let (Some(from), Some(to)) = (rule.date_from, rule.date_to) {
-        if to < from {
-            return Err(ApiError::from("date_to must not be before date_from".to_string()));
-        }
-    }
-    match &rule.target {
-        GridTarget::Clock { clock_id } => {
-            if !library.list_clocks()?.iter().any(|clock| &clock.id == clock_id) {
-                return Err(ApiError::from(format!("No clock {clock_id}")));
-            }
-        }
-        GridTarget::Playlist { playlist_id } => {
-            library
-                .load_playlist(playlist_id)
-                .map_err(|e| ApiError::from(format!("No playlist {playlist_id}: {e}")))?;
-        }
-    }
-    Ok(())
-}
-
 async fn status(State(state): State<Arc<AppState>>) -> Result<Json<AutomationStatus>, ApiError> {
     let status = state.automation.lock().map_err(ApiError::internal)?.status();
     Ok(Json(status))
@@ -358,7 +203,7 @@ async fn save_config(
     State(state): State<Arc<AppState>>,
     Json(config): Json<AutomationConfig>,
 ) -> Result<Json<AutomationConfig>, ApiError> {
-    validate_config(&config)?;
+    validate::validate_config(&config)?;
     {
         let mut library = state.library.lock().map_err(ApiError::internal)?;
         library.save_automation_config(&config)?;
@@ -550,9 +395,7 @@ async fn save_clock(
 ) -> Result<Json<Clock>, ApiError> {
     let saved = {
         let mut library = state.library.lock().map_err(ApiError::internal)?;
-        let categories: HashSet<i64> =
-            library.list_categories()?.into_iter().map(|category| category.id).collect();
-        validate_clock(&clock, &categories, &library)?;
+        validate::validate_clock(&clock, &library)?;
         library.save_clock(&clock)?;
         clock
     };
@@ -586,7 +429,7 @@ async fn save_grid_rule(
 ) -> Result<Json<GridRule>, ApiError> {
     let saved = {
         let mut library = state.library.lock().map_err(ApiError::internal)?;
-        validate_grid_rule(&rule, &library)?;
+        validate::validate_grid_rule(&rule, &library)?;
         library.save_grid_rule(&rule)?;
         rule
     };
@@ -702,12 +545,7 @@ async fn preview_get(
         Some(text) => parse_api_datetime(&text).map_err(ApiError::from)?,
         None => now(),
     };
-    let hours = q.hours.unwrap_or(1);
-    if !(1..=MAX_PREVIEW_HOURS).contains(&hours) {
-        return Err(ApiError::from(format!(
-            "hours must be between 1 and {MAX_PREVIEW_HOURS}"
-        )));
-    }
+    let hours = validate::preview_hours(q.hours)?;
     let worker = Arc::clone(&state);
     let overlap = crossfade_overlap(&state)?;
     let items = tokio::task::spawn_blocking(move || preview(&worker.library, from, hours, overlap))
@@ -721,7 +559,7 @@ async fn log_get(
     State(state): State<Arc<AppState>>,
     Query(q): Query<LogQuery>,
 ) -> Result<Json<Vec<PlayLogEntry>>, ApiError> {
-    let (from, to) = datetime_range(q.from, q.to)?;
+    let (from, to) = validate::datetime_range(q.from.as_deref(), q.to.as_deref())?;
     let limit = q.limit.unwrap_or(500).clamp(1, 5000);
     let worker = Arc::clone(&state);
     let entries = tokio::task::spawn_blocking(move || {
@@ -737,7 +575,7 @@ async fn log_csv(
     State(state): State<Arc<AppState>>,
     Query(q): Query<CsvRangeQuery>,
 ) -> Result<Response, ApiError> {
-    let (from, to) = datetime_range(q.from, q.to)?;
+    let (from, to) = validate::datetime_range(q.from.as_deref(), q.to.as_deref())?;
     let worker = Arc::clone(&state);
     let csv = tokio::task::spawn_blocking(move || {
         worker.library.lock().map_err(|e| e.to_string())?.play_log_csv(from, to)
@@ -752,7 +590,7 @@ async fn delivery_get(
     State(state): State<Arc<AppState>>,
     Query(q): Query<DateRangeQuery>,
 ) -> Result<Json<Vec<DeliveryRow>>, ApiError> {
-    let (from, to) = date_range(q.from, q.to)?;
+    let (from, to) = validate::date_range(q.from.as_deref(), q.to.as_deref())?;
     let worker = Arc::clone(&state);
     let rows = tokio::task::spawn_blocking(move || {
         worker.library.lock().map_err(|e| e.to_string())?.delivery_report(from, to)
@@ -767,7 +605,7 @@ async fn delivery_csv(
     State(state): State<Arc<AppState>>,
     Query(q): Query<DateRangeQuery>,
 ) -> Result<Response, ApiError> {
-    let (from, to) = date_range(q.from, q.to)?;
+    let (from, to) = validate::date_range(q.from.as_deref(), q.to.as_deref())?;
     let worker = Arc::clone(&state);
     let csv = tokio::task::spawn_blocking(move || {
         worker.library.lock().map_err(|e| e.to_string())?.delivery_csv(from, to)
@@ -785,7 +623,7 @@ async fn campaign_log_csv(
     State(state): State<Arc<AppState>>,
     Query(q): Query<CampaignLogQuery>,
 ) -> Result<Response, ApiError> {
-    let (from, to) = datetime_range(q.from, q.to)?;
+    let (from, to) = validate::datetime_range(q.from.as_deref(), q.to.as_deref())?;
     let worker = Arc::clone(&state);
     let csv = tokio::task::spawn_blocking(move || {
         worker
@@ -807,8 +645,10 @@ async fn campaign_log_csv(
 mod tests {
     use std::path::{Path, PathBuf};
 
-    use chrono::NaiveTime;
-    use riars_core::automation::model::ClockSlot;
+    use chrono::{NaiveDate, NaiveTime};
+    use riars_core::automation::model::{ClockSlot, GridTarget, SlotItem};
+    use riars_core::automation::runner::MAX_PREVIEW_HOURS;
+    use riars_core::library::db::MediaLibrary;
     use riars_core::playlist::playlist::ItemKind;
     use riars_core::{AudioEngine, Scheduler};
     use riars_core::automation::Automation;
