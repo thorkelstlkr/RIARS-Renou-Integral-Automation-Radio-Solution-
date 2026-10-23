@@ -1,4 +1,5 @@
 pub mod audio;
+pub mod automation;
 pub mod library;
 pub mod locale;
 pub mod playlist;

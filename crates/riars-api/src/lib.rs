@@ -15,6 +15,8 @@ pub struct AppState {
     pub engine: Mutex<AudioEngine>,
     pub library: Mutex<MediaLibrary>,
     pub scheduler: Mutex<Scheduler>,
+    /// Where the schedule is saved after every change.
+    pub schedule_path: std::path::PathBuf,
     /// Every request must carry it as `Authorization: Bearer <token>`
     /// (or `?token=` on the WebSocket, where browsers cannot set headers).
     pub api_token: String,
@@ -70,6 +72,10 @@ pub async fn serve(state: Arc<AppState>, port: u16) -> Result<(), Box<dyn std::e
     let addr = format!("0.0.0.0:{port}");
     log::info!("RIARS API server listening on {addr}");
     tokio::spawn(auto_advance(Arc::clone(&state)));
+    let scheduler_state = Arc::clone(&state);
+    std::thread::Builder::new()
+        .name("riars-scheduler".into())
+        .spawn(move || run_scheduler(&scheduler_state))?;
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
     Ok(())
@@ -114,5 +120,26 @@ mod tests {
         assert!(!constant_time_eq(b"abc123", b"abc124"));
         assert!(!constant_time_eq(b"abc", b"abc123"));
         assert!(!constant_time_eq(b"", b"abc"));
+    }
+}
+
+/// Scheduled events, on a blocking thread because an action may decode a track.
+fn run_scheduler(state: &AppState) {
+    let mut stream = |command| stream_command(state.stream.as_ref(), command);
+    riars_core::automation::scheduler_loop(&state.engine, &state.scheduler, &state.schedule_path, &mut stream)
+}
+
+pub fn stream_command(
+    stream: Option<&riars_stream::StreamService>,
+    command: riars_core::automation::StreamCommand,
+) -> Result<(), String> {
+    use riars_core::automation::StreamCommand;
+    match (stream, command) {
+        (Some(s), StreamCommand::Start) => s.resume(),
+        (Some(s), StreamCommand::Stop) => {
+            s.stop();
+            Ok(())
+        }
+        (None, _) => Err("Streaming needs an audio output".to_string()),
     }
 }

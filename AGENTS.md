@@ -47,6 +47,8 @@ Agents connect via two protocols:
 
 Both expose the same capabilities: playback control, playlist management, library search, scheduling, streaming, and status monitoring.
 
+The schedule (`/api/v1/schedule`, MCP `add_scheduled_event` etc.) is saved as `riars_schedule.json` next to the library database and runs in riars-server, with second precision; one-shot `Time` events disable themselves after firing.
+
 ## Conventions
 
 - Audio processing code in riars-core must be real-time safe: no allocations, no locks, no I/O in the audio callback

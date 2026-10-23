@@ -70,7 +70,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("Audio output: {}", engine.output_device().unwrap_or("none"));
     let stream = engine.take_stream_tap().map(riars_stream::StreamService::new);
     let mut library = MediaLibrary::open(&cli.db_path).expect(&t("library_init_failed"));
-    let scheduler = Scheduler::new();
+    // The schedule lives next to the library database.
+    let schedule_path = std::path::Path::new(&cli.db_path).with_file_name("riars_schedule.json");
+    let scheduler = Scheduler::load(&schedule_path).unwrap_or_else(|e| {
+        log::warn!("{e}; starting with an empty schedule");
+        Scheduler::new()
+    });
+    log::info!("Schedule: {} ({} events)", schedule_path.display(), scheduler.events().len());
 
     if let Some(ref folder) = cli.scan {
         match library.scan_folder(folder) {
@@ -86,6 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             library: Arc::new(Mutex::new(library)),
             scheduler: Arc::new(Mutex::new(scheduler)),
             stream,
+            schedule_path,
         };
         riars_mcp::run_stdio(mcp_state).await?;
     } else {
@@ -101,6 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let state = Arc::new(AppState {
             api_token,
             stream,
+            schedule_path,
             engine: Mutex::new(engine),
             library: Mutex::new(library),
             scheduler: Mutex::new(scheduler),

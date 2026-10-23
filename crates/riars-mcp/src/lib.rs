@@ -14,6 +14,8 @@ pub struct McpState {
     pub scheduler: Arc<Mutex<Scheduler>>,
     /// Icecast streaming; `None` without a sound card.
     pub stream: Option<riars_stream::StreamService>,
+    /// Where the schedule is saved after every change.
+    pub schedule_path: std::path::PathBuf,
 }
 
 #[derive(Deserialize)]
@@ -91,6 +93,22 @@ pub async fn run_stdio(state: McpState) -> Result<(), Box<dyn std::error::Error>
     tokio::spawn(auto_advance(Arc::clone(&state.engine)));
     let state = Arc::new(state);
     tokio::spawn(follow_title(Arc::clone(&state)));
+    let scheduler_state = Arc::clone(&state);
+    std::thread::Builder::new().name("riars-scheduler".into()).spawn(move || {
+        let state = scheduler_state;
+        let mut stream = |command| {
+            use riars_core::automation::StreamCommand;
+            match (&state.stream, command) {
+                (Some(s), StreamCommand::Start) => s.resume(),
+                (Some(s), StreamCommand::Stop) => {
+                    s.stop();
+                    Ok(())
+                }
+                (None, _) => Err("Streaming needs an audio output".to_string()),
+            }
+        };
+        riars_core::automation::scheduler_loop(&state.engine, &state.scheduler, &state.schedule_path, &mut stream)
+    })?;
     let stdin = tokio::io::stdin();
     let mut stdout = tokio::io::stdout();
     let mut reader = BufReader::new(stdin);

@@ -8,6 +8,7 @@ use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 
 use riars_core::audio::crossfade::{CrossfadeConfig, FadeCurve};
+use riars_core::playlist::scheduler::{EventAction, EventTrigger, ScheduledEvent};
 use riars_core::{play_index_unlocked, EngineStateInfo, IcecastConfig, Playlist};
 use riars_stream::{StreamService, StreamStatus};
 
@@ -68,6 +69,10 @@ pub fn api_routes() -> Router<Arc<AppState>> {
         .route("/stream", get(stream_get))
         .route("/stream/start", post(stream_start))
         .route("/stream/stop", post(stream_stop))
+        .route("/schedule", get(schedule_get))
+        .route("/schedule/add", post(schedule_add))
+        .route("/schedule/remove", post(schedule_remove))
+        .route("/schedule/toggle", post(schedule_toggle))
         .route("/playlist", get(playlist_get))
         .route("/playlist/add", post(playlist_add))
         .route("/playlist/remove", post(playlist_remove))
@@ -231,6 +236,52 @@ async fn stream_stop(State(state): State<Arc<AppState>>) -> Result<Json<StreamRe
         config: service.config(),
     };
     Ok(Json(response))
+}
+
+#[derive(Deserialize)]
+struct AddEventRequest {
+    name: String,
+    trigger: EventTrigger,
+    action: EventAction,
+}
+
+#[derive(Deserialize)]
+struct EventIdRequest {
+    id: String,
+}
+
+async fn schedule_get(State(state): State<Arc<AppState>>) -> Result<Json<Vec<ScheduledEvent>>, ApiError> {
+    Ok(Json(state.scheduler.lock().map_err(ApiError::internal)?.events().to_vec()))
+}
+
+async fn schedule_add(State(state): State<Arc<AppState>>, Json(req): Json<AddEventRequest>) -> Result<Json<ScheduledEvent>, ApiError> {
+    if req.name.trim().is_empty() {
+        return Err(ApiError::from("name is required".to_string()));
+    }
+    let mut scheduler = state.scheduler.lock().map_err(ApiError::internal)?;
+    let event = ScheduledEvent::new(req.name, req.trigger, req.action);
+    scheduler.add_event(event.clone());
+    scheduler.save(&state.schedule_path)?;
+    Ok(Json(event))
+}
+
+async fn schedule_remove(State(state): State<Arc<AppState>>, Json(req): Json<EventIdRequest>) -> Result<Json<Vec<ScheduledEvent>>, ApiError> {
+    let mut scheduler = state.scheduler.lock().map_err(ApiError::internal)?;
+    if !scheduler.remove_event(&req.id) {
+        return Err(ApiError::from(format!("No scheduled event {}", req.id)));
+    }
+    scheduler.save(&state.schedule_path)?;
+    Ok(Json(scheduler.events().to_vec()))
+}
+
+async fn schedule_toggle(State(state): State<Arc<AppState>>, Json(req): Json<EventIdRequest>) -> Result<Json<Vec<ScheduledEvent>>, ApiError> {
+    let mut scheduler = state.scheduler.lock().map_err(ApiError::internal)?;
+    if let Some(_) = scheduler.toggle_event(&req.id) {
+        scheduler.save(&state.schedule_path)?;
+        Ok(Json(scheduler.events().to_vec()))
+    } else {
+        Err(ApiError::from(format!("No scheduled event {}", req.id)))
+    }
 }
 
 /// Error body for every endpoint: `{"error": "..."}` with a 4xx/5xx status, so clients
