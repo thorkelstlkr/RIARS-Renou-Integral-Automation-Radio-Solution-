@@ -44,7 +44,23 @@
   },
   "stream": {
     "streaming": "EN DIRECT",
-    "offline": "HORS LIGNE"
+    "offline": "HORS LIGNE",
+    "connecting": "CONNEXION",
+    "error": "ERREUR DE STREAM",
+    "unavailable": "PAS D'AUDIO",
+    "settings": "Paramètres de streaming",
+    "noDevice": "Le streaming nécessite un périphérique de sortie audio.",
+    "host": "Serveur",
+    "port": "Port",
+    "mount": "Point de montage",
+    "bitrate": "Débit",
+    "username": "Utilisateur",
+    "password": "Mot de passe",
+    "stationName": "Nom de la station",
+    "genre": "Genre",
+    "sent": "{{size}} envoyés",
+    "connect": "Se connecter",
+    "disconnect": "Se déconnecter"
   },
   "vuMeter": {
     "title": "VU-mètre"

@@ -44,7 +44,23 @@
   },
   "stream": {
     "streaming": "EN DIRECTE",
-    "offline": "FORA DE LÍNIA"
+    "offline": "FORA DE LÍNIA",
+    "connecting": "CONNECTANT",
+    "error": "ERROR DE STREAM",
+    "unavailable": "SENSE ÀUDIO",
+    "settings": "Configuració de streaming",
+    "noDevice": "El streaming necessita un dispositiu de sortida d'àudio.",
+    "host": "Servidor",
+    "port": "Port",
+    "mount": "Punt de muntatge",
+    "bitrate": "Bitrate",
+    "username": "Usuari",
+    "password": "Contrasenya",
+    "stationName": "Nom de l'emissora",
+    "genre": "Gènere",
+    "sent": "{{size}} enviats",
+    "connect": "Connecta",
+    "disconnect": "Desconnecta"
   },
   "vuMeter": {
     "title": "Mesurador VU"
