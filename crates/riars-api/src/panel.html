@@ -32,6 +32,18 @@
   #login { max-width: 360px; margin: 15vh auto; }
   .muted { color: var(--muted); font-size: 12px; }
   .error { color: var(--red); font-size: 12px; min-height: 16px; }
+  .sub { margin-top: 16px; }
+  .auto-period { margin: 8px 0 0; overflow-wrap: anywhere; }
+  .kind { flex: 0 0 auto; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; white-space: nowrap; background: var(--input); color: var(--muted); }
+  .kind.music { background: #1f6feb; color: #fff; }
+  .kind.imaging { background: var(--yellow); color: #000; }
+  .kind.spot { background: var(--red); color: #fff; }
+  .kind.other { background: var(--input); color: var(--muted); }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  td.missed { color: var(--red); font-weight: 700; }
 </style>
 </head>
 <body>
@@ -59,6 +71,34 @@
   </div>
   <div class="card"><h2 data-t="playlist"></h2><ul id="playlist"></ul></div>
   <div class="card"><h2 data-t="library"></h2><input id="search" data-tp="search"><p class="muted" id="count"></p><ul id="results"></ul></div>
+  <div class="card">
+    <h2 data-t="automation"></h2>
+    <div class="row" style="margin-top: 0; justify-content: space-between">
+      <span class="muted" data-t="autoState"></span>
+      <button id="autoToggle" class="badge" type="button" aria-pressed="false" data-t="off"></button>
+    </div>
+    <p class="muted auto-period" id="autoPeriod"></p>
+    <h2 class="sub" data-t="warnings"></h2>
+    <ul id="autoWarnings"></ul>
+    <h2 class="sub" data-t="comingUp"></h2>
+    <ul id="autoPreview"></ul>
+    <p class="muted" data-t="previewHint"></p>
+    <h2 class="sub" data-t="todayAds"></h2>
+    <div class="scroll">
+      <table>
+        <thead><tr>
+          <th data-t="advertiser"></th><th data-t="campaign"></th><th data-t="target"></th><th data-t="aired"></th><th data-t="missed"></th>
+        </tr></thead>
+        <tbody id="deliveryBody"></tbody>
+      </table>
+    </div>
+    <h2 class="sub" data-t="downloads"></h2>
+    <div class="row">
+      <button id="dlPlay" type="button" data-t="downloadPlaylog"></button>
+      <button id="dlDelivery" type="button" data-t="downloadDelivery"></button>
+      <button id="dlSpots" type="button" data-t="downloadSpots"></button>
+    </div>
+  </div>
 </section>
 </div>
 <script>
@@ -70,11 +110,55 @@ const L = {
   en: { tokenHelp: "Enter the API token (riars-server --api-token, or the one printed at startup).", enter: "Enter",
         playlist: "Playlist", library: "Library", search: "Search…", tracks: "tracks", track: "track", badToken: "Wrong token",
         Playing: "ON AIR", Paused: "PAUSED", Stopped: "STOPPED", Connected: "STREAMING", Connecting: "CONNECTING",
-        Error: "STREAM ERROR", Disconnected: "OFFLINE", deadAir: "SILENCE", empty: "Empty", lost: "Connection lost, retrying…" },
+        Error: "STREAM ERROR", Disconnected: "OFFLINE", deadAir: "SILENCE", empty: "Empty", lost: "Connection lost, retrying…",
+        automation: "Automation", autoState: "State", on: "ON", off: "OFF", clock: "Clock", period: "Period",
+        noPeriod: "No period", rule: "Rule", warnings: "Warnings", noWarnings: "No warnings",
+        comingUp: "Coming up", previewHint: "Preview only. The Playlist card shows what is really on air.",
+        todayAds: "Today's advertising", advertiser: "Advertiser", campaign: "Campaign", target: "Target",
+        aired: "Aired", missed: "Missed", noAds: "No campaigns today", downloads: "Downloads",
+        downloadPlaylog: "Play log (CSV)", downloadDelivery: "Delivery (CSV)", downloadSpots: "Spot log (CSV)",
+        downloadError: "Could not download the file", none: "None",
+        kindMusic: "Music", kindJingle: "Jingle", kindBumper: "Bumper", kindStationId: "Station ID",
+        kindSweeper: "Sweeper", kindPromo: "Promo", kindSpot: "Spot", kindProgram: "Program", kindBed: "Bed", kindOther: "Other" },
   es: { tokenHelp: "Introduce el token de la API (riars-server --api-token, o el que se muestra al arrancar).", enter: "Entrar",
         playlist: "Lista de reproducción", library: "Biblioteca", search: "Buscar…", tracks: "pistas", track: "pista", badToken: "Token incorrecto",
         Playing: "AL AIRE", Paused: "PAUSA", Stopped: "DETENIDO", Connected: "EMITIENDO", Connecting: "CONECTANDO",
-        Error: "ERROR DE STREAM", Disconnected: "DESCONECTADO", deadAir: "SILENCIO", empty: "Vacía", lost: "Conexión perdida, reintentando…" },
+        Error: "ERROR DE STREAM", Disconnected: "DESCONECTADO", deadAir: "SILENCIO", empty: "Vacía", lost: "Conexión perdida, reintentando…",
+        automation: "Automatización",
+        autoState: "Estado",
+        on: "ACTIVA",
+        off: "PARADA",
+        clock: "Reloj",
+        period: "Franja",
+        noPeriod: "Sin franja",
+        rule: "Regla",
+        warnings: "Avisos",
+        noWarnings: "Sin avisos",
+        comingUp: "Lo próximo",
+        previewHint: "Solo es una vista previa. Lo que suena de verdad está en la lista de reproducción.",
+        todayAds: "Publicidad de hoy",
+        advertiser: "Anunciante",
+        campaign: "Campaña",
+        target: "Contratadas",
+        aired: "Emitidas",
+        missed: "Perdidas",
+        noAds: "Hoy no hay campañas",
+        downloads: "Descargas",
+        downloadPlaylog: "Registro de emisiones (CSV)",
+        downloadDelivery: "Cumplimiento (CSV)",
+        downloadSpots: "Emisiones de cuñas (CSV)",
+        downloadError: "No se ha podido descargar el archivo",
+        none: "Ninguno",
+        kindMusic: "Música",
+        kindJingle: "Jingle",
+        kindBumper: "Bumper",
+        kindStationId: "Indicativo",
+        kindSweeper: "Sweeper",
+        kindPromo: "Promo",
+        kindSpot: "Cuña",
+        kindProgram: "Programa",
+        kindBed: "Cama musical",
+        kindOther: "Otro" },
 };
 const T = L[(navigator.language || "en").slice(0, 2)] || L.en;
 document.querySelectorAll("[data-t]").forEach((el) => (el.textContent = T[el.dataset.t]));
@@ -141,6 +225,122 @@ async function search() {
   }));
 }
 
+// --- Automation -----------------------------------------------------------
+let autoStatus = null;
+const autoLast = { preview: 0, delivery: 0 };
+const autoPending = {};
+const KIND_CLASS = { Music: "music", Jingle: "imaging", Bumper: "imaging", StationId: "imaging",
+                     Sweeper: "imaging", Promo: "imaging", Spot: "spot" };
+const hhmm = (text) => { const m = /T(\d{2}:\d{2})/.exec(text || ""); return m ? m[1] : "—"; };
+const pad2 = (n) => String(n).padStart(2, "0");
+const dayStart = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T00:00:00`; };
+
+function renderAutoStatus() {
+  if (!autoStatus) return;
+  const btn = $("autoToggle");
+  btn.textContent = autoStatus.enabled ? T.on : T.off;
+  btn.className = "badge" + (autoStatus.enabled ? " on" : "");
+  btn.setAttribute("aria-pressed", autoStatus.enabled ? "true" : "false");
+  const p = autoStatus.period;
+  if (!p) {
+    $("autoPeriod").textContent = T.noPeriod;
+  } else {
+    const source = p.clock_id ? `${T.clock}: ${p.clock_id}` : p.playlist_id ? `${T.playlist}: ${p.playlist_id}` : T.none;
+    const parts = [source];
+    if (p.rule_id) parts.push(`${T.rule}: ${p.rule_id}`);
+    parts.push(`${hhmm(p.start)}–${hhmm(p.end)}`);
+    $("autoPeriod").textContent = parts.join(" · ");
+  }
+  const warnings = (autoStatus.warnings || []).slice(-5).reverse();
+  $("autoWarnings").replaceChildren(...(warnings.length ? warnings.map((w) => {
+    const li = document.createElement("li");
+    const time = document.createElement("small"); time.textContent = hhmm(w[0]);
+    const msg = document.createElement("span"); msg.textContent = w[1];
+    li.append(time, msg);
+    return li;
+  }) : [Object.assign(document.createElement("li"), { className: "muted", textContent: T.noWarnings })]));
+}
+
+async function loadStatus() {
+  const s = await api("/automation/status").catch(() => null);
+  if (!s) return;
+  autoStatus = s;
+  renderAutoStatus();
+}
+
+async function loadPreview() {
+  const items = await api("/automation/preview?hours=1").catch(() => null);
+  if (!items) return;
+  $("autoPreview").replaceChildren(...(items.length ? items.slice(0, 10).map((it) => {
+    const li = document.createElement("li");
+    const time = document.createElement("small"); time.textContent = hhmm(it.planned_at);
+    const kind = document.createElement("span");
+    kind.className = "kind " + (KIND_CLASS[it.kind] || "other");
+    kind.textContent = T["kind" + it.kind] || it.kind || T.kindOther;
+    const name = document.createElement("span"); name.textContent = it.artist ? `${it.artist} — ${it.title}` : it.title;
+    li.append(time, kind, name);
+    return li;
+  }) : [Object.assign(document.createElement("li"), { className: "muted", textContent: T.empty })]));
+}
+
+async function loadDelivery() {
+  const rows = await api("/automation/delivery").catch(() => null);
+  if (!rows) return;
+  const list = rows.length ? rows.map((r) => {
+    const tr = document.createElement("tr");
+    [r.advertiser, r.campaign, r.target, r.aired, r.missed].forEach((value, i) => {
+      const td = document.createElement("td"); td.textContent = String(value);
+      if (i === 4 && r.missed > 0) td.className = "missed";
+      tr.append(td);
+    });
+    return tr;
+  }) : (() => {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 5; td.className = "muted"; td.textContent = T.noAds;
+    tr.append(td); return tr;
+  })();
+  $("deliveryBody").replaceChildren(...(Array.isArray(list) ? list : [list]));
+}
+
+function loadAutomation() { loadStatus(); loadPreview(); loadDelivery(); }
+
+function refreshSoon(key, task) {
+  if (autoPending[key]) return;
+  const wait = Math.max(0, 5000 - (Date.now() - autoLast[key]));
+  autoPending[key] = setTimeout(() => {
+    autoPending[key] = null;
+    autoLast[key] = Date.now();
+    task();
+  }, wait);
+}
+
+function automationEvent(data) {
+  if (data.generated > 0) refreshSoon("preview", () => { loadStatus(); loadPreview(); });
+  if (data.logged > 0) refreshSoon("delivery", loadDelivery);
+}
+
+async function downloadCsv(path, fallback) {
+  try {
+    const r = await fetch("/api/v1" + path, { headers: { Authorization: "Bearer " + token } });
+    if (r.status === 401) { logout(T.badToken); return; }
+    if (!r.ok) {
+      let message = await r.text();
+      try { message = JSON.parse(message).error; } catch {}
+      $("error").textContent = message;
+      return;
+    }
+    const blob = await r.blob();
+    const match = /filename="?([^";]+)"?/i.exec(r.headers.get("Content-Disposition") || "");
+    const name = match ? match[1] : fallback;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch { $("error").textContent = T.downloadError; }
+}
+
 async function streamStatus() {
   if (document.hidden) return;
   const s = await api("/stream").catch(() => null);
@@ -155,7 +355,8 @@ function connect() {
   ws.onmessage = (m) => {
     try {
       const data = JSON.parse(m.data);
-      if (data.type !== "automation") render(data);
+      if (data.type === "automation") automationEvent(data);
+      else render(data);
     } catch {}
   };
   ws.onclose = () => { if (token) { $("error").textContent = T.lost; setTimeout(connect, 2000); } };
@@ -165,8 +366,9 @@ function connect() {
 async function start() {
   try { await api("/status"); } catch { return; }
   $("login").hidden = true; $("app").hidden = false;
-  connect(); search(); streamStatus();
+  connect(); search(); streamStatus(); loadAutomation();
   setInterval(streamStatus, 5000);
+  setInterval(() => { if (document.visibilityState !== "hidden") loadStatus(); }, 60000);
 }
 function logout(msg) {
   token = null; store.set(null); if (ws) ws.close();
@@ -182,6 +384,16 @@ $("bar").onclick = (e) => {
   api("/player/seek", { position_ms: Math.round((e.clientX - r.left) / r.width * state.duration_ms) }).catch(() => {});
 };
 $("search").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(search, 300); };
+$("autoToggle").onclick = () => {
+  const enabled = !(autoStatus && autoStatus.enabled);
+  api("/automation/enable", { enabled }).then((config) => {
+    autoStatus = Object.assign(autoStatus || { period: null, warnings: [] }, { enabled: config.enabled });
+    renderAutoStatus(); loadStatus();
+  }).catch(() => {});
+};
+$("dlPlay").onclick = () => downloadCsv("/automation/log.csv", "riars-log.csv");
+$("dlDelivery").onclick = () => downloadCsv("/automation/delivery.csv", "riars-delivery.csv");
+$("dlSpots").onclick = () => downloadCsv("/automation/campaign-log.csv?from=" + encodeURIComponent(dayStart()), "riars-campaign-log.csv");
 if (token) start(); else logout();
 </script>
 </body>

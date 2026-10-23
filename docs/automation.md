@@ -1,6 +1,6 @@
 # Automatización a largo plazo (diseño)
 
-Estado: **aprobado** (23-10-2026) con las propuestas por defecto del apartado 8. Fases 1 (núcleo), 2 (publicidad) y 3 (API, WebSocket y MCP) implementadas.
+Estado: **aprobado** (23-10-2026) con las propuestas por defecto del apartado 8. Fases 1 a 4 implementadas (núcleo, publicidad, API/WebSocket/MCP e interfaz).
 
 ## 1. Objetivo
 
@@ -220,6 +220,11 @@ Las mismas operaciones como herramientas: `automation_status`, `set_automation_e
 `AutomationConfig.no_overlap_kinds` (por defecto, solo cuñas): los elementos de esos tipos nunca se funden con el anterior ni con el siguiente. El generador marca cada elemento (`PlaylistItem.no_overlap`) y el hilo de audio salta el fundido en esa transición.
 
 ### 6.5 Interfaz (fase 4)
+
+Implementada así:
+- **Escritorio**: arriba, la barra de RadioBOSS (fecha, hora y lo que le queda a la pista; pista anterior, en el aire y siguiente, con su tipo). A la izquierda, la biblioteca con el registro debajo. En el centro, las pestañas *Lista de reproducción* (con hora de inicio y color por tipo), *Programación*, *Relojes* (editor de huecos con gráfico circular de la hora), *Parrilla* (semana tipo de 7×24 casillas y editor de reglas), *Categorías* (árbol, filtros, separación, pistas, reglas y ajustes de la emisora), *Publicidad* (anunciantes, campañas y cumplimiento con exportación CSV) y *Registro* (emisiones con filtros y CSV). A la derecha, lo que suena, el vúmetro y la tarjeta de la automatización. Abajo, la barra de estado (detector de silencio, automatización, programador de eventos).
+- **Panel web**: tarjeta *Automatización* con el interruptor, la franja que se prepara, los avisos, lo próximo (vista previa), la publicidad de hoy y las descargas CSV; adaptado al móvil.
+- La validación de datos vive en `riars-core/src/automation/validate.rs` y la comparten REST, MCP y escritorio.
 
 - **Guía visual**: la disposición de RadioBOSS Advanced, que el usuario tomó como referencia. Arriba: reloj, pista anterior, en el aire y siguiente. A la izquierda: biblioteca por carpetas y categorías, con un registro debajo. En el centro: playlist en pestañas con columnas de hora de inicio, duración, repeticiones, intro, outro, valoración y última emisión, y los controles debajo. Abajo del todo: barra de estado con el detector de silencio y el programador.
 - **Escritorio** (Tauri + React): pestañas *Categorías*, *Relojes* (editor de huecos con vista de "tarta" de la hora), *Parrilla* (semana tipo + calendario), *Publicidad* (anunciantes, campañas, estado de cumplimiento) y *Registro*.
