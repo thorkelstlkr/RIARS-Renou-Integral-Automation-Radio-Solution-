@@ -1,19 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { invoke } from "@tauri-apps/api/core";
 
 interface PlaylistItem {
   id: string;
-  titleKey: string;
-  artistKey: string;
-  duration: string;
+  track_path: string;
+  title: string;
+  artist: string;
+  duration_ms: number;
 }
 
-const DEMO: PlaylistItem[] = [
-  { id: "1", titleKey: "playlist.demo.welcome", artistKey: "playlist.demo.jingle", duration: "0:15" },
-  { id: "2", titleKey: "playlist.demo.localNews", artistKey: "playlist.demo.newsroom", duration: "5:00" },
-  { id: "3", titleKey: "playlist.demo.morningMusic", artistKey: "playlist.demo.autoPlaylist", duration: "45:00" },
-  { id: "4", titleKey: "playlist.demo.adBreak", artistKey: "playlist.demo.sponsor", duration: "0:30" },
-];
+interface Playlist {
+  items: PlaylistItem[];
+  current_index: number;
+}
 
 const S: Record<string, React.CSSProperties> = {
   panel: { display: "flex", flexDirection: "column", height: "100%" },
@@ -32,8 +32,9 @@ const S: Record<string, React.CSSProperties> = {
     borderBottom: "1px solid var(--border)",
   },
   list: { flex: 1, overflowY: "auto" },
+  empty: { padding: "24px 16px", textAlign: "center", color: "var(--text-muted)", fontSize: 13 },
   row: {
-    display: "flex", padding: "8px 16px", cursor: "pointer",
+    display: "flex", alignItems: "center", padding: "8px 16px", cursor: "pointer",
     borderBottom: "1px solid rgba(255,255,255,0.03)",
   },
   active: {
@@ -43,40 +44,87 @@ const S: Record<string, React.CSSProperties> = {
   tit: { flex: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
   art: { flex: 1, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
   dur: { width: 70, textAlign: "right" as const, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-secondary)" },
+  act: { width: 72, display: "flex", justifyContent: "flex-end", gap: 2 },
+  icon: { padding: "0 6px", fontSize: 12, background: "transparent", color: "var(--text-muted)" },
   foot: { padding: "6px 16px", fontSize: 12, color: "var(--text-muted)", borderTop: "1px solid var(--border)" },
+};
+
+const fmt = (ms: number) => {
+  if (ms <= 0) return "--:--";
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 };
 
 export default function PlaylistPanel() {
   const { t } = useTranslation();
-  const [items] = useState(DEMO);
-  const [activeId, setActiveId] = useState("1");
+  const [playlist, setPlaylist] = useState<Playlist>({ items: [], current_index: 0 });
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    try { setPlaylist(await invoke<Playlist>("playlist_get")); } catch { /* not ready */ }
+  }, []);
+
+  // Poll so auto-advance and additions from the library show up.
+  useEffect(() => {
+    refresh();
+    const id = setInterval(refresh, 1000);
+    window.addEventListener("playlist-changed", refresh);
+    return () => { clearInterval(id); window.removeEventListener("playlist-changed", refresh); };
+  }, [refresh]);
+
+  const run = useCallback(async (cmd: string, args?: Record<string, unknown>) => {
+    try {
+      const result = await invoke<Playlist | null>(cmd, args);
+      if (result) setPlaylist(result); else await refresh();
+      setError(null);
+    } catch (e) {
+      setError(cmd === "playlist_play" ? t("library.loadError", { error: String(e) }) : String(e));
+    }
+  }, [refresh, t]);
+
+  const { items, current_index } = playlist;
+  const total = items.reduce((sum, i) => sum + i.duration_ms, 0);
 
   return (
     <div style={S.panel}>
       <div style={S.toolbar}>
         <h2 style={S.title}>{t("playlist.title")}</h2>
-        <button style={S.btn}>{t("playlist.add")}</button>
-        <button style={S.btn}>{t("playlist.clear")}</button>
+        <button style={S.btn} onClick={() => run("playlist_clear")} disabled={items.length === 0}>
+          {t("playlist.clear")}
+        </button>
       </div>
       <div style={S.hdr}>
         <span style={S.num}>{t("playlist.headerNumber")}</span>
         <span style={S.tit}>{t("playlist.headerTitle")}</span>
-        <span style={S.art}>{t("playlist.headerType")}</span>
+        <span style={S.art}>{t("playlist.headerArtist")}</span>
         <span style={S.dur}>{t("playlist.headerDuration")}</span>
+        <span style={S.act} />
       </div>
+      {error && <div style={{ ...S.foot, color: "var(--red)", borderTop: "none" }}>{error}</div>}
       <div style={S.list}>
+        {items.length === 0 && <div style={S.empty}>{t("playlist.empty")}</div>}
         {items.map((item, i) => (
-          <div key={item.id}
-            style={{ ...S.row, ...(item.id === activeId ? S.active : {}) }}
-            onClick={() => setActiveId(item.id)}>
+          <div key={item.id} title={item.track_path}
+            style={{ ...S.row, ...(i === current_index ? S.active : {}) }}
+            onDoubleClick={() => run("playlist_play", { index: i })}>
             <span style={S.num}>{i + 1}</span>
-            <span style={S.tit}>{t(item.titleKey)}</span>
-            <span style={S.art}>{t(item.artistKey)}</span>
-            <span style={S.dur}>{item.duration}</span>
+            <span style={S.tit}>{item.title}</span>
+            <span style={S.art}>{item.artist || t("library.unknownArtist")}</span>
+            <span style={S.dur}>{fmt(item.duration_ms)}</span>
+            <span style={S.act}>
+              <button style={S.icon} title={t("playlist.moveUp")} disabled={i === 0}
+                onClick={() => run("playlist_move", { from: i, to: i - 1 })}>&#9650;</button>
+              <button style={S.icon} title={t("playlist.moveDown")} disabled={i === items.length - 1}
+                onClick={() => run("playlist_move", { from: i, to: i + 1 })}>&#9660;</button>
+              <button style={S.icon} title={t("playlist.remove")}
+                onClick={() => run("playlist_remove", { index: i })}>&#10005;</button>
+            </span>
           </div>
         ))}
       </div>
-      <div style={S.foot}>{t("playlist.itemCount", { count: items.length })}</div>
+      <div style={S.foot}>
+        {t("playlist.itemCount", { count: items.length })} · {fmt(total)}
+      </div>
     </div>
   );
 }

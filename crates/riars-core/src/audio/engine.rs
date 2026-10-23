@@ -8,6 +8,7 @@ use super::crossfade::CrossfadeConfig;
 use super::mixer::Mixer;
 use super::output::{AudioOutput, Command};
 use super::player::TrackPlayer;
+use crate::playlist::playlist::Playlist;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum PlaybackState {
@@ -36,6 +37,9 @@ pub struct AudioEngine {
     volume: f32,
     mixer: Mixer,
     current_track: Option<LoadedTrack>,
+    playlist: Playlist,
+    /// Set while the caller of `poll` decodes the next track.
+    advancing: bool,
     /// `None` when no sound card is available (e.g. a headless server); the engine
     /// then keeps track of state without producing sound.
     output: Option<AudioOutput>,
@@ -61,6 +65,8 @@ impl AudioEngine {
             volume,
             mixer,
             current_track: None,
+            playlist: Playlist::new("On air".to_string()),
+            advancing: false,
             output,
             crossfade: CrossfadeConfig::default(),
             sample_rate,
@@ -106,8 +112,89 @@ impl AudioEngine {
         log::info!("Playback stopped");
     }
 
-    pub fn next_track(&mut self) {
-        log::info!("Skipping to next track");
+    /// Load and play the next playlist item. Stops when the playlist has nothing left.
+    /// Decodes while holding `&mut self`; UIs that must stay responsive should use
+    /// `next_index` + `TrackPlayer::from_file` + `start_index` instead.
+    pub fn next_track(&mut self) -> Result<(), String> {
+        match self.playlist.next_index() {
+            Some(index) => {
+                log::info!("Skipping to next track");
+                self.play_index(index)
+            }
+            None => {
+                self.stop();
+                Ok(())
+            }
+        }
+    }
+
+    /// Load and play the playlist item at `index`.
+    pub fn play_index(&mut self, index: usize) -> Result<(), String> {
+        let path = self.item_path(index)?;
+        let player = TrackPlayer::from_file(Path::new(&path), self.sample_rate)?;
+        self.start_index(index, player);
+        Ok(())
+    }
+
+    /// Path of the playlist item at `index`.
+    pub fn item_path(&self, index: usize) -> Result<String, String> {
+        self.playlist
+            .items
+            .get(index)
+            .map(|item| item.track_path.clone())
+            .ok_or_else(|| format!("No playlist item at {index}"))
+    }
+
+    pub fn next_index(&self) -> Option<usize> {
+        self.playlist.next_index()
+    }
+
+    /// Make an already decoded playlist item current and play it. Fast: no decoding.
+    pub fn start_index(&mut self, index: usize, player: TrackPlayer) {
+        self.advancing = false;
+        if index < self.playlist.len() {
+            self.playlist.current_index = index;
+        }
+        self.load_decoded(player);
+        self.play();
+    }
+
+    /// Call periodically from the control side. When the current track has finished,
+    /// returns the playlist index to play next, once; the caller decodes it and calls
+    /// `start_index`, or `end_advance` if nothing could be played.
+    pub fn poll(&mut self) -> Option<usize> {
+        let finished = self.state == PlaybackState::Playing
+            && self
+                .output
+                .as_ref()
+                .is_some_and(|o| o.shared.finished.load(Ordering::Relaxed));
+        if !finished || self.advancing {
+            return None;
+        }
+        match self.playlist.next_index() {
+            Some(index) => {
+                self.advancing = true;
+                Some(index)
+            }
+            None => {
+                self.stop();
+                None
+            }
+        }
+    }
+
+    /// Give up an advance started by `poll`.
+    pub fn end_advance(&mut self) {
+        self.advancing = false;
+        self.stop();
+    }
+
+    pub fn playlist(&self) -> &Playlist {
+        &self.playlist
+    }
+
+    pub fn playlist_mut(&mut self) -> &mut Playlist {
+        &mut self.playlist
     }
 
     pub fn set_volume(&mut self, volume: f32) {
@@ -129,16 +216,31 @@ impl AudioEngine {
         }
         // Decoding allocates and reads the file, so it happens here, never on the audio thread.
         let player = TrackPlayer::from_file(path, self.sample_rate)?;
+        self.load_decoded(player);
+        Ok(())
+    }
+
+    /// Hand an already decoded track to the audio thread.
+    pub fn load_decoded(&mut self, player: TrackPlayer) {
+        let path = player.path().to_path_buf();
         log::info!("Loaded track: {}", path.display());
+        // The library scan does not read durations, so fill them in once decoded.
+        let path_str = path.to_string_lossy();
+        let duration_ms = player.duration().as_millis() as u64;
+        for item in self.playlist.items.iter_mut().filter(|i| i.track_path == path_str) {
+            item.duration_ms = duration_ms;
+        }
         self.current_track = Some(LoadedTrack {
             name: player.file_name().to_string(),
             duration: player.duration(),
         });
         if let Some(output) = &self.output {
             output.shared.position_ms.store(0, Ordering::Relaxed);
+            // Clear it here too, so `poll` does not see the old track's end before the
+            // audio thread picks up the new one.
+            output.shared.finished.store(false, Ordering::Relaxed);
             output.send(Command::Load(Box::new(player)));
         }
-        Ok(())
     }
 
     pub fn state_info(&self) -> EngineStateInfo {

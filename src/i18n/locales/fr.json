@@ -12,24 +12,17 @@
   },
   "playlist": {
     "title": "Liste de lecture",
-    "add": "+ Ajouter",
     "clear": "Vider",
     "headerNumber": "#",
     "headerTitle": "Titre",
-    "headerType": "Type",
     "headerDuration": "Durée",
     "itemCount": "{{count}} éléments",
     "itemCount_one": "{{count}} élément",
-    "demo": {
-      "welcome": "Bienvenue",
-      "jingle": "Jingle",
-      "localNews": "Actualités locales",
-      "newsroom": "Rédaction",
-      "morningMusic": "Bloc musical matinal",
-      "autoPlaylist": "Playlist Auto",
-      "adBreak": "Spot publicitaire",
-      "sponsor": "Sponsor"
-    }
+    "headerArtist": "Artiste",
+    "empty": "Liste de lecture vide. Double-cliquez sur une piste de la bibliothèque pour l'ajouter.",
+    "moveUp": "Déplacer vers le haut",
+    "moveDown": "Déplacer vers le bas",
+    "remove": "Supprimer"
   },
   "library": {
     "title": "Bibliothèque",

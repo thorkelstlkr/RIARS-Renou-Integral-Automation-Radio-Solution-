@@ -12,24 +12,17 @@
   },
   "playlist": {
     "title": "Lista de reproducción",
-    "add": "+ Añadir",
     "clear": "Limpiar",
     "headerNumber": "#",
     "headerTitle": "Título",
-    "headerType": "Tipo",
     "headerDuration": "Duración",
     "itemCount": "{{count}} elementos",
     "itemCount_one": "{{count}} elemento",
-    "demo": {
-      "welcome": "Bienvenida",
-      "jingle": "Jingle",
-      "localNews": "Noticias locales",
-      "newsroom": "Redacción",
-      "morningMusic": "Bloque musical matinal",
-      "autoPlaylist": "Playlist Auto",
-      "adBreak": "Cuña publicitaria",
-      "sponsor": "Sponsor"
-    }
+    "headerArtist": "Artista",
+    "empty": "Lista de reproducción vacía. Haz doble clic en una pista de la biblioteca para añadirla.",
+    "moveUp": "Mover arriba",
+    "moveDown": "Mover abajo",
+    "remove": "Eliminar"
   },
   "library": {
     "title": "Biblioteca",

@@ -148,7 +148,7 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
             Ok(text_result(&t("playback_stopped")))
         }
         "next_track" => {
-            state.engine.lock().map_err(|e| e.to_string())?.next_track();
+            state.engine.lock().map_err(|e| e.to_string())?.next_track()?;
             Ok(text_result(&t("skipped_next")))
         }
         "set_volume" => {

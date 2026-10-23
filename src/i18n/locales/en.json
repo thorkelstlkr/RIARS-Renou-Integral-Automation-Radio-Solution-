@@ -12,24 +12,17 @@
   },
   "playlist": {
     "title": "Playlist",
-    "add": "+ Add",
     "clear": "Clear",
     "headerNumber": "#",
     "headerTitle": "Title",
-    "headerType": "Type",
     "headerDuration": "Duration",
     "itemCount": "{{count}} items",
     "itemCount_one": "{{count}} item",
-    "demo": {
-      "welcome": "Welcome",
-      "jingle": "Jingle",
-      "localNews": "Local news",
-      "newsroom": "Newsroom",
-      "morningMusic": "Morning music block",
-      "autoPlaylist": "Auto Playlist",
-      "adBreak": "Ad break",
-      "sponsor": "Sponsor"
-    }
+    "headerArtist": "Artist",
+    "empty": "Empty playlist. Double-click a track in the library to add it.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove"
   },
   "library": {
     "title": "Library",
