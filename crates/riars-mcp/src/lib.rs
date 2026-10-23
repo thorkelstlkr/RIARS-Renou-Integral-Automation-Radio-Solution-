@@ -16,6 +16,8 @@ pub struct McpState {
     pub stream: Option<riars_stream::StreamService>,
     /// Where the schedule is saved after every change.
     pub schedule_path: std::path::PathBuf,
+    /// Saves playlist, position, volume, crossfade and streaming for restarts.
+    pub session: Mutex<riars_core::session::SessionSaver>,
 }
 
 #[derive(Deserialize)]
@@ -220,13 +222,21 @@ async fn auto_advance(engine: Arc<Mutex<AudioEngine>>) {
 
 /// Keep the stream's song title in step with what is playing.
 async fn follow_title(state: Arc<McpState>) {
-    let Some(stream) = &state.stream else {
-        return;
-    };
     let mut tick = tokio::time::interval(tokio::time::Duration::from_millis(500));
     let mut last = String::new();
     loop {
         tick.tick().await;
+        let config = state.stream.as_ref().and_then(|s| s.config_for_session());
+        let due = match (state.session.lock(), state.engine.lock()) {
+            (Ok(mut saver), Ok(engine)) => saver.due(&engine, config),
+            _ => None,
+        };
+        if let Some(session) = due {
+            if let Ok(saver) = state.session.lock() {
+                saver.write(&session);
+            }
+        }
+        let Some(stream) = &state.stream else { continue };
         let title = state.engine.lock().ok().and_then(|e| e.now_playing_title());
         if let Some(title) = title.filter(|t| *t != last) {
             stream.set_title(&title);

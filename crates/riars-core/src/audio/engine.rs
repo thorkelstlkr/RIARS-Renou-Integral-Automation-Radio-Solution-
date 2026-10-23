@@ -10,6 +10,7 @@ use super::mixer::Mixer;
 use super::output::{AudioOutput, Command, Levels, StreamTap};
 use super::player::TrackPlayer;
 use crate::playlist::playlist::Playlist;
+use crate::session::SessionState;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum PlaybackState {
@@ -48,6 +49,8 @@ pub struct AudioEngine {
     /// Bumped on every playlist change (items, order, current item, durations), so
     /// UIs can skip fetching an unchanged playlist.
     playlist_revision: u64,
+    /// Bumped on every seek, so a jump is saved at once (see `session_key`).
+    seek_count: u64,
     /// Nothing after the current track could be decoded; stop when it ends.
     advance_blocked: bool,
     /// Next playlist item, already handed to the audio thread.
@@ -97,6 +100,7 @@ impl AudioEngine {
             playlist: Playlist::new("On air".to_string()),
             advancing: false,
             playlist_revision: 0,
+            seek_count: 0,
             advance_blocked: false,
             queued: None,
             switches_seen: 0,
@@ -114,6 +118,7 @@ impl AudioEngine {
             output.shared.position_ms.store(position.as_millis() as u64, Ordering::Relaxed);
             output.send(Command::Seek(position));
         }
+        self.seek_count += 1;
         Ok(())
     }
 
@@ -341,6 +346,47 @@ impl AudioEngine {
         self.queued = None;
         self.advancing = false;
         self.advance_blocked = false;
+    }
+
+    /// What to save so a restart can carry on (the stream is added by the caller).
+    pub fn snapshot(&self) -> SessionState {
+        SessionState {
+            playlist: Some(self.playlist.clone()),
+            position_ms: self.state_info().position_ms,
+            playing: self.playback_state() == PlaybackState::Playing,
+            volume: Some(self.volume),
+            crossfade: Some(self.crossfade.clone()),
+            stream: None,
+        }
+    }
+
+    /// Changes worth saving at once (not the position, which moves all the time).
+    pub fn session_key(&self) -> (u64, u32, u64, bool, bool) {
+        (
+            self.playlist_revision.wrapping_add(self.seek_count << 32),
+            self.volume.to_bits(),
+            self.crossfade.duration.as_millis() as u64,
+            self.crossfade.enabled,
+            self.playback_state() == PlaybackState::Playing,
+        )
+    }
+
+    /// Put back a saved playlist (keeping its current item), volume and crossfade.
+    /// Playback is resumed by `session::resume`.
+    pub fn restore(&mut self, state: &SessionState) {
+        if let Some(volume) = state.volume {
+            self.set_volume(volume);
+        }
+        if let Some(crossfade) = &state.crossfade {
+            self.set_crossfade(crossfade.clone());
+        }
+        if let Some(playlist) = &state.playlist {
+            self.playlist = playlist.clone();
+            if self.playlist.current_index >= self.playlist.len() {
+                self.playlist.current_index = 0;
+            }
+            self.playlist_revision += 1;
+        }
     }
 
     pub fn playlist_revision(&self) -> u64 {

@@ -31,6 +31,11 @@ struct Cli {
     #[arg(long)]
     no_sound_card: bool,
 
+    /// Start fresh instead of resuming the last session (playlist, position,
+    /// volume, crossfade, streaming).
+    #[arg(long)]
+    no_resume: bool,
+
     /// Folder to auto-scan on startup
     #[arg(long)]
     scan: Option<String>,
@@ -77,6 +82,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Scheduler::new()
     });
     log::info!("Schedule: {} ({} events)", schedule_path.display(), scheduler.events().len());
+    let session_path = std::path::Path::new(&cli.db_path).with_file_name("riars_session.json");
+    let session = Mutex::new(riars_core::session::SessionSaver::new(session_path.clone()));
 
     if let Some(ref folder) = cli.scan {
         match library.scan_folder(folder) {
@@ -93,7 +100,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             scheduler: Arc::new(Mutex::new(scheduler)),
             stream,
             schedule_path,
+            session,
         };
+        if !cli.no_resume {
+            let engine = Arc::clone(&mcp_state.engine);
+            let path = session_path.clone();
+            let resumed =
+                tokio::task::spawn_blocking(move || riars_core::session::resume_from_file(&engine, &path)).await?;
+            if let (Some(config), Some(stream)) = (resumed, &mcp_state.stream) {
+                if let Err(e) = stream.start(config) {
+                    log::warn!("Cannot resume streaming: {e}");
+                }
+            }
+        }
         riars_mcp::run_stdio(mcp_state).await?;
     } else {
         log::info!("{} 0.0.0.0:{}", t("api_listening"), cli.port);
@@ -109,10 +128,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             api_token,
             stream,
             schedule_path,
+            session,
             engine: Mutex::new(engine),
             library: Mutex::new(library),
             scheduler: Mutex::new(scheduler),
         });
+        if !cli.no_resume {
+            let resume_state = Arc::clone(&state);
+            let path = session_path.clone();
+            let resumed = tokio::task::spawn_blocking(move || {
+                riars_core::session::resume_from_file(&resume_state.engine, &path)
+            })
+            .await?;
+            if let (Some(config), Some(stream)) = (resumed, &state.stream) {
+                if let Err(e) = stream.start(config) {
+                    log::warn!("Cannot resume streaming: {e}");
+                }
+            }
+        }
         riars_api::serve(state, cli.port).await?;
     }
 

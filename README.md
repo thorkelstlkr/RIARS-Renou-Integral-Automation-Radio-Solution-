@@ -86,6 +86,11 @@ cargo build -p riars-server --release
 
 # Sin tarjeta de sonido (p. ej. un servidor que solo emite a Icecast): reloj interno
 ./target/release/riars-server --port 3100 --no-sound-card
+
+# Tras un corte de luz o un reinicio, RIARS sigue donde estaba (playlist, posición,
+# volumen, crossfade y emisión, guardados en riars_session.json junto a la base de
+# datos; incluye la contraseña de Icecast). Para arrancar desde cero:
+./target/release/riars-server --port 3100 --no-resume
 ```
 
 ### Controlar con un agente IA

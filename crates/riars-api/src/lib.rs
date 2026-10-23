@@ -22,6 +22,8 @@ pub struct AppState {
     pub api_token: String,
     /// Icecast streaming; `None` without a sound card (nothing to stream).
     pub stream: Option<riars_stream::StreamService>,
+    /// Saves playlist, position, volume, crossfade and streaming for restarts.
+    pub session: Mutex<riars_core::session::SessionSaver>,
 }
 
 pub fn create_router(state: Arc<AppState>) -> Router {
@@ -88,6 +90,7 @@ async fn auto_advance(state: Arc<AppState>) {
     let mut last_title = String::new();
     loop {
         tick.tick().await;
+        save_session(&state).await;
         // Keep the stream's song title in step with what is playing.
         if let Some(stream) = &state.stream {
             let title = state.engine.lock().ok().and_then(|e| e.now_playing_title());
@@ -141,5 +144,23 @@ pub fn stream_command(
             Ok(())
         }
         (None, _) => Err("Streaming needs an audio output".to_string()),
+    }
+}
+
+/// Write the session file when something changed, off the async workers.
+async fn save_session(state: &Arc<AppState>) {
+    let stream = state.stream.as_ref().and_then(|s| s.config_for_session());
+    let due = match (state.session.lock(), state.engine.lock()) {
+        (Ok(mut saver), Ok(engine)) => saver.due(&engine, stream),
+        _ => None,
+    };
+    if let Some(session) = due {
+        let state = Arc::clone(state);
+        let _ = tokio::task::spawn_blocking(move || {
+            if let Ok(saver) = state.session.lock() {
+                saver.write(&session);
+            }
+        })
+        .await;
     }
 }
