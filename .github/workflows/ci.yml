@@ -51,14 +51,22 @@ jobs:
         target:
           - aarch64-unknown-linux-gnu    # Pi 3/4/5 with a 64-bit OS
           - armv7-unknown-linux-gnueabihf # Pi 2/3/4 with a 32-bit OS
+    # cross names its Docker image after the checkout folder, and the repository name
+    # ends with '-', which Docker rejects: check out into ./riars instead.
+    defaults:
+      run:
+        working-directory: riars
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: riars
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
+          workspaces: riars
       - uses: taiki-e/install-action@v2
         with:
           tool: cross
@@ -66,5 +74,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: riars-server-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/riars-server
+          path: riars/target/${{ matrix.target }}/release/riars-server
           if-no-files-found: error
