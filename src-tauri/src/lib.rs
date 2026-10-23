@@ -159,6 +159,15 @@ fn engine_set_volume(volume: f32, state: State<AppState>) -> Result<(), String> 
     Ok(())
 }
 
+#[tauri::command]
+fn engine_seek(position_ms: u64, state: State<AppState>) -> Result<(), String> {
+    state
+        .engine
+        .lock()
+        .map_err(|e| e.to_string())?
+        .seek(std::time::Duration::from_millis(position_ms))
+}
+
 /// Output peaks since the last call; the VU meter polls it.
 #[tauri::command]
 fn engine_levels(state: State<AppState>) -> Result<riars_core::audio::Levels, String> {
@@ -364,6 +373,7 @@ pub fn run() {
             engine_set_volume,
             engine_get_state,
             engine_levels,
+            engine_seek,
             schedule_get,
             playlists_list,
             playlists_save,

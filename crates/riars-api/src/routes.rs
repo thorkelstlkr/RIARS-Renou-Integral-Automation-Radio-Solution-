@@ -62,6 +62,7 @@ pub fn api_routes() -> Router<Arc<AppState>> {
         .route("/player/next", post(next))
         .route("/player/volume", post(set_volume))
         .route("/player/levels", get(levels))
+        .route("/player/seek", post(seek))
         .route("/player/crossfade", get(get_crossfade).post(set_crossfade))
         .route("/player/load", post(load_track))
         .route("/library/tracks", get(library_tracks))
@@ -345,6 +346,20 @@ impl IntoResponse for ApiError {
 /// Output peaks since the previous call (each read resets them).
 async fn levels(State(state): State<Arc<AppState>>) -> Result<Json<riars_core::audio::Levels>, ApiError> {
     Ok(Json(state.engine.lock().map_err(ApiError::internal)?.take_levels()))
+}
+
+#[derive(Deserialize)]
+struct SeekRequest {
+    position_ms: u64,
+}
+
+async fn seek(State(state): State<Arc<AppState>>, Json(req): Json<SeekRequest>) -> Result<&'static str, ApiError> {
+    state
+        .engine
+        .lock()
+        .map_err(ApiError::internal)?
+        .seek(std::time::Duration::from_millis(req.position_ms))?;
+    Ok("ok")
 }
 
 async fn info() -> Json<ApiInfo> {

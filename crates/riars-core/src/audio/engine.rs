@@ -102,6 +102,17 @@ impl AudioEngine {
         })
     }
 
+    /// Jump to `position` in the current track (clamped to its length).
+    pub fn seek(&mut self, position: Duration) -> Result<(), String> {
+        let track = self.current_track.as_ref().ok_or("No track loaded")?;
+        let position = position.min(track.duration);
+        if let Some(output) = &self.output {
+            output.shared.position_ms.store(position.as_millis() as u64, Ordering::Relaxed);
+            output.send(Command::Seek(position));
+        }
+        Ok(())
+    }
+
     /// Output peaks since the previous call (silence without an output).
     pub fn take_levels(&self) -> Levels {
         self.output.as_ref().map(|o| o.shared.take_levels()).unwrap_or_default()
@@ -236,6 +247,9 @@ impl AudioEngine {
             ),
             None => return None,
         };
+        if let Some(output) = &self.output {
+            output.collect_garbage();
+        }
         // The audio thread switched to the queued track: catch up.
         if switches != self.switches_seen {
             self.switches_seen = switches;
