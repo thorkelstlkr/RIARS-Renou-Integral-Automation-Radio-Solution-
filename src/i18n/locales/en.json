@@ -39,7 +39,9 @@
     "searchPlaceholder": "Search...",
     "loading": "Loading...",
     "empty": "No tracks. Use “Add folder” to scan your music.",
-    "unknownArtist": "Unknown"
+    "unknownArtist": "Unknown",
+    "count": "{{count}} tracks",
+    "count_one": "{{count}} track"
   },
   "nowPlaying": {
     "onAir": "ON AIR",

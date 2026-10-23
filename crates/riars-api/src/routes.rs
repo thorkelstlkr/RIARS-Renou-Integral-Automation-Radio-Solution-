@@ -68,6 +68,7 @@ pub fn api_routes() -> Router<Arc<AppState>> {
         .route("/library/tracks", get(library_tracks))
         .route("/library/search", post(library_search))
         .route("/library/scan", post(library_scan))
+        .route("/library/query", get(library_query))
         .route("/stream", get(stream_get))
         .route("/stream/start", post(stream_start))
         .route("/stream/stop", post(stream_stop))
@@ -360,6 +361,29 @@ async fn seek(State(state): State<Arc<AppState>>, Json(req): Json<SeekRequest>) 
         .map_err(ApiError::internal)?
         .seek(std::time::Duration::from_millis(req.position_ms))?;
     Ok("ok")
+}
+
+#[derive(Deserialize)]
+struct LibraryQuery {
+    #[serde(default)]
+    search: String,
+    #[serde(default = "default_page")]
+    limit: usize,
+    #[serde(default)]
+    offset: usize,
+}
+
+fn default_page() -> usize {
+    100
+}
+
+/// One page of the library (GET /library/query?search=&limit=&offset=).
+async fn library_query(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Query(q): axum::extract::Query<LibraryQuery>,
+) -> Result<Json<riars_core::TrackPage>, ApiError> {
+    let library = state.library.lock().map_err(ApiError::internal)?;
+    Ok(Json(library.query(&q.search, q.limit, q.offset)?))
 }
 
 async fn info() -> Json<ApiInfo> {

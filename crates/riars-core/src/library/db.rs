@@ -39,7 +39,10 @@ impl MediaLibrary {
                 duration_ms INTEGER NOT NULL DEFAULT 0,
                 file_path   TEXT NOT NULL UNIQUE,
                 bpm         REAL,
-                sample_rate INTEGER NOT NULL DEFAULT 44100
+                sample_rate INTEGER NOT NULL DEFAULT 44100,
+                -- Title, artist, album and genre folded in Rust (lowercase, no
+                -- accents): SQLite's LIKE only folds ASCII.
+                search_key  TEXT NOT NULL DEFAULT ''
             );
             CREATE INDEX IF NOT EXISTS idx_tracks_artist ON tracks(artist);
             CREATE INDEX IF NOT EXISTS idx_tracks_genre ON tracks(genre);
@@ -120,24 +123,22 @@ impl MediaLibrary {
                         .unwrap_or("Unknown")
                         .to_string()
                 });
-                let values = params![
-                    title,
-                    tags.artist.unwrap_or_default(),
-                    tags.album.unwrap_or_default(),
-                    tags.genre.unwrap_or_default(),
-                    tags.duration_ms as i64,
-                    file_path_str
-                ];
+                let artist = tags.artist.unwrap_or_default();
+                let album = tags.album.unwrap_or_default();
+                let genre = tags.genre.unwrap_or_default();
+                let key = search_key(&[&title, &artist, &album, &genre]);
+                let values = params![title, artist, album, genre, tags.duration_ms as i64, file_path_str, key];
 
                 match tx.execute(
-                    "INSERT OR IGNORE INTO tracks (title, artist, album, genre, duration_ms, file_path)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    "INSERT OR IGNORE INTO tracks (title, artist, album, genre, duration_ms, file_path, search_key)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                     values,
                 ) {
                     Ok(0) => {
                         // Already known: fill in tags for tracks scanned before tags were read.
                         let _ = tx.execute(
-                            "UPDATE tracks SET title = ?1, artist = ?2, album = ?3, genre = ?4, duration_ms = ?5
+                            "UPDATE tracks SET title = ?1, artist = ?2, album = ?3, genre = ?4, duration_ms = ?5,
+                                               search_key = ?7
                              WHERE file_path = ?6 AND duration_ms = 0",
                             values,
                         );
@@ -181,6 +182,54 @@ impl MediaLibrary {
             .collect();
 
         Ok(tracks)
+    }
+
+    /// One page of tracks matching every word of `search` in title, artist, album or
+    /// genre (case and accents ignored), sorted by artist and title, plus the total
+    /// number of matches. An empty search pages through the whole library.
+    pub fn query(&self, search: &str, limit: usize, offset: usize) -> Result<TrackPage, String> {
+        let words: Vec<String> = fold(search)
+            .split_whitespace()
+            .map(|w| format!("%{}%", w.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_")))
+            .collect();
+        let filter = if words.is_empty() {
+            String::new()
+        } else {
+            let terms: Vec<String> = (1..=words.len())
+                .map(|i| format!("search_key LIKE ?{i} ESCAPE '\\'"))
+                .collect();
+            format!("WHERE {}", terms.join(" AND "))
+        };
+        let args = rusqlite::params_from_iter(words.iter());
+        let total: i64 = self
+            .db
+            .query_row(&format!("SELECT COUNT(*) FROM tracks {filter}"), args, |r| r.get(0))
+            .map_err(|e| format!("Query error: {e}"))?;
+        let sql = format!(
+            "SELECT id, title, artist, album, genre, duration_ms, file_path, bpm, sample_rate
+             FROM tracks {filter} ORDER BY artist, title LIMIT {} OFFSET {}",
+            limit.min(1000),
+            offset
+        );
+        let mut stmt = self.db.prepare(&sql).map_err(|e| format!("Query error: {e}"))?;
+        let tracks = stmt
+            .query_map(rusqlite::params_from_iter(words.iter()), |row| {
+                Ok(Track {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    artist: row.get(2)?,
+                    album: row.get(3)?,
+                    genre: row.get(4)?,
+                    duration_ms: row.get(5)?,
+                    file_path: row.get(6)?,
+                    bpm: row.get(7)?,
+                    sample_rate: row.get(8)?,
+                })
+            })
+            .map_err(|e| format!("Query error: {e}"))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Query error: {e}"))?;
+        Ok(TrackPage { total: total as usize, offset, tracks })
     }
 
     pub fn search(&self, query: &str) -> Result<Vec<Track>, String> {
@@ -359,6 +408,32 @@ impl MediaLibrary {
 
 /// Bring databases created by older versions up to the current schema.
 fn migrate(db: &Connection) -> Result<(), String> {
+    let has_search_key = db
+        .prepare("SELECT 1 FROM pragma_table_info('tracks') WHERE name = 'search_key'")
+        .and_then(|mut stmt| stmt.exists([]))
+        .map_err(|e| format!("DB migration error: {e}"))?;
+    if !has_search_key {
+        db.execute_batch("ALTER TABLE tracks ADD COLUMN search_key TEXT NOT NULL DEFAULT ''")
+            .map_err(|e| format!("DB migration error: {e}"))?;
+    }
+    let rows: Vec<(i64, String, String, String, String)> = db
+        .prepare("SELECT id, title, artist, album, genre FROM tracks WHERE search_key = ''")
+        .and_then(|mut stmt| {
+            stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))?.collect()
+        })
+        .map_err(|e| format!("DB migration error: {e}"))?;
+    if !rows.is_empty() {
+        db.execute_batch("BEGIN").map_err(|e| format!("DB migration error: {e}"))?;
+        for (id, title, artist, album, genre) in rows {
+            db.execute(
+                "UPDATE tracks SET search_key = ?1 WHERE id = ?2",
+                params![search_key(&[&title, &artist, &album, &genre]), id],
+            )
+            .map_err(|e| format!("DB migration error: {e}"))?;
+        }
+        db.execute_batch("COMMIT").map_err(|e| format!("DB migration error: {e}"))?;
+    }
+
     let has_name_key = db
         .prepare("SELECT 1 FROM pragma_table_info('playlists') WHERE name = 'name_key'")
         .and_then(|mut stmt| stmt.exists([]))
@@ -378,6 +453,35 @@ fn migrate(db: &Connection) -> Result<(), String> {
     }
     db.execute_batch("CREATE UNIQUE INDEX IF NOT EXISTS idx_playlists_name_key ON playlists(name_key);")
         .map_err(|e| format!("DB migration error: {e}"))
+}
+
+/// A page of a library query.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrackPage {
+    pub total: usize,
+    pub offset: usize,
+    pub tracks: Vec<Track>,
+}
+
+/// Lowercase and drop common Latin accents, so "Canción" matches "cancion".
+pub fn fold(text: &str) -> String {
+    text.to_lowercase()
+        .chars()
+        .map(|c| match c {
+            'á' | 'à' | 'ä' | 'â' | 'ã' | 'å' => 'a',
+            'é' | 'è' | 'ë' | 'ê' => 'e',
+            'í' | 'ì' | 'ï' | 'î' => 'i',
+            'ó' | 'ò' | 'ö' | 'ô' | 'õ' => 'o',
+            'ú' | 'ù' | 'ü' | 'û' => 'u',
+            'ñ' => 'n',
+            'ç' => 'c',
+            other => other,
+        })
+        .collect()
+}
+
+fn search_key(fields: &[&str]) -> String {
+    fold(&fields.join(" "))
 }
 
 /// A saved playlist as listed (without its items).
@@ -493,6 +597,33 @@ mod tests {
         lib.delete_playlist(&id).unwrap();
         assert!(lib.list_playlists().unwrap().is_empty());
         assert!(lib.delete_playlist(&id).is_err());
+    }
+
+    #[test]
+    fn query_pages_and_folds_accents() {
+        let mut lib = MediaLibrary::open(":memory:").unwrap();
+        let tx = lib.db.transaction().unwrap();
+        for (i, (title, artist)) in [("Canción del mar", "Ñandú"), ("Luna", "Amulet"), ("100% luna", "X"), ("Sol_y_luna", "Y")]
+            .iter()
+            .enumerate()
+        {
+            tx.execute(
+                "INSERT INTO tracks (title, artist, file_path, search_key) VALUES (?1, ?2, ?3, ?4)",
+                params![title, artist, format!("/m/{i}.mp3"), search_key(&[title, artist])],
+            )
+            .unwrap();
+        }
+        tx.commit().unwrap();
+
+        assert_eq!(lib.query("", 10, 0).unwrap().total, 4);
+        let page = lib.query("", 2, 1).unwrap();
+        assert_eq!((page.total, page.offset, page.tracks.len()), (4, 1, 2));
+        assert_eq!(lib.query("CANCION", 10, 0).unwrap().tracks[0].title, "Canción del mar");
+        assert_eq!(lib.query("nandu mar", 10, 0).unwrap().total, 1); // every word
+        assert_eq!(lib.query("luna", 10, 0).unwrap().total, 3);
+        assert_eq!(lib.query("100%", 10, 0).unwrap().total, 1); // % is literal
+        assert_eq!(lib.query("_y_", 10, 0).unwrap().total, 1); // _ is literal
+        assert_eq!(lib.query("zzz", 10, 0).unwrap().total, 0);
     }
 
     #[test]

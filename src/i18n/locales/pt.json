@@ -39,7 +39,9 @@
     "searchPlaceholder": "Pesquisar...",
     "loading": "A carregar...",
     "empty": "Sem faixas. Use «Adicionar pasta» para analisar a sua música.",
-    "unknownArtist": "Desconhecido"
+    "unknownArtist": "Desconhecido",
+    "count": "{{count}} faixas",
+    "count_one": "{{count}} faixa"
   },
   "nowPlaying": {
     "onAir": "NO AR",

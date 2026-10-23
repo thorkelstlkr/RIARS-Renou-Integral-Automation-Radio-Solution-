@@ -39,7 +39,9 @@
     "searchPlaceholder": "Cercar...",
     "loading": "Carregant...",
     "empty": "Sense pistes. Fes servir «Afegeix carpeta» per escanejar la teva música.",
-    "unknownArtist": "Desconegut"
+    "unknownArtist": "Desconegut",
+    "count": "{{count}} pistes",
+    "count_one": "{{count}} pista"
   },
   "nowPlaying": {
     "onAir": "EN ANTENA",

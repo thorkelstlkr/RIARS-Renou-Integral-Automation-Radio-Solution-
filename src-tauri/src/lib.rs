@@ -300,6 +300,12 @@ fn library_scan_folder(path: String, state: State<AppState>) -> Result<usize, St
         .scan_folder(&path)
 }
 
+/// One page of the library: the UI loads pages as it scrolls instead of everything.
+#[tauri::command]
+fn library_query(search: String, limit: usize, offset: usize, state: State<AppState>) -> Result<riars_core::TrackPage, String> {
+    state.library.lock().map_err(|e| e.to_string())?.query(&search, limit, offset)
+}
+
 #[tauri::command]
 fn library_get_tracks(state: State<AppState>) -> Result<Vec<Track>, String> {
     state
@@ -408,7 +414,12 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .setup(move |app| {
             // Keep the library in the per-user app data folder, not the working directory.
-            let data_dir = app.path().app_data_dir()?;
+            // RIARS_DATA_DIR points at another data folder (portable installs, a
+            // second station on the same machine, tests).
+            let data_dir = match std::env::var_os("RIARS_DATA_DIR") {
+                Some(dir) => PathBuf::from(dir),
+                None => app.path().app_data_dir()?,
+            };
             std::fs::create_dir_all(&data_dir)?;
             let db_path = data_dir.join("riars_library.db");
             let library = MediaLibrary::open(&db_path.to_string_lossy())?;
@@ -494,6 +505,7 @@ pub fn run() {
             engine_load_track,
             library_scan_folder,
             library_get_tracks,
+            library_query,
             library_search,
             playlist_create,
             playlist_get,

@@ -81,22 +81,25 @@ pub fn list_tools() -> ToolList {
             },
             ToolDef {
                 name: "search_library",
-                description: "Search the music library by title, artist, album, or genre",
+                description: "Search the music library by title, artist, album, or genre (every word must match; case and accents ignored). Returns one page and the total.",
                 input_schema: json!({
                     "type": "object",
                     "properties": {
                         "query": {
                             "type": "string",
                             "description": "Search query (matches title, artist, album, or genre)"
-                        }
+                        },
+                        "limit": { "type": "integer", "description": "Tracks per page (default 50, max 500)" },
+                        "offset": { "type": "integer", "description": "Tracks to skip, for the next pages" }
                     },
                     "required": ["query"]
                 }),
             },
             ToolDef {
                 name: "list_tracks",
-                description: "List all tracks in the music library",
-                input_schema: json!({ "type": "object", "properties": {} }),
+                description: "List the music library, sorted by artist and title, one page at a time (with the total)",
+                input_schema: json!({ "type": "object", "properties": { "limit": { "type": "integer", "description": "Tracks per page (default 50, max 500)" },
+                        "offset": { "type": "integer", "description": "Tracks to skip, for the next pages" } } }),
             },
             ToolDef {
                 name: "scan_folder",
@@ -312,32 +315,16 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
                 .load_track(path)?;
             Ok(text_result(&format!("{}: {path}", t("loaded_track"))))
         }
-        "search_library" => {
-            let query = args["query"].as_str().ok_or(t("missing_query"))?;
-            let tracks = state
-                .library
-                .lock()
-                .map_err(|e| e.to_string())?
-                .search(query)?;
-            Ok(json!({
-                "content": [{
-                    "type": "text",
-                    "text": serde_json::to_string_pretty(&tracks).unwrap_or_default()
-                }]
-            }))
-        }
-        "list_tracks" => {
-            let tracks = state
-                .library
-                .lock()
-                .map_err(|e| e.to_string())?
-                .get_all_tracks()?;
-            Ok(json!({
-                "content": [{
-                    "type": "text",
-                    "text": serde_json::to_string_pretty(&tracks).unwrap_or_default()
-                }]
-            }))
+        // Both return one page plus the total: a big library would flood an agent's context.
+        "search_library" | "list_tracks" => {
+            if name == "search_library" && args["query"].as_str().is_none() {
+                return Err(t("missing_query"));
+            }
+            let search = args["query"].as_str().unwrap_or("");
+            let limit = args["limit"].as_u64().unwrap_or(50).min(500) as usize;
+            let offset = args["offset"].as_u64().unwrap_or(0) as usize;
+            let page = state.library.lock().map_err(|e| e.to_string())?.query(search, limit, offset)?;
+            Ok(text_result(&serde_json::to_string_pretty(&page).unwrap_or_default()))
         }
         "scan_folder" => {
             let path = args["path"].as_str().ok_or(t("missing_path"))?;
