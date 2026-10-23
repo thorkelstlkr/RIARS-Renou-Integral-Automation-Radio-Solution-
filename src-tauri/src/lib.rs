@@ -159,6 +159,12 @@ fn engine_set_volume(volume: f32, state: State<AppState>) -> Result<(), String> 
     Ok(())
 }
 
+/// Output peaks since the last call; the VU meter polls it.
+#[tauri::command]
+fn engine_levels(state: State<AppState>) -> Result<riars_core::audio::Levels, String> {
+    Ok(state.engine.lock().map_err(|e| e.to_string())?.take_levels())
+}
+
 #[tauri::command]
 fn engine_get_state(app: AppHandle, state: State<AppState>) -> Result<EngineStateInfo, String> {
     let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
@@ -357,6 +363,7 @@ pub fn run() {
             engine_next,
             engine_set_volume,
             engine_get_state,
+            engine_levels,
             schedule_get,
             playlists_list,
             playlists_save,
