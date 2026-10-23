@@ -18,6 +18,8 @@ pub struct AppState {
     /// Every request must carry it as `Authorization: Bearer <token>`
     /// (or `?token=` on the WebSocket, where browsers cannot set headers).
     pub api_token: String,
+    /// Icecast streaming; `None` without a sound card (nothing to stream).
+    pub stream: Option<riars_stream::StreamService>,
 }
 
 pub fn create_router(state: Arc<AppState>) -> Router {
@@ -77,8 +79,17 @@ pub async fn serve(state: Arc<AppState>, port: u16) -> Result<(), Box<dyn std::e
 /// from its UI polling; the headless server needs its own loop.
 async fn auto_advance(state: Arc<AppState>) {
     let mut tick = tokio::time::interval(tokio::time::Duration::from_millis(250));
+    let mut last_title = String::new();
     loop {
         tick.tick().await;
+        // Keep the stream's song title in step with what is playing.
+        if let Some(stream) = &state.stream {
+            let title = state.engine.lock().ok().and_then(|e| e.now_playing_title());
+            if let Some(title) = title.filter(|t| *t != last_title) {
+                stream.set_title(&title);
+                last_title = title;
+            }
+        }
         let next = state.engine.lock().ok().and_then(|mut engine| engine.poll());
         if let Some(index) = next {
             let state = Arc::clone(&state);

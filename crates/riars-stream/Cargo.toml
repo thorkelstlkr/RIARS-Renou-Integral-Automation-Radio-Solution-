@@ -1,0 +1,11 @@
+[package]
+name = "riars-stream"
+version = "0.1.0"
+edition = "2021"
+description = "Icecast streaming for RIARS: MP3 encoding and the source client"
+
+[dependencies]
+riars-core = { path = "../riars-core" }
+log = { workspace = true }
+serde = { workspace = true }
+mp3lame-encoder = "0.2"

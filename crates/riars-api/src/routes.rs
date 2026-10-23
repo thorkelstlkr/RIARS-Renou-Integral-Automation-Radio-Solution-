@@ -8,7 +8,8 @@ use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 
 use riars_core::audio::crossfade::{CrossfadeConfig, FadeCurve};
-use riars_core::{play_index_unlocked, EngineStateInfo, Playlist};
+use riars_core::{play_index_unlocked, EngineStateInfo, IcecastConfig, Playlist};
+use riars_stream::{StreamService, StreamStatus};
 
 use crate::AppState;
 
@@ -64,6 +65,9 @@ pub fn api_routes() -> Router<Arc<AppState>> {
         .route("/library/tracks", get(library_tracks))
         .route("/library/search", post(library_search))
         .route("/library/scan", post(library_scan))
+        .route("/stream", get(stream_get))
+        .route("/stream/start", post(stream_start))
+        .route("/stream/stop", post(stream_stop))
         .route("/playlist", get(playlist_get))
         .route("/playlist/add", post(playlist_add))
         .route("/playlist/remove", post(playlist_remove))
@@ -188,6 +192,45 @@ async fn set_crossfade(
     let mut engine = state.engine.lock().map_err(ApiError::internal)?;
     engine.set_crossfade(req.into());
     Ok(Json(CrossfadeSettings::from(engine.crossfade_config())))
+}
+
+#[derive(Serialize)]
+struct StreamResponse {
+    status: StreamStatus,
+    config: Option<IcecastConfig>,
+}
+
+fn stream_service(state: &AppState) -> Result<&StreamService, ApiError> {
+    state.stream.as_ref().ok_or(ApiError::from("Streaming needs an audio output device".to_string()))
+}
+
+async fn stream_get(State(state): State<Arc<AppState>>) -> Result<Json<StreamResponse>, ApiError> {
+    let service = stream_service(&state)?;
+    let response = StreamResponse {
+        status: service.status(),
+        config: service.config(),
+    };
+    Ok(Json(response))
+}
+
+async fn stream_start(State(state): State<Arc<AppState>>, Json(config): Json<IcecastConfig>) -> Result<Json<StreamResponse>, ApiError> {
+    let service = stream_service(&state)?;
+    service.start(config)?;
+    let response = StreamResponse {
+        status: service.status(),
+        config: service.config(),
+    };
+    Ok(Json(response))
+}
+
+async fn stream_stop(State(state): State<Arc<AppState>>) -> Result<Json<StreamResponse>, ApiError> {
+    let service = stream_service(&state)?;
+    service.stop();
+    let response = StreamResponse {
+        status: service.status(),
+        config: service.config(),
+    };
+    Ok(Json(response))
 }
 
 /// Error body for every endpoint: `{"error": "..."}` with a 4xx/5xx status, so clients
