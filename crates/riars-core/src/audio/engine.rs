@@ -374,10 +374,11 @@ impl AudioEngine {
     }
 
     /// Make an already decoded playlist item current and play it. Fast: no decoding.
-    pub fn start_index(&mut self, index: usize, player: TrackPlayer) {
+    pub fn start_index(&mut self, index: usize, mut player: TrackPlayer) {
         let finished = self.output.as_ref().is_some_and(|o| o.shared.finished.load(Ordering::Relaxed));
         self.end_on_air(if finished { EndReason::Finished } else { EndReason::Skipped });
         if let Some(item) = self.playlist.items.get(index) {
+            player.set_no_overlap(item.no_overlap);
             self.on_air = Some((item.clone(), wall_clock()));
         }
         self.advancing = false;
@@ -394,7 +395,7 @@ impl AudioEngine {
 
     /// Hand the next playlist item, decoded after `poll`, to the audio thread. While the
     /// current track is still playing it is queued and starts the instant this one ends.
-    pub fn queue_or_start(&mut self, index: usize, player: TrackPlayer) {
+    pub fn queue_or_start(&mut self, index: usize, mut player: TrackPlayer) {
         self.advancing = false;
         let still_playing = self.playback_state() == PlaybackState::Playing;
         if !still_playing || self.output.is_none() || std::mem::take(&mut self.skip_now) {
@@ -406,6 +407,7 @@ impl AudioEngine {
             self.start_index(index, player);
             return;
         };
+        player.set_no_overlap(item.no_overlap);
         self.queued = Some((
             item,
             LoadedTrack {

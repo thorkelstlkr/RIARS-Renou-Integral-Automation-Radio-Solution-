@@ -43,6 +43,8 @@ pub struct TrackPlayer {
     frame_pos: f64,
     channels: usize,
     source: Source,
+    /// Never crossfade into or out of this track (e.g. spots).
+    no_overlap: bool,
 }
 
 enum Source {
@@ -183,12 +185,21 @@ impl TrackPlayer {
             volume: 1.0,
             sample_rate,
             frame_pos: 0.0,
+            no_overlap: false,
             channels,
             source: Source::Stream(Box::new(source)),
         }
     }
 
     /// Build a player from interleaved samples already in memory.
+    pub fn set_no_overlap(&mut self, no_overlap: bool) {
+        self.no_overlap = no_overlap;
+    }
+
+    pub fn no_overlap(&self) -> bool {
+        self.no_overlap
+    }
+
     pub fn from_samples(file_path: PathBuf, samples: Vec<f32>, channels: usize, sample_rate: u32) -> Self {
         let channels = channels.max(1);
         let frames = samples.len() / channels;
@@ -203,6 +214,7 @@ impl TrackPlayer {
             volume: 1.0,
             sample_rate,
             frame_pos: 0.0,
+            no_overlap: false,
             channels,
             source: Source::Memory(samples),
         }

@@ -517,7 +517,7 @@ impl Decks {
             };
             let cur_step = cur.sample_rate() as f64 / out_rate;
             let fading = match self.next.as_mut() {
-                Some(next) if fade.enabled => {
+                Some(next) if fade.enabled && !next.no_overlap() && !cur.no_overlap() => {
                     let next_step = next.sample_rate() as f64 / out_rate;
                     // Never fade over more than half of either track.
                     let window = (fade.duration.as_secs_f64() * out_rate)
@@ -632,6 +632,21 @@ mod tests {
         assert_eq!(outcome.switches, 1);
         // The fade spans 4 frames (the first at gain 1.0), so 6 of the incoming track remain.
         assert!((decks.current.as_ref().unwrap().remaining_frames() - 6.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn no_overlap_tracks_switch_without_fading() {
+        let mut spot = track(0.5, 3);
+        spot.set_no_overlap(true);
+        let mut decks = Decks { current: Some(track(1.0, 4)), next: Some(spot), ..Default::default() };
+        let (out, _) = render(&mut decks, 7, &linear(2));
+        assert_eq!(out, [1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5]);
+        // And out of it.
+        let mut spot = track(0.5, 4);
+        spot.set_no_overlap(true);
+        let mut decks = Decks { current: Some(spot), next: Some(track(1.0, 4)), ..Default::default() };
+        let (out, _) = render(&mut decks, 6, &linear(2));
+        assert_eq!(out, [0.5, 0.5, 0.5, 0.5, 1.0, 1.0]);
     }
 
     #[test]
