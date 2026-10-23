@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -15,6 +16,57 @@ pub struct PlaylistItem {
     pub title: String,
     pub artist: String,
     pub duration_ms: u64,
+    /// What the item is (song, jingle, spot...); `Music` for items added by hand.
+    #[serde(default)]
+    pub kind: ItemKind,
+    /// Library id, when known (items added by path may not have one).
+    #[serde(default)]
+    pub track_id: Option<i64>,
+    #[serde(default)]
+    pub category_id: Option<i64>,
+    #[serde(default)]
+    pub campaign_id: Option<i64>,
+    /// When the generator expects it to start.
+    #[serde(default)]
+    pub planned_at: Option<NaiveDateTime>,
+    /// Added by the automation generator (not by hand).
+    #[serde(default)]
+    pub generated: bool,
+}
+
+/// Role of a playlist item on air.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum ItemKind {
+    #[default]
+    Music,
+    Jingle,
+    Bumper,
+    StationId,
+    Sweeper,
+    Promo,
+    Spot,
+    Program,
+    Bed,
+    Other,
+}
+
+impl PlaylistItem {
+    /// A plain item (kind `Music`, no library or automation data).
+    pub fn new(path: String, title: String, artist: String, duration_ms: u64) -> Self {
+        Self {
+            id: Uuid::new_v4().to_string(),
+            track_path: path,
+            title,
+            artist,
+            duration_ms,
+            kind: ItemKind::Music,
+            track_id: None,
+            category_id: None,
+            campaign_id: None,
+            planned_at: None,
+            generated: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,13 +92,23 @@ impl Playlist {
     }
 
     pub fn add_item(&mut self, path: String, title: String, artist: String, duration_ms: u64) {
-        self.items.push(PlaylistItem {
-            id: Uuid::new_v4().to_string(),
-            track_path: path,
-            title,
-            artist,
-            duration_ms,
-        });
+        self.items.push(PlaylistItem::new(path, title, artist, duration_ms));
+    }
+
+    /// Position of the item with this id.
+    pub fn index_of(&self, id: &str) -> Option<usize> {
+        self.items.iter().position(|i| i.id == id)
+    }
+
+    /// Drop played items, keeping the last `keep` before the current one, so a
+    /// playlist fed for weeks does not grow without end. Returns how many went.
+    pub fn prune_played(&mut self, keep: usize) -> usize {
+        let drop = self.current_index.saturating_sub(keep);
+        if drop > 0 {
+            self.items.drain(..drop);
+            self.current_index -= drop;
+        }
+        drop
     }
 
     pub fn remove_item(&mut self, index: usize) -> Option<PlaylistItem> {
@@ -160,6 +222,23 @@ mod tests {
         assert_eq!(current(&p), "b");
         p.move_item(3, 0);
         assert_eq!(current(&p), "b");
+    }
+
+    #[test]
+    fn prune_keeps_current_and_recent() {
+        let mut p = abcd(3);
+        assert_eq!(p.prune_played(1), 2);
+        assert_eq!(p.len(), 2);
+        assert_eq!(current(&p), "d");
+        assert_eq!(p.prune_played(5), 0);
+    }
+
+    #[test]
+    fn old_items_load_with_defaults() {
+        let json = r#"{"id":"x","track_path":"a.mp3","title":"a","artist":"","duration_ms":0}"#;
+        let item: PlaylistItem = serde_json::from_str(json).unwrap();
+        assert_eq!(item.kind, ItemKind::Music);
+        assert!(!item.generated && item.track_id.is_none());
     }
 
     #[test]

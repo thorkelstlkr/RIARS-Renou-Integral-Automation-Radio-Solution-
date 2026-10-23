@@ -132,6 +132,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             engine: Mutex::new(engine),
             library: Mutex::new(library),
             scheduler: Mutex::new(scheduler),
+            automation: Mutex::new(riars_core::automation::Automation::new()),
         });
         if !cli.no_resume {
             let resume_state = Arc::clone(&state);

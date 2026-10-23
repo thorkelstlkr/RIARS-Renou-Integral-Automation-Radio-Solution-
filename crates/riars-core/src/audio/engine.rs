@@ -9,7 +9,7 @@ use super::crossfade::CrossfadeConfig;
 use super::mixer::Mixer;
 use super::output::{AudioOutput, Command, Levels, StreamTap};
 use super::player::TrackPlayer;
-use crate::playlist::playlist::Playlist;
+use crate::playlist::playlist::{Playlist, PlaylistItem};
 use crate::session::SessionState;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -70,6 +70,35 @@ pub struct EngineStateInfo {
     pub dead_air_count: u64,
 }
 
+/// Why an item stopped being on air.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EndReason {
+    /// Played to its end (or into the crossfade with the next one).
+    Finished,
+    /// Cut short by the operator or a scheduled jump.
+    Skipped,
+    /// Skipped by dead-air detection.
+    DeadAir,
+    /// Playback stopped.
+    Stopped,
+}
+
+/// A playlist item that went on air and came off it: what proof of play records.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlayRecord {
+    pub item: PlaylistItem,
+    pub started_at: chrono::NaiveDateTime,
+    pub ended_at: chrono::NaiveDateTime,
+    pub reason: EndReason,
+}
+
+/// Records kept for the caller to collect; older ones are dropped beyond this.
+const MAX_PLAY_RECORDS: usize = 256;
+
+fn wall_clock() -> chrono::NaiveDateTime {
+    chrono::Local::now().naive_local()
+}
+
 /// What the control side knows about the track handed to the audio thread.
 struct LoadedTrack {
     name: String,
@@ -105,8 +134,18 @@ pub struct AudioEngine {
     skip_now: bool,
     /// Nothing after the current track could be decoded; stop when it ends.
     advance_blocked: bool,
-    /// Next playlist item, already handed to the audio thread.
-    queued: Option<(usize, LoadedTrack)>,
+    /// Next playlist item, already handed to the audio thread. Kept as the item, not
+    /// its index: the playlist may be edited while it waits.
+    queued: Option<(PlaylistItem, LoadedTrack)>,
+    /// Playlist item on air and when it started.
+    on_air: Option<(PlaylistItem, chrono::NaiveDateTime)>,
+    /// Items that came off air, for the caller to log (`take_play_records`).
+    play_records: Vec<PlayRecord>,
+    /// Why the next start ends the current item, when it is not obvious.
+    end_reason: Option<EndReason>,
+    /// Revision bumps from `append_generated`, which need no session save (the
+    /// generator makes them again after a restart).
+    generated_bumps: u64,
     /// Last value of `Shared::switches` seen, to notice the audio thread moving on.
     switches_seen: u64,
     /// `None` when no sound card is available (e.g. a headless server); the engine
@@ -162,6 +201,10 @@ impl AudioEngine {
             skip_now: false,
             advance_blocked: false,
             queued: None,
+            on_air: None,
+            play_records: Vec::new(),
+            end_reason: None,
+            generated_bumps: 0,
             switches_seen: 0,
             output,
             crossfade,
@@ -207,6 +250,11 @@ impl AudioEngine {
             }
             output.shared.playing.store(true, Ordering::Relaxed);
         }
+        if self.on_air.is_none() {
+            if let Some(item) = self.playlist.current_item() {
+                self.on_air = Some((item.clone(), wall_clock()));
+            }
+        }
         self.state = PlaybackState::Playing;
         log::info!("Playback started");
     }
@@ -222,6 +270,8 @@ impl AudioEngine {
     }
 
     pub fn stop(&mut self) {
+        let finished = self.output.as_ref().is_some_and(|o| o.shared.finished.load(Ordering::Relaxed));
+        self.end_on_air(if finished { EndReason::Finished } else { EndReason::Stopped });
         if let Some(output) = &self.output {
             output.shared.playing.store(false, Ordering::Relaxed);
             output.send(Command::Seek(Duration::ZERO));
@@ -254,6 +304,62 @@ impl AudioEngine {
         Ok(())
     }
 
+    /// Id of the playlist item at `index`.
+    pub fn item_id(&self, index: usize) -> Result<String, String> {
+        self.playlist
+            .items
+            .get(index)
+            .map(|item| item.id.clone())
+            .ok_or_else(|| format!("No playlist item at {index}"))
+    }
+
+    /// Close the record of the item on air.
+    fn end_on_air(&mut self, reason: EndReason) {
+        let reason = self.end_reason.take().unwrap_or(reason);
+        if let Some((item, started_at)) = self.on_air.take() {
+            if self.play_records.len() >= MAX_PLAY_RECORDS {
+                self.play_records.remove(0);
+            }
+            self.play_records.push(PlayRecord { item, started_at, ended_at: wall_clock(), reason });
+        }
+    }
+
+    /// Items that came off air since the previous call, oldest first.
+    pub fn take_play_records(&mut self) -> Vec<PlayRecord> {
+        std::mem::take(&mut self.play_records)
+    }
+
+    pub fn has_play_records(&self) -> bool {
+        !self.play_records.is_empty()
+    }
+
+    /// Playlist item on air and when it started.
+    pub fn on_air(&self) -> Option<&(PlaylistItem, chrono::NaiveDateTime)> {
+        self.on_air.as_ref()
+    }
+
+    /// Give up an advance started by `poll` without blocking it: the item went away
+    /// while it was being decoded, and the next `poll` picks another.
+    pub fn cancel_advance(&mut self) {
+        self.advancing = false;
+    }
+
+    /// Append items from the automation generator and drop played items beyond
+    /// `keep_played`. Not a change worth a session save on its own.
+    pub fn append_generated(&mut self, items: Vec<PlaylistItem>, keep_played: usize) {
+        let before = self.playlist_revision;
+        if !items.is_empty() {
+            self.playlist.items.extend(items);
+            self.playlist_revision += 1;
+            // A blocked advance (nothing left to play) can go on now.
+            self.advance_blocked = false;
+        }
+        if self.playlist.prune_played(keep_played) > 0 {
+            self.playlist_revision += 1;
+        }
+        self.generated_bumps += self.playlist_revision - before;
+    }
+
     /// Path of the playlist item at `index`.
     pub fn item_path(&self, index: usize) -> Result<String, String> {
         self.playlist
@@ -269,6 +375,11 @@ impl AudioEngine {
 
     /// Make an already decoded playlist item current and play it. Fast: no decoding.
     pub fn start_index(&mut self, index: usize, player: TrackPlayer) {
+        let finished = self.output.as_ref().is_some_and(|o| o.shared.finished.load(Ordering::Relaxed));
+        self.end_on_air(if finished { EndReason::Finished } else { EndReason::Skipped });
+        if let Some(item) = self.playlist.items.get(index) {
+            self.on_air = Some((item.clone(), wall_clock()));
+        }
         self.advancing = false;
         self.dead_air_active = false;
         self.advance_blocked = false;
@@ -291,8 +402,12 @@ impl AudioEngine {
             return;
         }
         self.fill_duration(&player);
+        let Some(item) = self.playlist.items.get(index).cloned() else {
+            self.start_index(index, player);
+            return;
+        };
         self.queued = Some((
-            index,
+            item,
             LoadedTrack {
                 name: player.file_name().to_string(),
                 duration: player.duration(),
@@ -323,8 +438,13 @@ impl AudioEngine {
         // The audio thread switched to the queued track: catch up.
         if switches != self.switches_seen {
             self.switches_seen = switches;
-            if let Some((index, track)) = self.queued.take() {
-                self.playlist.current_index = index;
+            if let Some((item, track)) = self.queued.take() {
+                match self.playlist.index_of(&item.id) {
+                    Some(index) => self.playlist.current_index = index,
+                    None => log::warn!("Queued item {} left the playlist before it started", item.title),
+                }
+                self.end_on_air(EndReason::Finished);
+                self.on_air = Some((item, wall_clock()));
                 self.playlist_revision += 1;
                 log::info!("Now playing: {}", track.name);
                 self.current_track = Some(track);
@@ -394,6 +514,7 @@ impl AudioEngine {
         let next = self.playlist.next_index()?;
         // Drop a queued crossfade partner: we jump now.
         self.queued = None;
+        self.end_reason = Some(EndReason::DeadAir);
         self.skip_now = true;
         self.advancing = true;
         Some(next)
@@ -475,7 +596,8 @@ impl AudioEngine {
             ^ (self.dead_air.threshold_db.to_bits() as u64) << 8
             ^ self.dead_air.action as u64;
         (
-            self.playlist_revision.wrapping_add(self.seek_count << 32) ^ dead_air,
+            self.playlist_revision.wrapping_sub(self.generated_bumps).wrapping_add(self.seek_count << 32)
+                ^ dead_air,
             self.volume.to_bits(),
             self.crossfade.duration.as_millis() as u64,
             self.crossfade.enabled,
@@ -643,10 +765,22 @@ pub fn play_index_unlocked(
     // loop and deadlock on the next `lock()`.
     let attempts = lock()?.playlist().len().max(1);
     for _ in 0..attempts {
-        let path = lock()?.item_path(index)?;
+        let (path, id) = {
+            let engine = lock()?;
+            (engine.item_path(index)?, engine.item_id(index)?)
+        };
         match TrackPlayer::from_file(Path::new(&path), 44100) {
             Ok(player) => {
                 let mut engine = lock()?;
+                // The playlist may have changed while decoding: find the item again.
+                let Some(index) = engine.playlist().index_of(&id) else {
+                    engine.cancel_advance();
+                    if skip_failures {
+                        log::info!("{path} left the playlist while loading; not playing it");
+                        return Ok(());
+                    }
+                    return Err(format!("{path} left the playlist while loading"));
+                };
                 if skip_failures {
                     engine.queue_or_start(index, player);
                 } else {

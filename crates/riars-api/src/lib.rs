@@ -24,6 +24,8 @@ pub struct AppState {
     pub stream: Option<riars_stream::StreamService>,
     /// Saves playlist, position, volume, crossfade and streaming for restarts.
     pub session: Mutex<riars_core::session::SessionSaver>,
+    /// Long-term automation: playlist generator and proof-of-play log.
+    pub automation: Mutex<riars_core::automation::Automation>,
 }
 
 pub fn create_router(state: Arc<AppState>) -> Router {
@@ -129,6 +131,29 @@ async fn auto_advance(state: Arc<AppState>) {
                 log::error!("Auto-advance failed: {e}");
             }
         }
+        run_automation(&state).await;
+    }
+}
+
+/// Log what aired and keep the on-air playlist topped up, when there is work.
+async fn run_automation(state: &Arc<AppState>) {
+    // Engine first, released before the automation lock (see `automation::runner`).
+    let Ok((revision, records)) = state.engine.lock().map(|e| (e.playlist_revision(), e.has_play_records())) else {
+        return;
+    };
+    if !state.automation.lock().is_ok_and(|a| a.wants_tick(revision, records)) {
+        return;
+    }
+    let state = Arc::clone(state);
+    let now = chrono::Local::now().naive_local();
+    let result = tokio::task::spawn_blocking(move || {
+        riars_core::automation::tick(&state.engine, &state.library, &state.automation, now)
+    })
+    .await;
+    match result {
+        Ok(Ok(report)) if report.generated > 0 => log::info!("Automation: {} items added", report.generated),
+        Ok(Err(e)) => log::warn!("Automation: {e}"),
+        _ => {}
     }
 }
 
