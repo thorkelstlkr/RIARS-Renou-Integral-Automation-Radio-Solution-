@@ -48,7 +48,9 @@
     "paused": "EN PAUSA",
     "stopped": "ATURAT",
     "noTrack": "Cap pista carregada",
-    "seekHint": "Fes clic per saltar"
+    "seekHint": "Fes clic per saltar",
+    "deadAir": "SILENCI",
+    "deadAirHint": "Silenci a l'antena massa llarg ({{count}} fins ara)"
   },
   "stream": {
     "streaming": "EN DIRECTE",

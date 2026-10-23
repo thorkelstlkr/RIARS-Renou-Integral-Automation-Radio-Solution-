@@ -9,6 +9,8 @@ interface EngineState {
   current_track: string | null;
   position_ms: number;
   duration_ms: number;
+  dead_air?: boolean;
+  dead_air_count?: number;
 }
 
 const S: Record<string, React.CSSProperties> = {
@@ -48,6 +50,12 @@ export default function NowPlaying() {
       <div style={{ ...S.state, color }}>
         <span style={{ ...S.dot, background: color }} />
         {label}
+        {es.dead_air && (
+          <span data-testid="dead-air" title={t("nowPlaying.deadAirHint", { count: es.dead_air_count ?? 0 })}
+            style={{ marginLeft: 8, padding: "1px 6px", borderRadius: 3, background: "var(--red)", color: "#fff" }}>
+            {t("nowPlaying.deadAir")}
+          </span>
+        )}
       </div>
       <div style={S.track}>{es.current_track ?? t("nowPlaying.noTrack")}</div>
       <div style={S.bar} data-testid="progress" title={t("nowPlaying.seekHint")}

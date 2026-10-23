@@ -48,7 +48,9 @@
     "paused": "PAUSED",
     "stopped": "STOPPED",
     "noTrack": "No track loaded",
-    "seekHint": "Click to jump"
+    "seekHint": "Click to jump",
+    "deadAir": "SILENCE",
+    "deadAirHint": "Dead air: the output has been silent too long ({{count}} so far)"
   },
   "stream": {
     "streaming": "STREAMING",

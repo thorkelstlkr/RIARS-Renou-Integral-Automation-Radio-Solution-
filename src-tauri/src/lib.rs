@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use riars_core::automation::StreamCommand;
 use riars_core::playlist::scheduler::{EventAction, EventTrigger, ScheduledEvent};
-use riars_core::{IcecastConfig, SavedPlaylist, Scheduler};
+use riars_core::{DeadAirConfig, IcecastConfig, SavedPlaylist, Scheduler};
 use riars_stream::{StreamService, StreamState, StreamStatus};
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -176,6 +176,20 @@ fn playlist_changes(since: Option<u64>, state: State<AppState>) -> Result<Option
         return Ok(None);
     }
     Ok(Some(PlaylistChange { revision, playlist: engine.playlist().clone() }))
+}
+
+#[tauri::command]
+fn dead_air_get(state: State<AppState>) -> Result<DeadAirConfig, String> {
+    let config = state.engine.lock().map_err(|e| e.to_string())?.dead_air_config().clone();
+    Ok(config)
+}
+
+#[tauri::command]
+fn dead_air_set(config: DeadAirConfig, state: State<AppState>) -> Result<DeadAirConfig, String> {
+    config.validate()?;
+    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+    engine.set_dead_air(config);
+    Ok(engine.dead_air_config().clone())
 }
 
 #[tauri::command]
@@ -490,6 +504,8 @@ pub fn run() {
             engine_get_state,
             engine_levels,
             engine_seek,
+            dead_air_get,
+            dead_air_set,
             playlist_changes,
             schedule_get,
             playlists_list,

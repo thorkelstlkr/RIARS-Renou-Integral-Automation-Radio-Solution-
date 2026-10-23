@@ -17,6 +17,7 @@ pub struct SessionState {
     pub volume: Option<f32>,
     pub crossfade: Option<CrossfadeConfig>,
     pub stream: Option<IcecastConfig>,
+    pub dead_air: Option<crate::audio::engine::DeadAirConfig>,
 }
 
 impl SessionState {

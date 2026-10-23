@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use riars_core::audio::crossfade::{CrossfadeConfig, FadeCurve};
 use riars_core::playlist::scheduler::{EventAction, EventTrigger, ScheduledEvent};
-use riars_core::{play_index_unlocked, EngineStateInfo, IcecastConfig, Playlist, SavedPlaylist};
+use riars_core::{DeadAirConfig, play_index_unlocked, EngineStateInfo, IcecastConfig, Playlist, SavedPlaylist};
 use riars_stream::{StreamService, StreamStatus};
 
 use crate::AppState;
@@ -62,6 +62,7 @@ pub fn api_routes() -> Router<Arc<AppState>> {
         .route("/player/next", post(next))
         .route("/player/volume", post(set_volume))
         .route("/player/levels", get(levels))
+        .route("/player/dead-air", get(get_dead_air).post(set_dead_air))
         .route("/player/seek", post(seek))
         .route("/player/crossfade", get(get_crossfade).post(set_crossfade))
         .route("/player/load", post(load_track))
@@ -384,6 +385,18 @@ async fn library_query(
 ) -> Result<Json<riars_core::TrackPage>, ApiError> {
     let library = state.library.lock().map_err(ApiError::internal)?;
     Ok(Json(library.query(&q.search, q.limit, q.offset)?))
+}
+
+async fn get_dead_air(State(state): State<Arc<AppState>>) -> Result<Json<DeadAirConfig>, ApiError> {
+    let config = state.engine.lock().map_err(ApiError::internal)?.dead_air_config().clone();
+    Ok(Json(config))
+}
+
+async fn set_dead_air(State(state): State<Arc<AppState>>, Json(req): Json<DeadAirConfig>) -> Result<Json<DeadAirConfig>, ApiError> {
+    req.validate()?;
+    let mut engine = state.engine.lock().map_err(ApiError::internal)?;
+    engine.set_dead_air(req);
+    Ok(Json(engine.dead_air_config().clone()))
 }
 
 async fn info() -> Json<ApiInfo> {

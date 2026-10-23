@@ -48,7 +48,9 @@
     "paused": "PAUSA",
     "stopped": "DETENIDO",
     "noTrack": "Sin pista cargada",
-    "seekHint": "Haz clic para saltar"
+    "seekHint": "Haz clic para saltar",
+    "deadAir": "SILENCIO",
+    "deadAirHint": "Silencio en antena demasiado largo ({{count}} hasta ahora)"
   },
   "stream": {
     "streaming": "EMITIENDO",
