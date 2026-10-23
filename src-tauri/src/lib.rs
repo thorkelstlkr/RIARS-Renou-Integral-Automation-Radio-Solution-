@@ -1,9 +1,6 @@
 use std::sync::Mutex;
 
 use riars_core::{AudioEngine, EngineStateInfo, MediaLibrary, Playlist, Track};
-use std::path::Path;
-
-use riars_core::audio::player::TrackPlayer;
 use tauri::{AppHandle, Manager, State};
 
 #[tauri::command]
@@ -52,37 +49,10 @@ async fn engine_next(app: AppHandle) -> Result<(), String> {
     }
 }
 
-/// Decode the playlist item at `index` without holding the engine lock, then start it.
-/// With `skip_failures`, unplayable items are skipped (used for auto-advance).
+/// Runs `riars_core::play_index_unlocked` off the async runtime.
 async fn decode_and_start(app: AppHandle, index: usize, skip_failures: bool) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let state = app.state::<AppState>();
-        let lock = || state.engine.lock().map_err(|e| e.to_string());
-        let mut index = index;
-        // Separate statement: a guard in the `for` expression would live for the whole
-        // loop and deadlock on the next `lock()`.
-        let attempts = lock()?.playlist().len().max(1);
-        for _ in 0..attempts {
-            let path = lock()?.item_path(index)?;
-            match TrackPlayer::from_file(Path::new(&path), 44100) {
-                Ok(player) => {
-                    lock()?.start_index(index, player);
-                    return Ok(());
-                }
-                Err(e) if skip_failures => {
-                    log::warn!("Skipping unplayable playlist item {path}: {e}");
-                    let mut engine = lock()?;
-                    engine.playlist_mut().current_index = index;
-                    match engine.next_index() {
-                        Some(next) => index = next,
-                        None => break,
-                    }
-                }
-                Err(e) => return Err(e),
-            }
-        }
-        lock()?.end_advance();
-        Ok(())
+        riars_core::play_index_unlocked(&app.state::<AppState>().engine, index, skip_failures)
     })
     .await
     .map_err(|e| e.to_string())?

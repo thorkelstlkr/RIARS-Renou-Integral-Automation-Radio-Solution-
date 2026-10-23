@@ -22,10 +22,31 @@ pub fn create_router(state: Arc<AppState>) -> Router {
 }
 
 pub async fn serve(state: Arc<AppState>, port: u16) -> Result<(), Box<dyn std::error::Error>> {
-    let app = create_router(state);
+    let app = create_router(Arc::clone(&state));
     let addr = format!("0.0.0.0:{port}");
     log::info!("RIARS API server listening on {addr}");
+    tokio::spawn(auto_advance(Arc::clone(&state)));
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+/// Move to the next playlist item when the current track ends. The desktop app does this
+/// from its UI polling; the headless server needs its own loop.
+async fn auto_advance(state: Arc<AppState>) {
+    let mut tick = tokio::time::interval(tokio::time::Duration::from_millis(250));
+    loop {
+        tick.tick().await;
+        let next = state.engine.lock().ok().and_then(|mut engine| engine.poll());
+        if let Some(index) = next {
+            let state = Arc::clone(&state);
+            let result = tokio::task::spawn_blocking(move || {
+                riars_core::play_index_unlocked(&state.engine, index, true)
+            })
+            .await;
+            if let Ok(Err(e)) = result {
+                log::error!("Auto-advance failed: {e}");
+            }
+        }
+    }
 }

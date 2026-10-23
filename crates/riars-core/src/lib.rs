@@ -4,7 +4,7 @@ pub mod locale;
 pub mod playlist;
 pub mod streaming;
 
-pub use audio::engine::{AudioEngine, EngineStateInfo, PlaybackState};
+pub use audio::engine::{play_index_unlocked, AudioEngine, EngineStateInfo, PlaybackState};
 pub use library::db::{MediaLibrary, Track};
 pub use locale::{current_language, set_language, t, SUPPORTED_LANGUAGES};
 pub use playlist::playlist::Playlist;

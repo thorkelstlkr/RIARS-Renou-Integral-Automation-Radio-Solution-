@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::sync::atomic::Ordering;
+use std::sync::Mutex;
 use std::time::Duration;
 
 use serde::Serialize;
@@ -283,4 +284,40 @@ impl AudioEngine {
     pub fn set_crossfade(&mut self, config: CrossfadeConfig) {
         self.crossfade = config;
     }
+}
+
+/// Decode the playlist item at `index` without holding the engine lock, then start it.
+/// With `skip_failures` (auto-advance), unplayable items are skipped and the engine
+/// stops if none can be played. Blocking: call it from a worker thread.
+pub fn play_index_unlocked(
+    engine: &Mutex<AudioEngine>,
+    index: usize,
+    skip_failures: bool,
+) -> Result<(), String> {
+    let lock = || engine.lock().map_err(|e| e.to_string());
+    let mut index = index;
+    // Separate statement: a guard in the `for` expression would live for the whole
+    // loop and deadlock on the next `lock()`.
+    let attempts = lock()?.playlist().len().max(1);
+    for _ in 0..attempts {
+        let path = lock()?.item_path(index)?;
+        match TrackPlayer::from_file(Path::new(&path), 44100) {
+            Ok(player) => {
+                lock()?.start_index(index, player);
+                return Ok(());
+            }
+            Err(e) if skip_failures => {
+                log::warn!("Skipping unplayable playlist item {path}: {e}");
+                let mut engine = lock()?;
+                engine.playlist_mut().current_index = index;
+                match engine.next_index() {
+                    Some(next) => index = next,
+                    None => break,
+                }
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    lock()?.end_advance();
+    Ok(())
 }
