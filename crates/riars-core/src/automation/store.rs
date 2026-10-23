@@ -117,7 +117,9 @@ pub(crate) fn init_schema(db: &rusqlite::Connection) -> Result<(), String> {
         CREATE INDEX IF NOT EXISTS idx_play_log_aired ON play_log(aired_at);
         CREATE INDEX IF NOT EXISTS idx_play_log_campaign ON play_log(campaign_id, aired_at);",
     )
-    .map_err(|e| format!("DB error: {e}"))
+    .map_err(|e| format!("DB error: {e}"))?;
+    crate::automation::traffic_store::init_traffic_schema(db)?;
+    Ok(())
 }
 
 fn enum_text<T: Serialize>(value: &T) -> Result<String, String> {
@@ -1006,6 +1008,12 @@ impl super::generator::Catalog for MediaLibrary {
     }
     fn kv_set(&mut self, key: &str, value: &str) -> Result<(), String> {
         MediaLibrary::kv_set(self, key, value)
+    }
+    fn campaigns(&self) -> Result<Vec<super::model::Campaign>, String> {
+        self.list_campaigns()
+    }
+    fn campaign_plays(&self, from: NaiveDateTime, to: NaiveDateTime) -> Result<Vec<(i64, NaiveDateTime)>, String> {
+        MediaLibrary::campaign_plays(self, from, to)
     }
 }
 

@@ -1,6 +1,6 @@
 # Automatización a largo plazo (diseño)
 
-Estado: **aprobado** (23-10-2026) con las propuestas por defecto del apartado 8. Fase 1 (núcleo) implementada.
+Estado: **aprobado** (23-10-2026) con las propuestas por defecto del apartado 8. Fases 1 (núcleo) y 2 (publicidad) implementadas.
 
 ## 1. Objetivo
 
@@ -133,6 +133,7 @@ play_log(id, aired_at, ended_at, track_id, file_path, title, artist,
 - **Patrocinio**: una campaña con `sponsor_of` se emite al principio (y/o final) del programa o franja patrocinada ("Este programa llega gracias a...").
 - **Registro de emisiones** (*proof of play*): una fila por elemento que **de verdad sonó**, escrita cuando el motor cambia de pista (no al planificar), con la hora real. `status` = `aired` / `skipped` / `failed`. Exportable a **CSV** por anunciante, campaña y rango de fechas, con totales para facturar. También sirve para las rotaciones musicales y para informes de derechos de autor (SGAE y similares).
 - Las cuñas que no cupieron se registran como `missed` en un informe aparte para recolocarlas o compensar.
+- **Implementación (fase 2)**: `automation/traffic.rs` reparte las cuñas. El día se divide en tramos de 5 minutos: una campaña entra en un bloque cuando va retrasada respecto a un ritmo uniforme dentro de sus franjas (puede adelantarse como mucho media cuña), primero por prioridad y luego por retraso. Los bloques pueden llevar cortina de entrada y de salida. Un patrocinio se liga a un reloj o a una regla de la parrilla: suena antes de la primera canción del programa y al cerrarlo, y no se repite si el mismo programa sigue en la hora siguiente. El informe `delivery_report` (y `delivery_csv`) da por día y campaña lo contratado, lo emitido, lo cortado y lo perdido; `campaign_log_csv` da las líneas de emisión de un anunciante o campaña. Un bloque saltado porque pasó su hora se avisa, y sus cuñas se recolocan solas en los siguientes, porque esas campañas quedan retrasadas.
 
 ## 4. Generador
 

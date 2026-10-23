@@ -7,6 +7,8 @@ pub mod grid;
 pub mod model;
 pub mod runner;
 pub mod store;
+pub mod traffic_store;
+pub mod traffic;
 
 pub use events::{run_due, scheduler_loop, Fired, StreamCommand};
 pub use generator::{Catalog, Generator};

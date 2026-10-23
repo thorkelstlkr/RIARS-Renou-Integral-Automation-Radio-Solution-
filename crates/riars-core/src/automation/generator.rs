@@ -9,8 +9,9 @@ use chrono::{Duration, NaiveDateTime, NaiveTime, Timelike};
 
 use super::grid;
 use super::model::{
-    AutomationConfig, CandidateRow, Category, Clock, GridRule, GridTarget, Separation, SlotItem,
+    AutomationConfig, Campaign, CandidateRow, Category, Clock, GridRule, GridTarget, Separation, SlotItem,
 };
+use super::traffic::{SpotPick, Traffic};
 use crate::library::db::{fold, Track};
 use crate::playlist::playlist::{ItemKind, Playlist, PlaylistItem};
 
@@ -30,6 +31,9 @@ pub trait Catalog {
     fn recent_plays(&self, since: NaiveDateTime) -> Result<Vec<(Option<i64>, String, NaiveDateTime)>, String>;
     fn kv_get(&self, key: &str) -> Result<Option<String>, String>;
     fn kv_set(&mut self, key: &str, value: &str) -> Result<(), String>;
+    fn campaigns(&self) -> Result<Vec<Campaign>, String>;
+    /// Complete spot plays as (campaign id, start) in `[from, to)`.
+    fn campaign_plays(&self, from: NaiveDateTime, to: NaiveDateTime) -> Result<Vec<(i64, NaiveDateTime)>, String>;
 }
 
 /// An anchor may fire this early (the item before it ends a little before the time).
@@ -98,6 +102,8 @@ struct Cursor {
     start: NaiveDateTime,
     end: NaiveDateTime,
     source: Source,
+    /// Grid rule that chose the source (for sponsorships).
+    rule_id: Option<String>,
     slot: usize,
     /// Items made for the current slot.
     done: u32,
@@ -155,6 +161,9 @@ pub struct Generator {
     hard_anchors: Vec<(String, NaiveDateTime)>,
     warnings: Vec<String>,
     seed: u64,
+    traffic: Traffic,
+    /// Sponsorship spots to play before the first song of the period.
+    opening: VecDeque<SpotPick>,
 }
 
 impl Default for Generator {
@@ -192,6 +201,8 @@ impl Generator {
             hard_anchors: Vec::new(),
             warnings: Vec::new(),
             seed: seed | 1,
+            traffic: Traffic::default(),
+            opening: VecDeque::new(),
         }
     }
 
@@ -226,6 +237,7 @@ impl Generator {
             self.categories = catalog.categories()?.into_iter().map(|c| (c.id, c)).collect();
             self.clocks = catalog.clocks()?.into_iter().map(|c| (c.id.clone(), c)).collect();
             self.grid = catalog.grid_rules()?;
+            self.traffic.set_campaigns(catalog.campaigns()?);
             self.loaded = true;
         }
         let revision = catalog.revision();
@@ -286,13 +298,19 @@ impl Generator {
     }
 
     fn next_item(&mut self, catalog: &mut dyn Catalog, t: NaiveDateTime) -> Result<Option<PlaylistItem>, String> {
+        if self.traffic.needs_day(t.date()) {
+            let midnight = t.date().and_time(NaiveTime::MIN);
+            let aired = catalog.campaign_plays(midnight, midnight + Duration::days(1))?;
+            self.traffic.start_day(t.date(), &aired);
+        }
+        self.ensure_period(catalog, t)?;
         if let Some(mut item) = self.pending.pop_front() {
             item.planned_at = Some(t);
             return Ok(Some(item));
         }
         // Bounded: a clock of empty slots must not spin forever.
         for _ in 0..256 {
-            self.ensure_period(t);
+            self.ensure_period(catalog, t)?;
             let source = self.cursor.as_ref().map(|c| c.source.clone()).unwrap_or(Source::Nothing);
             let step = match source {
                 Source::Clock(id) => self.clock_step(catalog, &id, t)?,
@@ -315,16 +333,38 @@ impl Generator {
     /// Start a new clock period when `t` left the current one. Like anchors, a period
     /// may start a little early, so a song ending just before the hour is followed by
     /// the top of the hour, not by one more song.
-    fn ensure_period(&mut self, t: NaiveDateTime) {
-        let t = t + Duration::seconds(EARLY_SECS);
+    /// Closing sponsorships of the period that ends go first; opening ones of the new
+    /// period play before its first song.
+    fn ensure_period(&mut self, catalog: &mut dyn Catalog, planned: NaiveDateTime) -> Result<(), String> {
+        let t = planned + Duration::seconds(EARLY_SECS);
         if self.cursor.as_ref().is_some_and(|c| c.start <= t && t < c.end) {
-            return;
+            return Ok(());
         }
-        let source = match grid::resolve(&self.grid, t).map(|r| r.target.clone()) {
+        let rule = grid::resolve(&self.grid, t);
+        let rule_id = rule.map(|r| r.id.clone());
+        let source = match rule.map(|r| r.target.clone()) {
             Some(GridTarget::Clock { clock_id }) => Source::Clock(clock_id),
             Some(GridTarget::Playlist { playlist_id }) => Source::Playlist(playlist_id),
             None => self.config.default_clock.clone().map_or(Source::Nothing, Source::Clock),
         };
+        let clock_of = |source: &Source| match source {
+            Source::Clock(id) => Some(id.clone()),
+            _ => None,
+        };
+        if let Some(old) = self.cursor.take() {
+            // The same programme going on (next hour, same rule and clock) is not
+            // closed and opened again.
+            if old.rule_id != rule_id || old.source != source {
+                for pick in self.traffic.sponsors(clock_of(&old.source).as_deref(), old.rule_id.as_deref(), planned, false) {
+                    if let Some(item) = self.spot_item(catalog, pick, planned)? {
+                        self.pending.push_back(item);
+                    }
+                }
+                self.opening = self.traffic.sponsors(clock_of(&source).as_deref(), rule_id.as_deref(), t, true).into();
+            }
+        } else {
+            self.opening = self.traffic.sponsors(clock_of(&source).as_deref(), rule_id.as_deref(), t, true).into();
+        }
         let minutes = match &source {
             Source::Clock(id) => self.clocks.get(id).map_or(60, |c| c.duration_minutes.clamp(5, 24 * 60)),
             _ => 60,
@@ -332,7 +372,34 @@ impl Generator {
         let length = minutes * 60;
         let since_midnight = t.time().num_seconds_from_midnight() as i64;
         let start = t.date().and_time(NaiveTime::MIN) + Duration::seconds(since_midnight / length * length);
-        self.cursor = Some(Cursor { start, end: start + Duration::seconds(length), source, slot: 0, done: 0 });
+        self.cursor = Some(Cursor { start, end: start + Duration::seconds(length), source, rule_id, slot: 0, done: 0 });
+        Ok(())
+    }
+
+    fn spot_item(&mut self, catalog: &dyn Catalog, pick: SpotPick, t: NaiveDateTime) -> Result<Option<PlaylistItem>, String> {
+        let Some(track) = catalog.track(pick.track_id)? else {
+            self.warn(format!("spot {} of campaign {} is missing", pick.track_id, pick.campaign_id));
+            return Ok(None);
+        };
+        let mut item = PlaylistItem::new(track.file_path, track.title, track.artist, track.duration_ms);
+        item.kind = ItemKind::Spot;
+        item.track_id = Some(track.id);
+        item.campaign_id = Some(pick.campaign_id);
+        item.planned_at = Some(t);
+        item.generated = true;
+        Ok(Some(item))
+    }
+
+    /// Put `items` on air in order: the first now, the rest next.
+    fn sequence(&mut self, mut items: Vec<PlaylistItem>) -> Option<PlaylistItem> {
+        if items.is_empty() {
+            return None;
+        }
+        let first = items.remove(0);
+        for item in items.into_iter().rev() {
+            self.pending.push_front(item);
+        }
+        Some(first)
     }
 
     /// Fallback music when nothing is scheduled.
@@ -361,12 +428,19 @@ impl Generator {
             return self.fallback(catalog, t);
         };
         let Some(cursor) = self.cursor.as_mut() else { return Ok(Step::Stuck) };
-        let anchor_time = |i: usize| clock.slots[i].at.map(|a| cursor.start + Duration::seconds(a.offset_seconds()));
+        let period_start = cursor.start;
+        let anchor_time = |i: usize| clock.slots[i].at.map(|a| period_start + Duration::seconds(a.offset_seconds()));
         // Jump to the latest anchored slot whose time came, skipping what is left before it.
         let due = (cursor.slot..clock.slots.len())
             .rev()
             .find(|&i| anchor_time(i).is_some_and(|at| t >= at - Duration::seconds(EARLY_SECS)));
+        let mut skipped_breaks = Vec::new();
         if let Some(j) = due.filter(|&j| j > cursor.slot) {
+            for slot in &clock.slots[cursor.slot..j] {
+                if let SlotItem::AdBreak { name, .. } = &slot.item {
+                    skipped_breaks.push(format!("ad break \"{name}\" skipped: its time passed"));
+                }
+            }
             cursor.slot = j;
             cursor.done = 0;
         }
@@ -376,6 +450,9 @@ impl Generator {
             ..clock.slots.len())
             .find_map(|i| clock.slots[i].at.map(|a| (anchor_time(i).unwrap(), a.max_wait_seconds as i64)))
             .or(Some((period_end, 120)));
+        for warning in skipped_breaks {
+            self.warn(warning);
+        }
         let fill_category = clock.fill_category.or(self.last_music_category).or(self.config.fallback_category);
 
         let Some(slot) = clock.slots.get(slot_index) else {
@@ -423,10 +500,30 @@ impl Generator {
                     None => Step::Next,
                 }
             }
-            // Filled by the traffic part (phase 2).
-            SlotItem::AdBreak { .. } => {
+            SlotItem::AdBreak { max_seconds, intro_category, outro_category, .. } => {
                 self.advance_slot();
-                Step::Next
+                let max_ms = if *max_seconds > 0 { *max_seconds } else { self.config.ad_break_seconds } as u64 * 1000;
+                let picks = {
+                    let catalog: &dyn Catalog = catalog;
+                    let length = |id: i64| catalog.track(id).ok().flatten().map_or(30_000, |t| length_ms(t.duration_ms));
+                    self.traffic.fill_break(planned, max_ms, &length)
+                };
+                if picks.is_empty() {
+                    Step::Next
+                } else {
+                    let mut items = Vec::new();
+                    if let Some(category) = intro_category {
+                        items.extend(self.imaging(catalog, *category, planned)?);
+                    }
+                    for pick in picks {
+                        items.extend(self.spot_item(catalog, pick, planned)?);
+                    }
+                    if let Some(category) = outro_category {
+                        items.extend(self.imaging(catalog, *category, planned)?);
+                    }
+                    self.last_was_music = false;
+                    self.sequence(items).map_or(Step::Next, Step::Item)
+                }
             }
             SlotItem::Playlist { playlist_id, count } => match self.playlist_item(catalog, playlist_id, planned)? {
                 Some((item, at_end)) => {
@@ -494,37 +591,34 @@ impl Generator {
         exclude: &[String],
         target: Option<(NaiveDateTime, i64)>,
     ) -> Result<Option<PlaylistItem>, String> {
-        let mut before = None;
-        if self.last_was_music {
+        let mut before = Vec::new();
+        while let Some(pick) = self.opening.pop_front() {
+            before.extend(self.spot_item(catalog, pick, t)?);
+        }
+        if before.is_empty() && self.last_was_music {
             let imaging = self.config.imaging.clone();
             if let Some(jingles) = imaging.jingle_category.filter(|_| {
                 imaging.jingle_every > 0 && self.songs_since_jingle >= imaging.jingle_every
             }) {
-                before = self.imaging(catalog, jingles, t)?;
+                before.extend(self.imaging(catalog, jingles, t)?);
             }
-            if before.is_none() {
+            if before.is_empty() {
                 if let Some(sweepers) = imaging
                     .sweeper_on_change
                     .filter(|_| self.last_music_category.is_some_and(|c| c != category_id))
                 {
-                    before = self.imaging(catalog, sweepers, t)?;
+                    before.extend(self.imaging(catalog, sweepers, t)?);
                 }
             }
         }
-        let start = before.as_ref().map_or(t, |b| t + ms(item_ms(b)));
-        let Some(item) = self.pick_music(catalog, category_id, start, require, exclude, target)? else {
-            return Ok(before);
-        };
-        self.songs_since_jingle += 1;
-        self.last_music_category = Some(category_id);
-        self.last_was_music = true;
-        Ok(Some(match before {
-            Some(before) => {
-                self.pending.push_back(item);
-                before
-            }
-            None => item,
-        }))
+        let start = t + ms(before.iter().map(item_ms).sum());
+        if let Some(item) = self.pick_music(catalog, category_id, start, require, exclude, target)? {
+            self.songs_since_jingle += 1;
+            self.last_music_category = Some(category_id);
+            self.last_was_music = true;
+            before.push(item);
+        }
+        Ok(self.sequence(before))
     }
 
     fn ensure_candidates(&mut self, catalog: &dyn Catalog, category_id: i64) -> Result<(), String> {
@@ -788,7 +882,7 @@ fn landing_penalty(t: NaiveDateTime, duration_ms: u64, at: NaiveDateTime, max_wa
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::automation::model::{Anchor, ClockSlot, ImagingRules};
+    use crate::automation::model::{Anchor, CampaignSpot, ClockSlot, ImagingRules, SponsorTarget, Sponsorship};
     use chrono::NaiveDate;
 
     /// An in-memory library.
@@ -803,6 +897,7 @@ mod tests {
         config: AutomationConfig,
         playlists: HashMap<String, Playlist>,
         kv: HashMap<String, String>,
+        campaigns: Vec<Campaign>,
     }
 
     impl Fake {
@@ -884,6 +979,53 @@ mod tests {
         fn kv_set(&mut self, key: &str, value: &str) -> Result<(), String> {
             self.kv.insert(key.into(), value.into());
             Ok(())
+        }
+        fn campaigns(&self) -> Result<Vec<Campaign>, String> {
+            Ok(self.campaigns.clone())
+        }
+        fn campaign_plays(&self, _: NaiveDateTime, _: NaiveDateTime) -> Result<Vec<(i64, NaiveDateTime)>, String> {
+            Ok(Vec::new())
+        }
+    }
+
+    impl Fake {
+        /// Spot audio: `count` tracks of 30 s, ids from `first_id`.
+        fn spots(&mut self, first_id: i64, count: i64) -> Vec<i64> {
+            (first_id..first_id + count)
+                .map(|id| {
+                    self.by_id.insert(id, self.tracks.len());
+                    self.tracks.push(Track {
+                        id,
+                        title: format!("spot{id}"),
+                        artist: String::new(),
+                        album: String::new(),
+                        genre: String::new(),
+                        duration_ms: 30_000,
+                        file_path: format!("/spots/{id}.mp3"),
+                        bpm: None,
+                        sample_rate: 44100,
+                    });
+                    id
+                })
+                .collect()
+        }
+
+        fn campaign(&mut self, id: i64, advertiser_id: i64, plays_per_day: u32, spots: &[i64]) -> &mut Campaign {
+            self.campaigns.push(Campaign {
+                id,
+                advertiser_id,
+                name: format!("campaign{id}"),
+                date_from: NaiveDate::from_ymd_opt(2026, 10, 1).unwrap(),
+                date_to: NaiveDate::from_ymd_opt(2026, 10, 31).unwrap(),
+                plays_per_day,
+                max_per_hour: 0,
+                dayparts: vec![],
+                priority: 0,
+                sponsorship: None,
+                enabled: true,
+                spots: spots.iter().map(|&track_id| CampaignSpot { track_id, weight: 1.0 }).collect(),
+            });
+            self.campaigns.last_mut().unwrap()
         }
     }
 
@@ -1110,6 +1252,81 @@ mod tests {
             let mut g = Generator::with_seed(seed);
             let next = g.generate(&mut f, at(9, 0) + Duration::days(1), 1, 0, 0).unwrap();
             assert_eq!(next[0].title, format!("s{n}"));
+        }
+    }
+
+    fn ad_break(minute: u32) -> ClockSlot {
+        slot(
+            Some(minute),
+            SlotItem::AdBreak { name: format!(":{minute}"), max_seconds: 90, intro_category: Some(JINGLES), outro_category: None },
+        )
+    }
+
+    #[test]
+    fn ad_breaks_meet_daily_targets() {
+        for seed in SEEDS {
+            let mut f = station();
+            f.clocks[0].slots.insert(2, ad_break(15));
+            f.clocks[0].slots.push(ad_break(45));
+            let a = f.spots(9000, 3);
+            let b = f.spots(9100, 2);
+            let c = f.spots(9200, 1);
+            f.campaign(1, 1, 20, &a);
+            f.campaign(2, 2, 10, &b);
+            f.campaign(3, 1, 10, &c); // same advertiser as campaign 1
+            let mut g = Generator::with_seed(seed);
+            let items = run(&mut f, &mut g, at(0, 0), 24);
+            let today: Vec<_> = items.iter().filter(|i| i.planned_at.unwrap() < at(0, 0) + Duration::days(1)).collect();
+            for (campaign, target) in [(1, 20), (2, 10), (3, 10)] {
+                let n = today.iter().filter(|i| i.campaign_id == Some(campaign)).count();
+                assert_eq!(n, target, "seed {seed}: campaign {campaign}");
+            }
+            // Breaks: a jingle intro, then spots of different advertisers.
+            for (n, item) in items.iter().enumerate().filter(|(_, i)| i.kind == ItemKind::Spot) {
+                let prev = &items[n - 1];
+                assert!(prev.kind == ItemKind::Jingle || prev.kind == ItemKind::Spot, "seed {seed}: spot after {:?}", prev.kind);
+                if prev.kind == ItemKind::Spot {
+                    let advertiser = |i: &PlaylistItem| if i.campaign_id == Some(2) { 2 } else { 1 };
+                    assert_ne!(advertiser(prev), advertiser(item), "seed {seed}: same advertiser twice in a break");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn sponsorship_opens_and_closes_the_programme() {
+        for seed in SEEDS {
+            let mut f = station();
+            f.grid.push(GridRule {
+                id: "sports".into(),
+                name: "sports".into(),
+                priority: 1,
+                target: GridTarget::Clock { clock_id: "rock".into() },
+                weekdays: 0x7f,
+                months: 0xfff,
+                weeks_of_month: 0x3f,
+                start: NaiveTime::from_hms_opt(20, 0, 0).unwrap(),
+                end: NaiveTime::from_hms_opt(22, 0, 0).unwrap(),
+                date_from: None,
+                date_to: None,
+                enabled: true,
+            });
+            let spot = f.spots(9000, 1);
+            f.campaign(7, 1, 0, &spot).sponsorship = Some(Sponsorship {
+                target: SponsorTarget::GridRule { rule_id: "sports".into() },
+                opening: true,
+                closing: true,
+            });
+            let mut g = Generator::with_seed(seed);
+            let items = run(&mut f, &mut g, at(19, 0), 4);
+            let mentions: Vec<NaiveDateTime> =
+                items.iter().filter(|i| i.campaign_id == Some(7)).map(|i| i.planned_at.unwrap()).collect();
+            assert_eq!(mentions.len(), 2, "seed {seed}: {mentions:?}");
+            assert!((mentions[0] - at(20, 0)).num_seconds().abs() < 300, "seed {seed}: opening at {}", mentions[0]);
+            assert!((mentions[1] - at(22, 0)).num_seconds().abs() < 120, "seed {seed}: closing at {}", mentions[1]);
+            // The opening comes right before the first rock song.
+            let n = items.iter().position(|i| i.campaign_id == Some(7)).unwrap();
+            assert_eq!(items[n + 1].category_id, Some(ROCK), "seed {seed}");
         }
     }
 
