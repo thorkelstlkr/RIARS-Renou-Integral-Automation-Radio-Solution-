@@ -45,7 +45,8 @@
     "onAir": "AL AIRE",
     "paused": "PAUSA",
     "stopped": "DETENIDO",
-    "noTrack": "Sin pista cargada"
+    "noTrack": "Sin pista cargada",
+    "seekHint": "Haz clic para saltar"
   },
   "stream": {
     "streaming": "EMITIENDO",

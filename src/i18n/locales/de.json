@@ -45,7 +45,8 @@
     "onAir": "AUF SENDUNG",
     "paused": "PAUSIERT",
     "stopped": "GESTOPPT",
-    "noTrack": "Kein Titel geladen"
+    "noTrack": "Kein Titel geladen",
+    "seekHint": "Klicken, um zu springen"
   },
   "stream": {
     "streaming": "LIVE",

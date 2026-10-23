@@ -45,7 +45,8 @@
     "onAir": "NO AR",
     "paused": "EM PAUSA",
     "stopped": "PARADO",
-    "noTrack": "Nenhuma faixa carregada"
+    "noTrack": "Nenhuma faixa carregada",
+    "seekHint": "Clique para saltar"
   },
   "stream": {
     "streaming": "EM DIRETO",

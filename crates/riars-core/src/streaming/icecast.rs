@@ -7,6 +7,16 @@ pub enum StreamFormat {
     Aac,
 }
 
+/// MP3 encoder effort. `Fast` keeps CPU low on small machines; at 128 kbps and up
+/// the difference is hard to hear.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum EncoderQuality {
+    #[default]
+    Fast,
+    Balanced,
+    High,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IcecastConfig {
     pub host: String,
@@ -20,6 +30,8 @@ pub struct IcecastConfig {
     pub station_description: String,
     pub station_genre: String,
     pub station_url: String,
+    #[serde(default)]
+    pub encoder_quality: EncoderQuality,
 }
 
 impl Default for IcecastConfig {
@@ -36,6 +48,7 @@ impl Default for IcecastConfig {
             station_description: String::new(),
             station_genre: String::new(),
             station_url: String::new(),
+            encoder_quality: EncoderQuality::default(),
         }
     }
 }

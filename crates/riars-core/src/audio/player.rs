@@ -11,14 +11,18 @@ use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::Hint;
 use symphonia::core::units::Time;
 
-/// Tracks at least this long are decoded progressively instead of all at once.
-const STREAM_MIN_SECS: u64 = 600;
+/// Tracks at least this long are decoded progressively instead of all at once. Shorter
+/// ones (jingles, idents) load whole: tiny, and ready instantly.
+const STREAM_MIN_SECS: u64 = 30;
 /// Audio the decoder thread keeps ready ahead of playback.
 const STREAM_BUFFER_SECS: usize = 5;
 /// Audio decoded before `from_file` returns, so playback starts without a stall.
 const STREAM_PREFILL_SECS: f64 = 0.5;
 /// Streaming supports up to this many channels (more are decoded in memory).
 const MAX_CHANNELS: usize = 8;
+/// Samples copied from the ring at a time, so reading costs a couple of atomic
+/// operations per block instead of per sample.
+const CACHE_SAMPLES: usize = 1024;
 
 /// How to open a file: decode it all, stream it, or pick by length.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,6 +53,10 @@ enum Source {
 /// The audio-thread side of a progressively decoded track.
 struct StreamSource {
     consumer: rtrb::Consumer<f32>,
+    /// Samples already taken from the ring, read from `cache_pos` to `cache_len`.
+    cache: [f32; CACHE_SAMPLES],
+    cache_pos: usize,
+    cache_len: usize,
     control: Arc<DecodeControl>,
     /// Frames `win_index` and `win_index + 1`, for interpolation.
     window: [[f32; MAX_CHANNELS]; 2],
@@ -156,6 +164,9 @@ impl TrackPlayer {
 
         let mut source = StreamSource {
             consumer,
+            cache: [0.0; CACHE_SAMPLES],
+            cache_pos: 0,
+            cache_len: 0,
             control,
             window: [[0.0; MAX_CHANNELS]; 2],
             win_index: 0,
@@ -302,6 +313,8 @@ impl TrackPlayer {
             if let Ok(chunk) = s.consumer.read_chunk(stale) {
                 chunk.commit_all();
             }
+            s.cache_pos = 0;
+            s.cache_len = 0;
             s.control.seek_flushed.store(generation, Ordering::Release);
             s.waiting_seek = None;
             // This output frame was silence; start moving on the next one.
@@ -310,7 +323,7 @@ impl TrackPlayer {
 
         if s.win_valid == 0 || s.win_index != self.frame_pos as usize {
             s.fill(channels);
-            if s.win_valid == 0 && s.control.eof.load(Ordering::Acquire) && s.consumer.is_empty() {
+            if s.win_valid == 0 && s.control.eof.load(Ordering::Acquire) && s.is_drained() {
                 s.ended = true;
                 s.total_frames = s.win_index;
             }
@@ -327,7 +340,7 @@ impl TrackPlayer {
             } else {
                 s.fill(channels);
                 if s.win_valid < 2 {
-                    if s.control.eof.load(Ordering::Acquire) && s.consumer.is_empty() {
+                    if s.control.eof.load(Ordering::Acquire) && s.is_drained() {
                         // Past the last decoded frame.
                         s.ended = true;
                         s.total_frames = s.win_index + s.win_valid;
@@ -365,15 +378,43 @@ impl TrackPlayer {
 }
 
 impl StreamSource {
-    /// Pull frames from the ring until both window slots are full or it runs dry.
+    /// Pull frames until both window slots are full or the audio runs dry.
     fn fill(&mut self, channels: usize) {
-        while self.win_valid < 2 && self.consumer.slots() >= channels {
-            let slot = &mut self.window[self.win_valid];
-            for value in slot.iter_mut().take(channels) {
-                *value = self.consumer.pop().unwrap_or(0.0);
+        while self.win_valid < 2 {
+            if self.cache_len - self.cache_pos < channels && !self.refill(channels) {
+                return;
             }
+            let frame = &self.cache[self.cache_pos..self.cache_pos + channels];
+            self.window[self.win_valid][..channels].copy_from_slice(frame);
+            self.cache_pos += channels;
             self.win_valid += 1;
         }
+    }
+
+    /// Move whole frames from the ring into the cache. False if not even one frame
+    /// is available.
+    fn refill(&mut self, channels: usize) -> bool {
+        // Keep a partial frame left in the cache (none in practice: we copy whole frames).
+        let left = self.cache_len - self.cache_pos;
+        self.cache.copy_within(self.cache_pos..self.cache_len, 0);
+        self.cache_pos = 0;
+        self.cache_len = left;
+        let room = (CACHE_SAMPLES - left) / channels * channels;
+        let take = (self.consumer.slots() / channels * channels).min(room);
+        if take > 0 {
+            if let Ok(chunk) = self.consumer.read_chunk(take) {
+                let (first, second) = chunk.as_slices();
+                self.cache[left..left + first.len()].copy_from_slice(first);
+                self.cache[left + first.len()..left + take].copy_from_slice(second);
+                chunk.commit_all();
+                self.cache_len = left + take;
+            }
+        }
+        self.cache_len - self.cache_pos >= channels
+    }
+
+    fn is_drained(&self) -> bool {
+        self.consumer.is_empty() && self.cache_pos == self.cache_len
     }
 }
 
@@ -488,7 +529,12 @@ fn decode_loop(
             continue;
         }
 
-        // Push what fits; wait when the ring is full or the file is done.
+        // Push what fits. When the ring is full, sleep until about half a second has
+        // drained, instead of waking up every few milliseconds for nothing.
+        if producer.slots() == 0 {
+            std::thread::sleep(Duration::from_millis(250));
+            continue;
+        }
         let free = producer.slots().min(pending.len() - offset);
         if free > 0 {
             if let Ok(mut chunk) = producer.write_chunk_uninit(free) {
@@ -505,7 +551,8 @@ fn decode_loop(
                 offset += free;
             }
         } else {
-            std::thread::sleep(Duration::from_millis(5));
+            // Nothing pending: the file is done; wait for a seek or the player to go.
+            std::thread::sleep(Duration::from_millis(50));
         }
     }
 }

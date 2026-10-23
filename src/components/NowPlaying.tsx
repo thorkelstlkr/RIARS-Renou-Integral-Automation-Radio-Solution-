@@ -15,7 +15,7 @@ const S: Record<string, React.CSSProperties> = {
   state: { display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 },
   dot: { width: 8, height: 8, borderRadius: "50%", display: "inline-block" },
   track: { fontSize: 15, fontWeight: 600, marginBottom: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
-  bar: { height: 4, background: "var(--bg-input)", borderRadius: 2, overflow: "hidden", marginBottom: 6 },
+  bar: { height: 8, background: "var(--bg-input)", borderRadius: 4, overflow: "hidden", marginBottom: 6, cursor: "pointer" },
   fill: { height: "100%", background: "var(--accent)", borderRadius: 2 },
   times: { display: "flex", justifyContent: "space-between", fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--text-muted)" },
 };
@@ -28,6 +28,7 @@ export default function NowPlaying() {
 
   useEffect(() => {
     const id = setInterval(async () => {
+      if (document.hidden) return;
       try { setEs(await invoke<EngineState>("engine_get_state")); } catch { /**/ }
     }, 250);
     return () => clearInterval(id);
@@ -49,7 +50,17 @@ export default function NowPlaying() {
         {label}
       </div>
       <div style={S.track}>{es.current_track ?? t("nowPlaying.noTrack")}</div>
-      <div style={S.bar}><div style={{ ...S.fill, width: `${pct}%`, transition: "width 0.25s linear" }} /></div>
+      <div style={S.bar} data-testid="progress" title={t("nowPlaying.seekHint")}
+        onClick={(e) => {
+          if (es.duration_ms <= 0) return;
+          const r = e.currentTarget.getBoundingClientRect();
+          const fraction = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+          const position = Math.round(fraction * es.duration_ms);
+          setEs((s) => ({ ...s, position_ms: position })); // move the bar now, not on the next poll
+          invoke("engine_seek", { positionMs: position }).catch(() => {});
+        }}>
+        <div style={{ ...S.fill, width: `${pct}%`, transition: "width 0.25s linear" }} />
+      </div>
       <div style={S.times}>
         <span>{fmt(es.position_ms)}</span>
         <span>-{fmt(es.duration_ms - es.position_ms)}</span>
