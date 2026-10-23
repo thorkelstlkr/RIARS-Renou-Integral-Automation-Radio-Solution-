@@ -17,6 +17,8 @@ use super::player::TrackPlayer;
 
 pub(crate) enum Command {
     Load(Box<TrackPlayer>),
+    /// Play this track the moment the current one ends (gapless).
+    Queue(Box<TrackPlayer>),
     Seek(Duration),
 }
 
@@ -27,6 +29,8 @@ pub(crate) struct Shared {
     pub finished: AtomicBool,
     volume_bits: AtomicU32,
     pub position_ms: AtomicU64,
+    /// Incremented by the callback each time it switches to a queued track.
+    pub switches: AtomicU64,
 }
 
 impl Shared {
@@ -36,6 +40,7 @@ impl Shared {
             finished: AtomicBool::new(false),
             volume_bits: AtomicU32::new(volume.to_bits()),
             position_ms: AtomicU64::new(0),
+            switches: AtomicU64::new(0),
         }
     }
 
@@ -157,6 +162,7 @@ where
     let out_channels = config.channels as usize;
     let out_rate = config.sample_rate.0 as f64;
     let mut player: Option<Box<TrackPlayer>> = None;
+    let mut queued: Option<Box<TrackPlayer>> = None;
 
     device
         .build_output_stream(
@@ -168,7 +174,15 @@ where
                             if let Some(old) = player.replace(new_player) {
                                 let _ = garbage.try_send(old);
                             }
+                            if let Some(old) = queued.take() {
+                                let _ = garbage.try_send(old);
+                            }
                             shared.finished.store(false, Ordering::Relaxed);
+                        }
+                        Command::Queue(next) => {
+                            if let Some(old) = queued.replace(next) {
+                                let _ = garbage.try_send(old);
+                            }
                         }
                         Command::Seek(position) => {
                             if let Some(p) = player.as_mut() {
@@ -182,21 +196,42 @@ where
                 let playing = shared.playing.load(Ordering::Relaxed);
                 let volume = shared.volume();
 
-                match player.as_mut() {
-                    Some(p) if playing => {
-                        let step = p.sample_rate() as f64 / out_rate;
-                        for frame in data.chunks_mut(out_channels) {
-                            for (channel, out) in frame.iter_mut().enumerate() {
-                                *out = T::from_sample(p.sample(channel) * volume);
+                if playing && player.is_some() {
+                    for frame in data.chunks_mut(out_channels) {
+                        // Switch to the queued track mid-buffer, so there is no gap.
+                        if player.as_ref().is_some_and(|p| p.is_finished()) {
+                            if let Some(next) = queued.take() {
+                                if let Some(old) = player.replace(next) {
+                                    let _ = garbage.try_send(old);
+                                }
+                                shared.switches.fetch_add(1, Ordering::Relaxed);
                             }
-                            p.advance(step);
                         }
-                        if p.is_finished() {
+                        match player.as_mut() {
+                            Some(p) if !p.is_finished() => {
+                                for (channel, out) in frame.iter_mut().enumerate() {
+                                    *out = T::from_sample(p.sample(channel) * volume);
+                                }
+                                p.advance(p.sample_rate() as f64 / out_rate);
+                            }
+                            _ => frame.fill(T::EQUILIBRIUM),
+                        }
+                    }
+                    if player.as_ref().is_some_and(|p| p.is_finished()) {
+                        // The track can end on the buffer's last frame: switch here too,
+                        // or playback would stop with the next track still queued.
+                        if let Some(next) = queued.take() {
+                            if let Some(old) = player.replace(next) {
+                                let _ = garbage.try_send(old);
+                            }
+                            shared.switches.fetch_add(1, Ordering::Relaxed);
+                        } else {
                             shared.playing.store(false, Ordering::Relaxed);
                             shared.finished.store(true, Ordering::Relaxed);
                         }
                     }
-                    _ => data.fill(T::EQUILIBRIUM),
+                } else {
+                    data.fill(T::EQUILIBRIUM);
                 }
 
                 if let Some(p) = player.as_ref() {
