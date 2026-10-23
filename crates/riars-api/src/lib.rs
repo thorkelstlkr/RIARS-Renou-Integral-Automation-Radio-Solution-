@@ -1,3 +1,4 @@
+mod automation_routes;
 pub mod routes;
 pub mod ws;
 
@@ -26,6 +27,8 @@ pub struct AppState {
     pub session: Mutex<riars_core::session::SessionSaver>,
     /// Long-term automation: playlist generator and proof-of-play log.
     pub automation: Mutex<riars_core::automation::Automation>,
+    /// Automation events (JSON with `"type": "automation"`) for WebSocket clients.
+    pub automation_events: tokio::sync::broadcast::Sender<String>,
 }
 
 pub fn create_router(state: Arc<AppState>) -> Router {
@@ -144,16 +147,31 @@ async fn run_automation(state: &Arc<AppState>) {
     if !state.automation.lock().is_ok_and(|a| a.wants_tick(revision, records)) {
         return;
     }
-    let state = Arc::clone(state);
+    let worker = Arc::clone(state);
     let now = chrono::Local::now().naive_local();
     let result = tokio::task::spawn_blocking(move || {
-        riars_core::automation::tick(&state.engine, &state.library, &state.automation, now)
+        riars_core::automation::tick(&worker.engine, &worker.library, &worker.automation, now)
     })
     .await;
     match result {
-        Ok(Ok(report)) if report.generated > 0 => log::info!("Automation: {} items added", report.generated),
+        Ok(Ok(report)) => {
+            if report.generated > 0 {
+                log::info!("Automation: {} items added", report.generated);
+            }
+            if report.generated > 0 || report.logged > 0 || report.cut_to.is_some() || !report.warnings.is_empty() {
+                let event = serde_json::json!({
+                    "type": "automation",
+                    "generated": report.generated,
+                    "logged": report.logged,
+                    "cut_to": report.cut_to,
+                    "warnings": report.warnings,
+                });
+                // No subscribers is fine.
+                let _ = state.automation_events.send(event.to_string());
+            }
+        }
         Ok(Err(e)) => log::warn!("Automation: {e}"),
-        _ => {}
+        Err(_) => {}
     }
 }
 

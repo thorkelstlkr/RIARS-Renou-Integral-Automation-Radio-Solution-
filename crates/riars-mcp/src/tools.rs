@@ -11,10 +11,10 @@ use crate::McpState;
 
 #[derive(Serialize)]
 pub struct ToolDef {
-    name: &'static str,
-    description: &'static str,
+    pub(crate) name: &'static str,
+    pub(crate) description: &'static str,
     #[serde(rename = "inputSchema")]
-    input_schema: Value,
+    pub(crate) input_schema: Value,
 }
 
 #[derive(Serialize)]
@@ -262,11 +262,17 @@ pub fn list_tools() -> ToolList {
                     "action": { "type": "string", "enum": ["Skip", "Alert"], "description": "Skip to the next item, or only raise the alarm" }
                 } }),
             },
-        ],
+        ]
+        .into_iter()
+        .chain(crate::automation_tools::tool_defs())
+        .collect(),
     }
 }
 
 pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Value, String> {
+    if let Some(result) = crate::automation_tools::handle(name, args, state) {
+        return result;
+    }
     match name {
         "get_status" => {
             let engine = state.engine.lock().map_err(|e| e.to_string())?;
@@ -565,7 +571,7 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
     }
 }
 
-fn text_result(text: &str) -> Value {
+pub(crate) fn text_result(text: &str) -> Value {
     json!({
         "content": [{ "type": "text", "text": text }]
     })

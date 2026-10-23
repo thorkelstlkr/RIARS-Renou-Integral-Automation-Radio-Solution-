@@ -152,7 +152,12 @@ async function streamStatus() {
 function connect() {
   const proto = location.protocol === "https:" ? "wss" : "ws";
   ws = new WebSocket(`${proto}://${location.host}/ws/events?token=${encodeURIComponent(token)}`);
-  ws.onmessage = (m) => { try { render(JSON.parse(m.data)); } catch {} };
+  ws.onmessage = (m) => {
+    try {
+      const data = JSON.parse(m.data);
+      if (data.type !== "automation") render(data);
+    } catch {}
+  };
   ws.onclose = () => { if (token) { $("error").textContent = T.lost; setTimeout(connect, 2000); } };
   ws.onopen = () => { $("error").textContent = ""; };
 }
