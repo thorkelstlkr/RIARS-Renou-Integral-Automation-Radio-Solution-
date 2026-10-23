@@ -20,6 +20,8 @@ pub struct Track {
 
 pub struct MediaLibrary {
     db: Connection,
+    /// Bumped when tracks or their categories change, so caches know to reload.
+    revision: u64,
 }
 
 impl MediaLibrary {
@@ -63,11 +65,17 @@ impl MediaLibrary {
                 duration_ms INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (playlist_id, position)
             );
-            PRAGMA foreign_keys = ON;",
+            PRAGMA foreign_keys = ON;
+            -- WAL: readers do not block the writer, and commits need no fsync with
+            -- synchronous=NORMAL, sparing SD cards.
+            PRAGMA journal_mode = WAL;
+            PRAGMA synchronous = NORMAL;
+            PRAGMA busy_timeout = 5000;",
         )
         .map_err(|e| format!("DB init error: {e}"))?;
         migrate(&db)?;
-        Ok(Self { db })
+        crate::automation::store::init_schema(&db)?;
+        Ok(Self { db, revision: 0 })
     }
 
     /// Add every playable audio file under `folder_path`, including subfolders.
@@ -150,6 +158,7 @@ impl MediaLibrary {
         }
 
         tx.commit().map_err(|e| format!("DB error: {e}"))?;
+        self.revision += 1;
         log::info!("Scanned {folder_path}: {count} new tracks added");
         Ok(count)
     }
@@ -397,7 +406,25 @@ impl MediaLibrary {
             .map_err(|e| format!("Count error: {e}"))
     }
 
-    pub fn delete_track(&self, id: i64) -> Result<bool, String> {
+    /// Changes when tracks or their categories change.
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+
+    pub(crate) fn bump_revision(&mut self) {
+        self.revision += 1;
+    }
+
+    pub(crate) fn conn(&self) -> &Connection {
+        &self.db
+    }
+
+    pub(crate) fn conn_mut(&mut self) -> &mut Connection {
+        &mut self.db
+    }
+
+    pub fn delete_track(&mut self, id: i64) -> Result<bool, String> {
+        self.revision += 1;
         let rows = self
             .db
             .execute("DELETE FROM tracks WHERE id = ?1", params![id])
