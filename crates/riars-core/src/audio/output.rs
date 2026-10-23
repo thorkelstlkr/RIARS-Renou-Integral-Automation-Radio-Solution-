@@ -204,8 +204,13 @@ impl AudioOutput {
         self.tap.take()
     }
 
-    pub fn send(&self, command: Command) {
+    /// Free players the audio thread retired (they can hold a whole decoded track).
+    pub fn collect_garbage(&self) {
         while self.garbage.try_recv().is_ok() {}
+    }
+
+    pub fn send(&self, command: Command) {
+        self.collect_garbage();
         if self.commands.send(command).is_err() {
             log::error!("Audio output thread is gone; command dropped");
         }
