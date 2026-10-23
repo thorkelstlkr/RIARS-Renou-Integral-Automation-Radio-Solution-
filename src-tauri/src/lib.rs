@@ -1,7 +1,11 @@
 use std::sync::Mutex;
 
 use riars_core::{AudioEngine, EngineStateInfo, MediaLibrary, Playlist, Track};
-use riars_core::IcecastConfig;
+use std::path::PathBuf;
+
+use riars_core::automation::StreamCommand;
+use riars_core::playlist::scheduler::{EventAction, EventTrigger, ScheduledEvent};
+use riars_core::{IcecastConfig, Scheduler};
 use riars_stream::{StreamService, StreamStatus};
 use tauri::{AppHandle, Manager, State};
 
@@ -23,6 +27,48 @@ pub struct AppState {
     pub stream: Option<StreamService>,
     /// Last title sent to the stream, to send it only when the track changes.
     pub stream_title: Mutex<String>,
+    pub scheduler: Mutex<Scheduler>,
+    /// Where the schedule is saved after every change.
+    pub schedule_path: PathBuf,
+}
+
+#[tauri::command]
+fn schedule_get(state: State<AppState>) -> Result<Vec<ScheduledEvent>, String> {
+    let scheduler = state.scheduler.lock().map_err(|e| e.to_string())?;
+    Ok(scheduler.events().to_vec())
+}
+
+#[tauri::command]
+fn schedule_add(name: String, trigger: EventTrigger, action: EventAction, state: State<AppState>) -> Result<Vec<ScheduledEvent>, String> {
+    if name.trim().is_empty() {
+        return Err("Name is required".to_string());
+    }
+    let mut scheduler = state.scheduler.lock().map_err(|e| e.to_string())?;
+    scheduler.add_event(ScheduledEvent::new(name.trim().to_string(), trigger, action));
+    scheduler.save(&state.schedule_path)?;
+    Ok(scheduler.events().to_vec())
+}
+
+#[tauri::command]
+fn schedule_remove(id: String, state: State<AppState>) -> Result<Vec<ScheduledEvent>, String> {
+    let mut scheduler = state.scheduler.lock().map_err(|e| e.to_string())?;
+    if !scheduler.remove_event(&id) {
+        return Err(format!("No scheduled event {}", id));
+    }
+    scheduler.save(&state.schedule_path)?;
+    Ok(scheduler.events().to_vec())
+}
+
+#[tauri::command]
+fn schedule_toggle(id: String, state: State<AppState>) -> Result<Vec<ScheduledEvent>, String> {
+    let mut scheduler = state.scheduler.lock().map_err(|e| e.to_string())?;
+    if let Some(toggled) = scheduler.toggle_event(&id) {
+        if !toggled {
+            return Err(format!("No scheduled event {}", id));
+        }
+    }
+    scheduler.save(&state.schedule_path)?;
+    Ok(scheduler.events().to_vec())
 }
 
 #[derive(serde::Serialize)]
@@ -237,14 +283,40 @@ pub fn run() {
             std::fs::create_dir_all(&data_dir)?;
             let db_path = data_dir.join("riars_library.db");
             let library = MediaLibrary::open(&db_path.to_string_lossy())?;
+            let schedule_path = data_dir.join("riars_schedule.json");
+            let scheduler = Scheduler::load(&schedule_path).unwrap_or_else(|e| {
+                log::warn!("{e}; starting with an empty schedule");
+                Scheduler::new()
+            });
             log::info!("Media library: {}", db_path.display());
 
             app.manage(AppState {
                 stream,
                 stream_title: Mutex::new(String::new()),
+                scheduler: Mutex::new(scheduler),
+                schedule_path,
                 engine: Mutex::new(engine),
                 library: Mutex::new(library),
             });
+            // Run the schedule on its own thread (an action may decode a track).
+            let handle = app.handle().clone();
+            std::thread::Builder::new().name("riars-scheduler".into()).spawn(move || {
+                let state = handle.state::<AppState>();
+                let mut stream = |command| match (&state.stream, command) {
+                    (Some(s), StreamCommand::Start) => s.resume(),
+                    (Some(s), StreamCommand::Stop) => {
+                        s.stop();
+                        Ok(())
+                    }
+                    (None, _) => Err("Streaming needs an audio output".to_string()),
+                };
+                riars_core::automation::scheduler_loop(
+                    &state.engine,
+                    &state.scheduler,
+                    &state.schedule_path,
+                    &mut stream,
+                )
+            })?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -254,6 +326,10 @@ pub fn run() {
             engine_next,
             engine_set_volume,
             engine_get_state,
+            schedule_get,
+            schedule_add,
+            schedule_remove,
+            schedule_toggle,
             stream_get,
             stream_start,
             stream_stop,
