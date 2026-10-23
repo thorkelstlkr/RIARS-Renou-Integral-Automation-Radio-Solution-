@@ -62,7 +62,9 @@ impl MediaLibrary {
             .db
             .transaction()
             .map_err(|e| format!("DB error: {e}"))?;
-        let mut pending: Vec<PathBuf> = vec![path.to_path_buf()];
+        // Rebuilding from components normalizes separators ("D:/Musica" and "D:\Musica"
+        // must give the same stored paths, or a rescan would duplicate every track).
+        let mut pending: Vec<PathBuf> = vec![path.components().collect()];
 
         while let Some(dir) = pending.pop() {
             let entries = match std::fs::read_dir(&dir) {
@@ -90,19 +92,38 @@ impl MediaLibrary {
                 }
 
                 let file_path_str = file_path.to_string_lossy().to_string();
-                let title = file_path
-                    .file_stem()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("Unknown")
-                    .to_string();
+                let tags = read_tags(&file_path);
+                let title = tags.title.unwrap_or_else(|| {
+                    file_path
+                        .file_stem()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("Unknown")
+                        .to_string()
+                });
+                let values = params![
+                    title,
+                    tags.artist.unwrap_or_default(),
+                    tags.album.unwrap_or_default(),
+                    tags.genre.unwrap_or_default(),
+                    tags.duration_ms as i64,
+                    file_path_str
+                ];
 
-                let result = tx.execute(
-                    "INSERT OR IGNORE INTO tracks (title, artist, file_path) VALUES (?1, '', ?2)",
-                    params![title, file_path_str],
-                );
-
-                if let Ok(rows) = result {
-                    count += rows;
+                match tx.execute(
+                    "INSERT OR IGNORE INTO tracks (title, artist, album, genre, duration_ms, file_path)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    values,
+                ) {
+                    Ok(0) => {
+                        // Already known: fill in tags for tracks scanned before tags were read.
+                        let _ = tx.execute(
+                            "UPDATE tracks SET title = ?1, artist = ?2, album = ?3, genre = ?4, duration_ms = ?5
+                             WHERE file_path = ?6 AND duration_ms = 0",
+                            values,
+                        );
+                    }
+                    Ok(rows) => count += rows,
+                    Err(e) => log::warn!("Cannot add {file_path_str}: {e}"),
                 }
             }
         }
@@ -215,5 +236,97 @@ impl MediaLibrary {
             .execute("DELETE FROM tracks WHERE id = ?1", params![id])
             .map_err(|e| format!("Delete error: {e}"))?;
         Ok(rows > 0)
+    }
+}
+
+#[derive(Default)]
+struct TrackTags {
+    title: Option<String>,
+    artist: Option<String>,
+    album: Option<String>,
+    genre: Option<String>,
+    duration_ms: u64,
+}
+
+/// Read tags and duration from the container without decoding audio.
+fn read_tags(path: &Path) -> TrackTags {
+    use symphonia::core::formats::FormatOptions;
+    use symphonia::core::io::MediaSourceStream;
+    use symphonia::core::meta::{MetadataOptions, MetadataRevision, StandardTagKey};
+    use symphonia::core::probe::Hint;
+
+    let mut tags = TrackTags::default();
+    let Ok(file) = std::fs::File::open(path) else {
+        return tags;
+    };
+    let mss = MediaSourceStream::new(Box::new(file), Default::default());
+    let mut hint = Hint::new();
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+        hint.with_extension(ext);
+    }
+    let Ok(mut probed) = symphonia::default::get_probe().format(
+        &hint,
+        mss,
+        &FormatOptions::default(),
+        &MetadataOptions::default(),
+    ) else {
+        return tags;
+    };
+
+    if let Some(track) = probed.format.default_track() {
+        let p = &track.codec_params;
+        if let (Some(frames), Some(rate)) = (p.n_frames, p.sample_rate) {
+            if rate > 0 {
+                tags.duration_ms = frames * 1000 / rate as u64;
+            }
+        }
+    }
+
+    let mut apply = |revision: &MetadataRevision| {
+        for tag in revision.tags() {
+            let value = tag.value.to_string().trim().to_string();
+            if value.is_empty() {
+                continue;
+            }
+            let slot = match tag.std_key {
+                Some(StandardTagKey::TrackTitle) => &mut tags.title,
+                Some(StandardTagKey::Artist) => &mut tags.artist,
+                Some(StandardTagKey::Album) => &mut tags.album,
+                Some(StandardTagKey::Genre) => &mut tags.genre,
+                _ => continue,
+            };
+            slot.get_or_insert(value);
+        }
+    };
+    // Tags can sit before the container (ID3v2) or inside it (Vorbis comments, MP4).
+    if let Some(metadata) = probed.metadata.get() {
+        if let Some(revision) = metadata.current() {
+            apply(revision);
+        }
+    }
+    if let Some(revision) = probed.format.metadata().current() {
+        apply(revision);
+    }
+    tags
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rescan_with_other_separators_adds_nothing() {
+        let dir = std::env::temp_dir().join(format!("riars-scan-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("sub")).unwrap();
+        std::fs::write(dir.join("sub").join("a.mp3"), b"not really audio").unwrap();
+        let mut lib = MediaLibrary::open(":memory:").unwrap();
+
+        assert_eq!(lib.scan_folder(&dir.to_string_lossy()).unwrap(), 1);
+        let forward = dir.to_string_lossy().replace(std::path::MAIN_SEPARATOR, "/");
+        assert_eq!(lib.scan_folder(&forward).unwrap(), 0);
+        let track = &lib.get_all_tracks().unwrap()[0];
+        assert_eq!(track.title, "a");
+
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }
