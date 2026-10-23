@@ -149,11 +149,17 @@ pub enum SlotItem {
     },
     /// One imaging element (jingle, sweeper, bumper, station ID) from a category.
     Imaging { category_id: i64 },
-    /// An ad break. Filled by the traffic part (phase 2); empty for now.
+    /// An ad break, filled with spots of the campaigns due. `max_seconds` 0 means
+    /// the station default. The intro and outro (imaging categories) frame the
+    /// break when it has spots.
     AdBreak {
         name: String,
         #[serde(default)]
         max_seconds: u32,
+        #[serde(default)]
+        intro_category: Option<i64>,
+        #[serde(default)]
+        outro_category: Option<i64>,
     },
     /// A saved playlist: all of it, or the next `count` items (continuing where
     /// it was left the previous time).
@@ -253,6 +259,8 @@ pub struct AutomationConfig {
     pub min_minutes_ahead: u32,
     /// Played items kept in the on-air playlist.
     pub keep_played: u32,
+    /// Length of an ad break whose slot does not say.
+    pub ad_break_seconds: u32,
 }
 
 impl Default for AutomationConfig {
@@ -266,6 +274,7 @@ impl Default for AutomationConfig {
             min_items_ahead: 3,
             min_minutes_ahead: 15,
             keep_played: 20,
+            ad_break_seconds: 180,
         }
     }
 }
@@ -304,4 +313,104 @@ pub struct PlayLogEntry {
     pub reason: EndReason,
     /// Played to its end (or nearly: 95 % of its length).
     pub complete: bool,
+}
+
+/// A company that buys airtime.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Advertiser {
+    pub id: i64,
+    pub name: String,
+    pub contact: String,
+    pub notes: String,
+}
+
+/// When a campaign may air: days (bit 0 = Monday) and a daily span (`end <= start`
+/// crosses midnight, `end == start` is all day).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Daypart {
+    #[serde(default = "all_days")]
+    pub weekdays: u8,
+    pub start: NaiveTime,
+    pub end: NaiveTime,
+}
+
+/// What a sponsorship is attached to.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum SponsorTarget {
+    /// Every period of this clock (a programme with its own clock).
+    Clock { clock_id: String },
+    /// The span of this grid rule.
+    GridRule { rule_id: String },
+}
+
+/// "This programme comes to you thanks to...": a spot at the opening and/or the
+/// closing of the sponsored programme.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Sponsorship {
+    pub target: SponsorTarget,
+    #[serde(default = "yes")]
+    pub opening: bool,
+    #[serde(default)]
+    pub closing: bool,
+}
+
+/// An audio spot of a campaign; spots of a campaign rotate by weight.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct CampaignSpot {
+    pub track_id: i64,
+    #[serde(default = "one_f32")]
+    pub weight: f32,
+}
+
+fn one_f32() -> f32 {
+    1.0
+}
+
+/// An advertising campaign: how many spots a day, when, and between which dates.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Campaign {
+    #[serde(default)]
+    pub id: i64,
+    pub advertiser_id: i64,
+    pub name: String,
+    /// First and last day it airs (both included).
+    pub date_from: NaiveDate,
+    pub date_to: NaiveDate,
+    /// Spots a day in ad breaks (0 for a pure sponsorship).
+    #[serde(default)]
+    pub plays_per_day: u32,
+    /// At most this many in one clock hour (0 = no limit).
+    #[serde(default)]
+    pub max_per_hour: u32,
+    /// Empty: any time.
+    #[serde(default)]
+    pub dayparts: Vec<Daypart>,
+    /// Higher goes first when breaks are full.
+    #[serde(default)]
+    pub priority: i32,
+    #[serde(default)]
+    pub sponsorship: Option<Sponsorship>,
+    #[serde(default = "yes")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub spots: Vec<CampaignSpot>,
+}
+
+/// How one campaign did on one day, for billing.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeliveryRow {
+    pub date: NaiveDate,
+    pub campaign_id: i64,
+    pub campaign: String,
+    pub advertiser_id: i64,
+    pub advertiser: String,
+    /// Spots it should have had that day.
+    pub target: u32,
+    /// Spots aired to the end.
+    pub aired: u32,
+    /// Spots cut short.
+    pub partial: u32,
+    pub seconds: u64,
+    pub missed: u32,
 }

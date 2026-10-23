@@ -4,17 +4,18 @@ use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
 
 use super::model::GridRule;
 
-/// The day a rule's daily span belongs to, if `at` falls inside it. A span that
-/// crosses midnight belongs to the day it started on.
-fn span_day(rule: &GridRule, at: NaiveDateTime) -> Option<NaiveDate> {
+/// The day a daily span (`end <= start` crosses midnight, `end == start` is all
+/// day) belongs to, if `at` falls inside it. A span that crosses midnight belongs
+/// to the day it started on.
+pub fn span_day(start: NaiveTime, end: NaiveTime, at: NaiveDateTime) -> Option<NaiveDate> {
     let (t, date) = (at.time(), at.date());
-    if rule.start == rule.end {
+    if start == end {
         Some(date)
-    } else if rule.start < rule.end {
-        (rule.start <= t && t < rule.end).then_some(date)
-    } else if t >= rule.start {
+    } else if start < end {
+        (start <= t && t < end).then_some(date)
+    } else if t >= start {
         Some(date)
-    } else if t < rule.end {
+    } else if t < end {
         date.pred_opt()
     } else {
         None
@@ -39,7 +40,7 @@ fn day_matches(rule: &GridRule, day: NaiveDate) -> bool {
 }
 
 pub fn rule_matches(rule: &GridRule, at: NaiveDateTime) -> bool {
-    rule.enabled && span_day(rule, at).is_some_and(|day| day_matches(rule, day))
+    rule.enabled && span_day(rule.start, rule.end, at).is_some_and(|day| day_matches(rule, day))
 }
 
 /// Roughly how much time a rule covers in a year: among rules of equal priority the
