@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useCommand } from "../commands";
 import { automation, fmtDuration, ITEM_KINDS, KIND_COLORS, today } from "./api";
 import type {
   AutomationConfig, Category, CategoryRule, CategoryTrack, Clock, ImagingRules, ItemKind,
@@ -153,6 +154,14 @@ const S: Record<string, React.CSSProperties> = {
 
 export default function CategoriesPanel() {
   const { t } = useTranslation();
+  // Automation ▸ Station settings opens the settings box and brings it into view.
+  const settingsBox = useRef<HTMLDetailsElement>(null);
+  useCommand("categories.settings", useCallback(() => {
+    if (settingsBox.current) {
+      settingsBox.current.open = true;
+      settingsBox.current.scrollIntoView({ block: "start" });
+    }
+  }, []));
   const [categories, setCategories] = useState<Category[]>([]);
   const [rules, setRules] = useState<CategoryRule[]>([]);
   const [clocks, setClocks] = useState<Clock[]>([]);
@@ -757,7 +766,7 @@ export default function CategoriesPanel() {
         </div>
       </div>
 
-      <details style={S.settings}>
+      <details ref={settingsBox} style={S.settings}>
         <summary style={S.summary}>{t("automation.categories.settings")}</summary>
         <div style={S.settingsBody}>
           {!config && <div style={S.hint}>{t("automation.categories.settingsUnavailable")}</div>}

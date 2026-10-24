@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useCommand } from "../commands";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 
@@ -98,6 +99,9 @@ export default function MediaLibrary() {
       setNotice({ text: String(e), error: true });
     }
   }, [loadTracks, t]);
+  const searchInput = useRef<HTMLInputElement>(null);
+  useCommand("library.addFolder", addFolder);
+  useCommand("library.search", useCallback(() => searchInput.current?.focus(), []));
 
   const addToPlaylist = useCallback(async (track: Track) => {
     try {
@@ -128,7 +132,8 @@ export default function MediaLibrary() {
         </div>
       </div>
       <div style={S.search}>
-        <input style={S.input} placeholder={t("library.searchPlaceholder")} value={search} onChange={handleSearch} />
+        <input ref={searchInput} style={S.input} placeholder={t("library.searchPlaceholder")} value={search} onChange={handleSearch}
+          aria-label={t("library.searchPlaceholder")} />
       </div>
       {notice && (
         <div style={{ ...S.notice, color: notice.error ? "var(--red)" : "var(--text-secondary)" }}>

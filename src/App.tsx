@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import TransportControls from "./components/TransportControls";
 import PlaylistPanel from "./components/PlaylistPanel";
@@ -17,6 +17,12 @@ import GridPanel from "./automation/GridPanel";
 import CategoriesPanel from "./automation/CategoriesPanel";
 import AdsPanel from "./automation/AdsPanel";
 import LogPanel from "./automation/LogPanel";
+import MenuBar from "./menu/MenuBar";
+import { TABS, TAB_LABEL, useAppMenus, type DialogId, type Tab } from "./menu/useAppMenus";
+import PlaybackSettingsDialog from "./menu/PlaybackSettingsDialog";
+import PreviewDialog from "./menu/PreviewDialog";
+import AboutDialog from "./menu/AboutDialog";
+import HelpDialog from "./help/HelpDialog";
 
 const APP_STYLES: Record<string, React.CSSProperties> = {
   app: { display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" },
@@ -45,19 +51,11 @@ const APP_STYLES: Record<string, React.CSSProperties> = {
   },
   tabActive: { color: "var(--text-primary)", borderBottom: "2px solid var(--accent)" },
   separator: { width: 1, background: "var(--border)", margin: "4px 6px" },
-};
-
-// On-air work first, then the automation set-up, as in RadioBOSS.
-const TABS = ["playlist", "schedule", "clocks", "grid", "categories", "ads", "log"] as const;
-type Tab = (typeof TABS)[number];
-const TAB_LABEL: Record<Tab, string> = {
-  playlist: "playlist.title",
-  schedule: "schedule.title",
-  clocks: "automation.tabs.clocks",
-  grid: "automation.tabs.grid",
-  categories: "automation.tabs.categories",
-  ads: "automation.tabs.ads",
-  log: "automation.tabs.log",
+  notice: {
+    position: "fixed", bottom: 36, left: "50%", transform: "translateX(-50%)", zIndex: 950,
+    background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 6,
+    padding: "6px 14px", fontSize: 13, boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
+  },
 };
 
 function TabContent({ tab }: { tab: Tab }) {
@@ -76,9 +74,24 @@ export default function App() {
   const { t } = useTranslation();
   const [volume, setVolume] = useState(0.8);
   const [tab, setTab] = useState<Tab>("playlist");
+  const [help, setHelp] = useState<{ open: boolean; topic?: string }>({ open: false });
+  const [dialog, setDialog] = useState<DialogId | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const openHelp = useCallback((topic?: string) => setHelp({ open: true, topic }), []);
+  const closeDialog = useCallback(() => setDialog(null), []);
+  const { menus, onMenuOpen } = useAppMenus({ tab, setTab, openHelp, openDialog: setDialog, setNotice });
+
+  // Short messages from menu actions fade after a few seconds.
+  useEffect(() => {
+    if (!notice) return;
+    const id = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(id);
+  }, [notice]);
 
   return (
     <div style={APP_STYLES.app}>
+      <MenuBar menus={menus} onOpen={onMenuOpen} />
       <header style={APP_STYLES.header}>
         <div style={APP_STYLES.logo}>
           RIARS
@@ -119,6 +132,12 @@ export default function App() {
       </main>
 
       <StatusBar />
+
+      {notice && <div style={APP_STYLES.notice} role="status">{notice}</div>}
+      {(dialog === "crossfade" || dialog === "deadAir") && <PlaybackSettingsDialog focus={dialog} onClose={closeDialog} />}
+      {dialog === "preview" && <PreviewDialog onClose={closeDialog} />}
+      {dialog === "about" && <AboutDialog onClose={closeDialog} />}
+      <HelpDialog open={help.open} topic={help.topic} onClose={() => setHelp({ open: false })} />
     </div>
   );
 }

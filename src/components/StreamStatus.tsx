@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { useCommand } from "../commands";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
@@ -105,6 +106,12 @@ export default function StreamStatus() {
   const disconnect = async () => {
     try { setInfo(await invoke<StreamInfo>("stream_stop")); } catch (e) { setError(String(e)); }
   };
+
+  // Broadcast menu: settings open the panel; start uses the saved settings when the
+  // password is there, otherwise it asks for it in the panel.
+  useCommand("stream.settings", useCallback(() => setOpen(true), []));
+  useCommand("stream.start", () => { if (config.password && config.host) void connect(); else setOpen(true); });
+  useCommand("stream.stop", () => void disconnect());
 
   const state = info?.status?.state ?? "Disconnected";
   const active = state !== "Disconnected";
