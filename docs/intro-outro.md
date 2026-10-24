@@ -1,4 +1,4 @@
-# Intros, outros y locución sobre la intro (plan)
+# Intros, outros, locución sobre la intro, preescucha y normalización (plan)
 
 Estado: **preparado, sin terminar** (24-10-2026). Se retoma cuando se renueve el uso semanal.
 
@@ -63,7 +63,49 @@ La forma de onda **no se guarda**: se calcula al abrir el editor, para no escrib
    - de punta a punta con el servidor sin tarjeta, comprobando que el jingle suena sobre la intro y nunca después de la voz;
    - CDP del editor.
 
-## Pendiente de decidir con el usuario
+## Decidido con el usuario (24-10-2026)
 
-- **Preescucha**: el editor no puede escuchar las marcas sin que suene en antena; hace falta una segunda salida de audio (cue/PFL). Propuesta: dejarlo para una fase con selección de dispositivo de preescucha.
-- **Ducking**: bajar la canción unos dB mientras suena el jingle encima. Propuesta: 0 dB por defecto (sin bajar), ajustable.
+### 1. Varias tarjetas de sonido y preescucha (cue/PFL)
+
+- **Salidas**: una salida de **antena** (la actual) y otra de **preescucha** elegibles por dispositivo en **Reproducción ▸ Salidas de audio…**. Se listan con `cpal` (ya es dependencia) y se guarda el nombre del dispositivo en la sesión. Si el dispositivo desaparece, se avisa y se vuelve al predeterminado.
+- **Motor de preescucha**: un segundo `AudioOutput` independiente, con su propio hilo de audio y un solo reproductor (sin playlist, sin registro de emisiones, sin detector de silencio). Nunca comparte búfer con la antena: un error en la preescucha no puede afectar a lo que suena.
+- **Usos**:
+  - en el editor de marcas: escuchar desde el inicio audible, los últimos segundos de la intro y el paso a la outro;
+  - en la biblioteca y la playlist: botón o tecla de preescucha (por ejemplo **Ctrl+P**);
+  - en el servidor sin pantalla: no aplica (sin tarjeta).
+- **Seguridad**: si la salida de preescucha es la misma que la de antena, se pide confirmación antes de escuchar, porque sonaría en el aire.
+
+### 2. Autoducking (al pisar la intro o la outro)
+
+- Mientras suena un elemento superpuesto, la canción baja **6 dB por defecto** (ajustable de 0 a 20) con **ataque de 150 ms** y **liberación de 400 ms**, para que el jingle se entienda.
+- Se hace en el hilo de audio con una rampa de ganancia por muestra, precalculada, sin reservar memoria. Es el mismo mecanismo de rampa que ya usa el volumen.
+- Ajustes en **Ajustes de la emisora ▸ Locución sobre intro/outro**: activar, en intro, en outro, margen y dB de ducking.
+
+### 3. Normalización del volumen
+
+- **Análisis de sonoridad** según **EBU R128 / ITU-R BS.1770** (LUFS integrados, con la ponderación K y el umbral de puertas) y el **pico verdadero** aproximado. Se calcula en la misma pasada que las marcas, así que se decodifica una sola vez por canción.
+- Se guardan `loudness_lufs` y `peak_dbfs` por pista. La ganancia de normalización se calcula al reproducir: `objetivo - loudness`, limitada para no pasar de −1 dBTP.
+- **Objetivo** configurable, **−16 LUFS** por defecto (lo habitual en streaming), con **límite de ganancia** (+10 dB / −12 dB) para no reventar grabaciones muy flojas.
+- Se aplica como **ganancia fija por reproductor** (`TrackPlayer::set_gain`), sin coste en tiempo real.
+- Los jingles y las cuñas también se normalizan, cada uno con su propio objetivo opcional (las cuñas suelen ir 1-2 dB por encima).
+- Opción de usar la **ReplayGain** de las etiquetas si la canción la trae y aún no se ha analizado.
+- **Limitador de seguridad** en la salida, un *soft clipper* sencillo en el hilo de audio, para que ninguna combinación (normalización + superposición) sature.
+- **Por lotes**: "Analizar biblioteca" (marcas + sonoridad) en segundo plano y con baja prioridad, con progreso. En una Raspberry Pi tarda unos segundos por canción y solo hace falta una vez.
+- En la playlist y la biblioteca: columna de sonoridad (LUFS) y la ganancia aplicada.
+
+## Orden de trabajo para el martes
+
+1. Calibrar la detección de marcas y añadir la sonoridad en la misma pasada (`analysis`).
+2. Almacenamiento y análisis por lotes.
+3. Motor:
+   - ganancia por reproductor (normalización);
+   - limitador;
+   - tercera pletina con ducking;
+   - salida de preescucha.
+4. Generador: locución sobre la intro y la outro.
+5. API, MCP, Tauri y el detector por agente de IA.
+6. Interfaz:
+   - editor de marcas con preescucha;
+   - ajustes de salidas;
+   - columnas Intro, Outro y LUFS.
+7. Manual, traducciones, pruebas y PR.
