@@ -114,7 +114,10 @@ async fn auto_advance(state: Arc<AppState>) {
     let mut last_title = String::new();
     loop {
         tick.tick().await;
+        // A step stuck this long stalls playback: say which one, to find out why.
+        let watch = Watchdog::new();
         save_session(&state).await;
+        watch.step("session save");
         // Keep the stream's song title in step with what is playing.
         if let Some(stream) = &state.stream {
             let title = state.engine.lock().ok().and_then(|e| e.now_playing_title());
@@ -133,8 +136,29 @@ async fn auto_advance(state: Arc<AppState>) {
             if let Ok(Err(e)) = result {
                 log::error!("Auto-advance failed: {e}");
             }
+            watch.step("loading the next track");
         }
         run_automation(&state).await;
+        watch.step("automation");
+    }
+}
+
+/// Warns when a step of the control loop takes too long.
+struct Watchdog(std::cell::Cell<std::time::Instant>);
+
+impl Watchdog {
+    const LIMIT: std::time::Duration = std::time::Duration::from_secs(2);
+
+    fn new() -> Self {
+        Self(std::cell::Cell::new(std::time::Instant::now()))
+    }
+
+    fn step(&self, name: &str) {
+        let took = self.0.get().elapsed();
+        if took > Self::LIMIT {
+            log::warn!("Control loop: {name} took {took:?}");
+        }
+        self.0.set(std::time::Instant::now());
     }
 }
 

@@ -9,6 +9,8 @@ use riars_core::{DeadAirConfig, IcecastConfig, SavedPlaylist, Scheduler};
 use riars_stream::{StreamService, StreamState, StreamStatus};
 use tauri::{AppHandle, Emitter, Manager, State};
 
+mod automation_cmds;
+
 #[tauri::command]
 fn set_locale(lang: String) -> Result<(), String> {
     riars_core::set_language(&lang);
@@ -261,8 +263,29 @@ fn run_engine_loop(app: AppHandle) {
         });
         if wants {
             let now = chrono::Local::now().naive_local();
-            if let Err(e) = riars_core::automation::tick(&state.engine, &state.library, &state.automation, now) {
-                log::warn!("Automation: {e}");
+            match riars_core::automation::tick(&state.engine, &state.library, &state.automation, now) {
+                Ok(report) => {
+                    if report.generated > 0 {
+                        log::info!("Automation: {} items added", report.generated);
+                    }
+                    if report.generated > 0
+                        || report.logged > 0
+                        || report.cut_to.is_some()
+                        || !report.warnings.is_empty()
+                    {
+                        let _ = app.emit(
+                            "automation",
+                            serde_json::json!({
+                                "type": "automation",
+                                "generated": report.generated,
+                                "logged": report.logged,
+                                "cut_to": report.cut_to,
+                                "warnings": report.warnings,
+                            }),
+                        );
+                    }
+                }
+                Err(e) => log::warn!("Automation: {e}"),
             }
         }
 
@@ -546,6 +569,40 @@ pub fn run() {
             playlist_play,
             set_locale,
             get_supported_languages,
+            automation_cmds::automation_status,
+            automation_cmds::automation_get_config,
+            automation_cmds::automation_save_config,
+            automation_cmds::automation_set_enabled,
+            automation_cmds::automation_categories,
+            automation_cmds::automation_save_category,
+            automation_cmds::automation_delete_category,
+            automation_cmds::automation_category_tracks,
+            automation_cmds::automation_track_categories,
+            automation_cmds::automation_set_track_codes,
+            automation_cmds::automation_set_track_enabled,
+            automation_cmds::automation_codes,
+            automation_cmds::automation_category_members,
+            automation_cmds::automation_tracks,
+            automation_cmds::automation_rules,
+            automation_cmds::automation_save_rule,
+            automation_cmds::automation_delete_rule,
+            automation_cmds::automation_apply_rules,
+            automation_cmds::automation_clocks,
+            automation_cmds::automation_save_clock,
+            automation_cmds::automation_delete_clock,
+            automation_cmds::automation_grid,
+            automation_cmds::automation_save_grid_rule,
+            automation_cmds::automation_delete_grid_rule,
+            automation_cmds::automation_advertisers,
+            automation_cmds::automation_save_advertiser,
+            automation_cmds::automation_delete_advertiser,
+            automation_cmds::automation_campaigns,
+            automation_cmds::automation_save_campaign,
+            automation_cmds::automation_delete_campaign,
+            automation_cmds::automation_preview,
+            automation_cmds::automation_log,
+            automation_cmds::automation_delivery,
+            automation_cmds::automation_export_csv,
         ])
         .run(tauri::generate_context!())
         .expect("error while running RIARS");

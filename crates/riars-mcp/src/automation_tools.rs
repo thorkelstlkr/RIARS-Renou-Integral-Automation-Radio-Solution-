@@ -1,16 +1,11 @@
-use std::collections::HashSet;
-
-use chrono::{Duration, Local, NaiveDate, NaiveDateTime};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::{json, Value};
 
 use riars_core::automation::model::{
-    Advertiser, AutomationConfig, Campaign, Category, CategoryRule, Clock, GridRule, GridTarget,
-    SlotItem,
+    Advertiser, AutomationConfig, Campaign, Category, CategoryRule, Clock, GridRule,
 };
 use riars_core::automation::runner::MAX_PREVIEW_HOURS;
-use riars_core::automation::{parse_api_date, parse_api_datetime};
-use riars_core::library::db::MediaLibrary;
+use riars_core::automation::{parse_api_datetime, validate};
 use riars_core::playlist::playlist::PlaylistItem;
 
 use crate::tools::{text_result, ToolDef};
@@ -701,7 +696,7 @@ fn dispatch(name: &str, args: &Value, state: &McpState) -> Result<Value, String>
         }
         "set_automation_config" => {
             let config: AutomationConfig = parse_arg(args, "config")?;
-            validate_config(&config)?;
+            validate::validate_config(&config)?;
             {
                 let mut library = state.library.lock().map_err(|e| e.to_string())?;
                 library.save_automation_config(&config)?;
@@ -715,9 +710,7 @@ fn dispatch(name: &str, args: &Value, state: &McpState) -> Result<Value, String>
         }
         "save_category" => {
             let category: Category = parse_id_arg(args, "category")?;
-            if category.name.trim().is_empty() {
-                return Err("Category name is required".to_string());
-            }
+            validate::validate_category(&category)?;
             let id = {
                 let mut library = state.library.lock().map_err(|e| e.to_string())?;
                 if category.id == 0 {
@@ -750,9 +743,7 @@ fn dispatch(name: &str, args: &Value, state: &McpState) -> Result<Value, String>
             }
             let weight = args["weight"].as_f64().unwrap_or(1.0) as f32;
             let remove = args["remove"].as_bool().unwrap_or(false);
-            if !remove && !(0.01..=100.0).contains(&weight) {
-                return Err("weight must be between 0.01 and 100".to_string());
-            }
+            validate::validate_weight(weight, remove)?;
             let changed = {
                 let mut library = state.library.lock().map_err(|e| e.to_string())?;
                 if remove {
@@ -838,7 +829,7 @@ fn dispatch(name: &str, args: &Value, state: &McpState) -> Result<Value, String>
             let clock: Clock = parse_arg(args, "clock")?;
             {
                 let mut library = state.library.lock().map_err(|e| e.to_string())?;
-                validate_clock(&clock, &library)?;
+                validate::validate_clock(&clock, &library)?;
                 library.save_clock(&clock)?;
             }
             reload_automation(state)?;
@@ -859,28 +850,9 @@ fn dispatch(name: &str, args: &Value, state: &McpState) -> Result<Value, String>
         }
         "save_grid_rule" => {
             let rule: GridRule = parse_arg(args, "rule")?;
-            if rule.id.trim().is_empty() {
-                return Err("Grid rule id is required".to_string());
-            }
-            if let (Some(from), Some(to)) = (rule.date_from, rule.date_to) {
-                if from > to {
-                    return Err("Grid rule start date is after its end date".to_string());
-                }
-            }
             {
                 let mut library = state.library.lock().map_err(|e| e.to_string())?;
-                match &rule.target {
-                    GridTarget::Clock { clock_id } => {
-                        if !library.list_clocks()?.iter().any(|clock| &clock.id == clock_id) {
-                            return Err(format!("No clock {clock_id}"));
-                        }
-                    }
-                    GridTarget::Playlist { playlist_id } => {
-                        library.load_playlist(playlist_id).map_err(|e| {
-                            format!("No playlist {playlist_id}: {e}")
-                        })?;
-                    }
-                }
+                validate::validate_grid_rule(&rule, &library)?;
                 library.save_grid_rule(&rule)?;
             }
             reload_automation(state)?;
@@ -956,13 +928,16 @@ fn dispatch(name: &str, args: &Value, state: &McpState) -> Result<Value, String>
         "preview_schedule" => {
             let from = match args.get("from").and_then(Value::as_str) {
                 Some(text) => parse_api_datetime(text)?,
-                None => Local::now().naive_local(),
+                None => chrono::Local::now().naive_local(),
             };
-            let hours = args.get("hours").and_then(Value::as_u64).unwrap_or(1);
-            if !(1..=MAX_PREVIEW_HOURS as u64).contains(&hours) {
-                return Err(format!("hours must be between 1 and {MAX_PREVIEW_HOURS}"));
-            }
-            let hours = hours as u32;
+            let hours = match args.get("hours").and_then(Value::as_u64) {
+                Some(hours) => {
+                    let hours = u32::try_from(hours)
+                        .map_err(|_| "hours are out of range".to_string())?;
+                    validate::preview_hours(Some(hours))?
+                }
+                None => validate::preview_hours(None)?,
+            };
             let overlap = {
                 let engine = state.engine.lock().map_err(|e| e.to_string())?;
                 let fade = engine.crossfade_config();
@@ -972,15 +947,10 @@ fn dispatch(name: &str, args: &Value, state: &McpState) -> Result<Value, String>
             json_compact(&preview_items(items))
         }
         "get_play_log" => {
-            let now = Local::now().naive_local();
-            let to = opt_datetime(args, "to")?.unwrap_or(now);
-            let from = opt_datetime(args, "from")?.unwrap_or(to - Duration::hours(24));
-            if to < from {
-                return Err("get_play_log end is before its start".to_string());
-            }
-            if (to - from).num_days() > 366 {
-                return Err("get_play_log span is at most 366 days".to_string());
-            }
+            let (from, to) = validate::datetime_range(
+                args.get("from").and_then(Value::as_str),
+                args.get("to").and_then(Value::as_str),
+            )?;
             let limit = args
                 .get("limit")
                 .and_then(Value::as_u64)
@@ -1008,15 +978,10 @@ fn dispatch(name: &str, args: &Value, state: &McpState) -> Result<Value, String>
             json_compact(&items)
         }
         "delivery_report" => {
-            let today = Local::now().date_naive();
-            let from = opt_date(args, "from")?.unwrap_or(today);
-            let to = opt_date(args, "to")?.unwrap_or(today);
-            if to < from {
-                return Err("delivery_report end date is before its start date".to_string());
-            }
-            if (to - from).num_days() > 365 {
-                return Err("delivery_report span is at most 366 days".to_string());
-            }
+            let (from, to) = validate::date_range(
+                args.get("from").and_then(Value::as_str),
+                args.get("to").and_then(Value::as_str),
+            )?;
             let rows = state
                 .library
                 .lock()
@@ -1030,84 +995,6 @@ fn dispatch(name: &str, args: &Value, state: &McpState) -> Result<Value, String>
 
 fn reload_automation(state: &McpState) -> Result<(), String> {
     state.automation.lock().map_err(|e| e.to_string())?.invalidate();
-    Ok(())
-}
-
-fn validate_config(config: &AutomationConfig) -> Result<(), String> {
-    if !(1..=50).contains(&config.min_items_ahead) {
-        return Err("min_items_ahead must be between 1 and 50".to_string());
-    }
-    if !(1..=240).contains(&config.min_minutes_ahead) {
-        return Err("min_minutes_ahead must be between 1 and 240".to_string());
-    }
-    if config.keep_played > 500 {
-        return Err("keep_played must be at most 500".to_string());
-    }
-    if !(10..=1800).contains(&config.ad_break_seconds) {
-        return Err("ad_break_seconds must be between 10 and 1800".to_string());
-    }
-    Ok(())
-}
-
-fn validate_clock(clock: &Clock, library: &MediaLibrary) -> Result<(), String> {
-    if clock.id.trim().is_empty() {
-        return Err("Clock id is required".to_string());
-    }
-    if clock.name.trim().is_empty() {
-        return Err("Clock name is required".to_string());
-    }
-    if !(5..=1440).contains(&clock.duration_minutes) {
-        return Err("Clock duration_minutes must be between 5 and 1440".to_string());
-    }
-    let clock_seconds = clock.duration_minutes as i64 * 60;
-    let categories: HashSet<i64> = library
-        .list_categories()?
-        .into_iter()
-        .map(|category| category.id)
-        .collect();
-    let mut referenced = Vec::new();
-    if let Some(id) = clock.fill_category {
-        referenced.push(id);
-    }
-    for slot in &clock.slots {
-        if let Some(anchor) = slot.at {
-            if anchor.second >= 60 {
-                return Err("Clock anchor second must be below 60".to_string());
-            }
-            if anchor.offset_seconds() >= clock_seconds {
-                return Err(format!(
-                    "Clock anchor {}:{} falls outside the clock",
-                    anchor.minute, anchor.second
-                ));
-            }
-        }
-        match &slot.item {
-            SlotItem::Category { category_id, .. }
-            | SlotItem::Imaging { category_id }
-            | SlotItem::Fill { category_id } => referenced.push(*category_id),
-            SlotItem::AdBreak { intro_category, outro_category, .. } => {
-                referenced.extend(intro_category.iter().chain(outro_category.iter()).copied());
-            }
-            SlotItem::Playlist { playlist_id, .. } => {
-                let playlist = library
-                    .load_playlist(playlist_id)
-                    .map_err(|e| format!("No playlist {playlist_id}: {e}"))?;
-                if playlist.items.is_empty() {
-                    return Err(format!("Playlist {playlist_id} is empty"));
-                }
-            }
-            SlotItem::Track { path } => {
-                if !std::path::Path::new(path).is_file() {
-                    return Err(format!("No track file {path}"));
-                }
-            }
-        }
-    }
-    for id in referenced {
-        if !categories.contains(&id) {
-            return Err(format!("No category {id}"));
-        }
-    }
     Ok(())
 }
 
@@ -1166,20 +1053,6 @@ fn parse_id_arg<T: DeserializeOwned>(args: &Value, key: &str) -> Result<T, Strin
     serde_json::from_value(value).map_err(|e| format!("Invalid {key}: {e}"))
 }
 
-fn opt_datetime(args: &Value, key: &str) -> Result<Option<NaiveDateTime>, String> {
-    match args.get(key).and_then(Value::as_str) {
-        Some(text) => Ok(Some(parse_api_datetime(text)?)),
-        None => Ok(None),
-    }
-}
-
-fn opt_date(args: &Value, key: &str) -> Result<Option<NaiveDate>, String> {
-    match args.get(key).and_then(Value::as_str) {
-        Some(text) => parse_api_date(text).map(Some),
-        None => Ok(None),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
@@ -1188,6 +1061,7 @@ mod tests {
 
     use super::*;
     use riars_core::automation::Automation;
+    use riars_core::library::db::MediaLibrary;
     use riars_core::session::SessionSaver;
     use riars_core::{AudioEngine, Scheduler};
 
@@ -1389,11 +1263,10 @@ mod tests {
 
     #[test]
     fn api_date_helpers_reject_out_of_range_values() {
-        let parsed =
-            opt_datetime(&json!({ "from": "2026-01-01 00:00:00" }), "from").unwrap().unwrap();
-        assert_eq!(parsed, parse_api_datetime("2026-01-01T00:00:00").unwrap());
-        assert!(opt_datetime(&json!({ "to": "-262143-01-01T00:00:00" }), "to").is_err());
-        assert!(opt_date(&json!({ "from": "1900-01-01" }), "from").is_err());
+        let (from, _) = validate::datetime_range(Some("2026-01-01 00:00:00"), Some("2026-01-02T00:00:00")).unwrap();
+        assert_eq!(from, parse_api_datetime("2026-01-01T00:00:00").unwrap());
+        assert!(validate::datetime_range(None, Some("-262143-01-01T00:00:00")).is_err());
+        assert!(validate::date_range(Some("1900-01-01"), None).is_err());
     }
 
     #[test]
@@ -1406,7 +1279,7 @@ mod tests {
             json!({ "from": "2024-01-02T00:00:00", "to": "2024-01-01T00:00:00" }),
         )
         .unwrap_err();
-        assert!(backwards.contains("before its start"));
+        assert!(backwards.contains("before from"));
 
         let long_log = call(
             &state,

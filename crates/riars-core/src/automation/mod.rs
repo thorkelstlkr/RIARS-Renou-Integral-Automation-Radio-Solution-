@@ -9,6 +9,7 @@ pub mod runner;
 pub mod store;
 pub mod traffic_store;
 pub mod traffic;
+pub mod validate;
 
 pub use events::{run_due, scheduler_loop, Fired, StreamCommand};
 pub use generator::{Catalog, Generator};

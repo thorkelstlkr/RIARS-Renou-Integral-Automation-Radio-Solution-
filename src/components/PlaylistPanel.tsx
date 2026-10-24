@@ -2,14 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-
-interface PlaylistItem {
-  id: string;
-  track_path: string;
-  title: string;
-  artist: string;
-  duration_ms: number;
-}
+import { KIND_COLORS, type PlaylistItem } from "../automation/api";
+import { startTimes, type EngineState } from "../automation/useOnAir";
 
 interface Playlist {
   name?: string;
@@ -50,6 +44,8 @@ const S: Record<string, React.CSSProperties> = {
     background: "var(--bg-panel)", borderLeft: "3px solid var(--accent)",
   },
   num: { width: 36, color: "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: 12 },
+  start: { width: 64, color: "var(--text-secondary)", fontFamily: "var(--font-mono)", fontSize: 12 },
+  kind: { width: 8, height: 8, borderRadius: "50%", display: "inline-block", marginRight: 8, flexShrink: 0 },
   tit: { flex: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
   art: { flex: 1, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
   dur: { width: 70, textAlign: "right" as const, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-secondary)" },
@@ -75,6 +71,14 @@ export default function PlaylistPanel() {
   const [saved, setSaved] = useState<SavedPlaylist[]>([]);
   const [menu, setMenu] = useState<"none" | "save" | "open">("none");
   const [saveName, setSaveName] = useState("");
+  const [engine, setEngine] = useState<EngineState | null>(null);
+
+  // Start times follow the position of the track on air.
+  useEffect(() => {
+    invoke<EngineState>("engine_get_state").then(setEngine).catch(() => {});
+    const off = listen<EngineState>("engine-state", (e) => setEngine(e.payload));
+    return () => { off.then((f) => f()); };
+  }, []);
 
   const openMenu = useCallback(async (which: "save" | "open") => {
     if (menu === which) { setMenu("none"); return; }
@@ -136,6 +140,9 @@ export default function PlaylistPanel() {
 
   const { items, current_index } = playlist;
   const total = items.reduce((sum, i) => sum + i.duration_ms, 0);
+  const starts = engine ? startTimes(items, current_index, engine) : [];
+  const clock = (ms: number | null | undefined) =>
+    ms == null ? "" : new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 
   return (
     <div style={S.panel}>
@@ -170,6 +177,7 @@ export default function PlaylistPanel() {
       )}
       <div style={S.hdr}>
         <span style={S.num}>{t("playlist.headerNumber")}</span>
+        <span style={S.start}>{t("playlist.headerStart")}</span>
         <span style={S.tit}>{t("playlist.headerTitle")}</span>
         <span style={S.art}>{t("playlist.headerArtist")}</span>
         <span style={S.dur}>{t("playlist.headerDuration")}</span>
@@ -183,7 +191,12 @@ export default function PlaylistPanel() {
             style={{ ...S.row, ...(i === current_index ? S.active : {}) }}
             onDoubleClick={() => run("playlist_play", { index: i })}>
             <span style={S.num}>{i + 1}</span>
-            <span style={S.tit}>{item.title}</span>
+            <span style={S.start}>{clock(starts[i])}</span>
+            <span style={{ ...S.tit, display: "flex", alignItems: "center" }}>
+              <span style={{ ...S.kind, background: KIND_COLORS[item.kind ?? "Music"] }}
+                title={t(`automation.kinds.${item.kind ?? "Music"}`) + (item.generated ? ` · ${t("playlist.generated")}` : "")} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{item.title}</span>
+            </span>
             <span style={S.art}>{item.artist || t("library.unknownArtist")}</span>
             <span style={S.dur}>{fmt(item.duration_ms)}</span>
             <span style={S.act}>
