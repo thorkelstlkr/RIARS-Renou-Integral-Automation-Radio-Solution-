@@ -261,6 +261,8 @@ pub struct AutomationConfig {
     pub keep_played: u32,
     /// Length of an ad break whose slot does not say.
     pub ad_break_seconds: u32,
+    /// Items of these kinds never crossfade with their neighbours.
+    pub no_overlap_kinds: Vec<ItemKind>,
 }
 
 impl Default for AutomationConfig {
@@ -275,6 +277,7 @@ impl Default for AutomationConfig {
             min_minutes_ahead: 15,
             keep_played: 20,
             ad_break_seconds: 180,
+            no_overlap_kinds: vec![ItemKind::Spot],
         }
     }
 }
@@ -413,4 +416,53 @@ pub struct DeliveryRow {
     pub partial: u32,
     pub seconds: u64,
     pub missed: u32,
+}
+
+/// Earliest and latest dates the automation API accepts: anything outside is a typo,
+/// and chrono's extremes would overflow date arithmetic.
+const FIRST_YEAR: i32 = 1970;
+const LAST_YEAR: i32 = 2200;
+
+/// Parse a date-time from an API or tool argument: `YYYY-MM-DDTHH:MM:SS` or with a
+/// space, optional seconds, within years 1970 to 2200.
+pub fn parse_api_datetime(text: &str) -> Result<NaiveDateTime, String> {
+    let text = text.trim();
+    let parsed = ["%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M"]
+        .iter()
+        .find_map(|format| NaiveDateTime::parse_from_str(text, format).ok())
+        .ok_or_else(|| format!("Invalid date and time \"{text}\": use YYYY-MM-DDTHH:MM:SS"))?;
+    check_year(parsed.date()).map(|_| parsed)
+}
+
+/// Parse a date (`YYYY-MM-DD`) from an API or tool argument, within years 1970 to 2200.
+pub fn parse_api_date(text: &str) -> Result<NaiveDate, String> {
+    let text = text.trim();
+    let parsed = NaiveDate::parse_from_str(text, "%Y-%m-%d")
+        .map_err(|_| format!("Invalid date \"{text}\": use YYYY-MM-DD"))?;
+    check_year(parsed).map(|_| parsed)
+}
+
+fn check_year(date: NaiveDate) -> Result<(), String> {
+    use chrono::Datelike;
+    if (FIRST_YEAR..=LAST_YEAR).contains(&date.year()) {
+        Ok(())
+    } else {
+        Err(format!("Date {date} is out of range ({FIRST_YEAR} to {LAST_YEAR})"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn api_dates() {
+        let t = parse_api_datetime("2026-10-23T09:15:00").unwrap();
+        assert_eq!(parse_api_datetime("2026-10-23 09:15").unwrap(), t);
+        assert!(parse_api_datetime("-262143-01-01T00:00:00").is_err());
+        assert!(parse_api_datetime("+262142-12-31T23:59:59").is_err());
+        assert!(parse_api_datetime("23/10/2026").is_err());
+        assert_eq!(parse_api_date("2026-10-23").unwrap(), t.date());
+        assert!(parse_api_date("1900-01-01").is_err());
+    }
 }

@@ -25,23 +25,44 @@ fn state_json(state: &AppState) -> Option<String> {
     serde_json::to_string(&engine.state_info()).ok()
 }
 
+/// A client gets this long to take a message; one that stops reading is dropped
+/// instead of holding its task (and the state) forever.
+const SEND_TIMEOUT: tokio::time::Duration = tokio::time::Duration::from_secs(5);
+
+async fn send(socket: &mut WebSocket, text: String) -> bool {
+    matches!(tokio::time::timeout(SEND_TIMEOUT, socket.send(Message::Text(text.into()))).await, Ok(Ok(())))
+}
+
 async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     log::info!("WebSocket client connected");
 
     // The state on connect, then only changes (while playing, that is the position).
     let mut last = state_json(&state);
     if let Some(json) = &last {
-        let _ = socket.send(Message::Text(json.clone().into())).await;
+        let _ = send(&mut socket, json.clone()).await;
     }
 
     let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(500));
+    let mut automation = state.automation_events.subscribe();
 
     loop {
         tokio::select! {
+            event = automation.recv() => {
+                match event {
+                    Ok(json) => {
+                        if !send(&mut socket, json).await {
+                            break;
+                        }
+                    }
+                    // A slow client missed some events: carry on with the next ones.
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {}
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                }
+            }
             _ = interval.tick() => {
                 let json = state_json(&state);
                 if json.is_some() && json != last {
-                    if socket.send(Message::Text(json.clone().unwrap_or_default().into())).await.is_err() {
+                    if !send(&mut socket, json.clone().unwrap_or_default()).await {
                         break;
                     }
                     last = json;

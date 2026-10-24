@@ -32,6 +32,9 @@ pub struct PlaylistItem {
     /// Added by the automation generator (not by hand).
     #[serde(default)]
     pub generated: bool,
+    /// Never crossfade into or out of it (spots, by default).
+    #[serde(default)]
+    pub no_overlap: bool,
 }
 
 /// Role of a playlist item on air.
@@ -65,6 +68,7 @@ impl PlaylistItem {
             campaign_id: None,
             planned_at: None,
             generated: false,
+            no_overlap: false,
         }
     }
 }

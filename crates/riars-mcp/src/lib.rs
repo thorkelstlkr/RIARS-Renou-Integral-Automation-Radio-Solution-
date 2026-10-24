@@ -1,3 +1,4 @@
+pub mod automation_tools;
 pub mod tools;
 
 use std::sync::{Arc, Mutex};
@@ -18,6 +19,8 @@ pub struct McpState {
     pub schedule_path: std::path::PathBuf,
     /// Saves playlist, position, volume, crossfade and streaming for restarts.
     pub session: Mutex<riars_core::session::SessionSaver>,
+    /// Long-term automation: playlist generator and proof-of-play log.
+    pub automation: Arc<Mutex<riars_core::automation::Automation>>,
 }
 
 #[derive(Deserialize)]
@@ -92,7 +95,7 @@ impl JsonRpcResponse {
 }
 
 pub async fn run_stdio(state: McpState) -> Result<(), Box<dyn std::error::Error>> {
-    tokio::spawn(auto_advance(Arc::clone(&state.engine)));
+    tokio::spawn(auto_advance(Arc::clone(&state.engine), Arc::clone(&state.library), Arc::clone(&state.automation)));
     let state = Arc::new(state);
     tokio::spawn(follow_title(Arc::clone(&state)));
     let scheduler_state = Arc::clone(&state);
@@ -201,11 +204,17 @@ pub async fn run_stdio(state: McpState) -> Result<(), Box<dyn std::error::Error>
     Ok(())
 }
 
-/// Move to the next playlist item when the current track ends (same as riars-api).
-async fn auto_advance(engine: Arc<Mutex<AudioEngine>>) {
+/// Move to the next playlist item when the current track ends, and run the
+/// automation (same as riars-api).
+async fn auto_advance(
+    engine: Arc<Mutex<AudioEngine>>,
+    library: Arc<Mutex<MediaLibrary>>,
+    automation: Arc<Mutex<riars_core::automation::Automation>>,
+) {
     let mut tick = tokio::time::interval(tokio::time::Duration::from_millis(250));
     loop {
         tick.tick().await;
+        // Advance first: the automation must never delay the next track.
         let next = engine.lock().ok().and_then(|mut e| e.poll());
         if let Some(index) = next {
             let engine = Arc::clone(&engine);
@@ -215,6 +224,21 @@ async fn auto_advance(engine: Arc<Mutex<AudioEngine>>) {
             .await;
             if let Ok(Err(e)) = result {
                 log::error!("Auto-advance failed: {e}");
+            }
+        }
+        // Engine first, released before the automation lock (see `automation::runner`).
+        let pending = engine.lock().ok().map(|e| (e.playlist_revision(), e.has_play_records()));
+        if let Some((revision, records)) = pending {
+            if automation.lock().is_ok_and(|a| a.wants_tick(revision, records)) {
+                let (engine, library, automation) = (Arc::clone(&engine), Arc::clone(&library), Arc::clone(&automation));
+                let now = chrono::Local::now().naive_local();
+                let result = tokio::task::spawn_blocking(move || {
+                    riars_core::automation::tick(&engine, &library, &automation, now)
+                })
+                .await;
+                if let Ok(Err(e)) = result {
+                    log::warn!("Automation: {e}");
+                }
             }
         }
     }

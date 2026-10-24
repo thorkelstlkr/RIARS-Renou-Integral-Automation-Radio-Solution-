@@ -87,6 +87,7 @@ pub fn api_routes() -> Router<Arc<AppState>> {
         .route("/playlist/move", post(playlist_move))
         .route("/playlist/clear", post(playlist_clear))
         .route("/playlist/play", post(playlist_play))
+        .merge(crate::automation_routes::automation_routes())
 }
 
 #[derive(Deserialize)]
@@ -325,10 +326,10 @@ async fn playlists_delete(State(state): State<Arc<AppState>>, Json(req): Json<Ev
 
 /// Error body for every endpoint: `{"error": "..."}` with a 4xx/5xx status, so clients
 /// and agents can tell failures from success.
-pub struct ApiError(StatusCode, String);
+pub struct ApiError(pub(crate) StatusCode, pub(crate) String);
 
 impl ApiError {
-    fn internal(e: impl std::fmt::Display) -> Self {
+    pub(crate) fn internal(e: impl std::fmt::Display) -> Self {
         Self(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
     }
 }

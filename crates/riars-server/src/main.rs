@@ -101,6 +101,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             stream,
             schedule_path,
             session,
+            automation: Arc::new(Mutex::new(riars_core::automation::Automation::new())),
         };
         if !cli.no_resume {
             let engine = Arc::clone(&mcp_state.engine);
@@ -133,6 +134,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             library: Mutex::new(library),
             scheduler: Mutex::new(scheduler),
             automation: Mutex::new(riars_core::automation::Automation::new()),
+            automation_events: tokio::sync::broadcast::channel(64).0,
         });
         if !cli.no_resume {
             let resume_state = Arc::clone(&state);
