@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use super::crossfade::CrossfadeConfig;
 use super::mixer::Mixer;
 use super::output::{AudioOutput, Command, Levels, StreamTap};
-use super::player::TrackPlayer;
+use super::normalize::{db_to_gain, NormalizationConfig};
+use super::player::{Overlay, TrackPlayer};
 use crate::playlist::playlist::{Playlist, PlaylistItem};
 use crate::session::SessionState;
 
@@ -92,6 +93,10 @@ pub struct PlayRecord {
     pub reason: EndReason,
 }
 
+/// Measured loudness of a file by path: (LUFS, peak dBFS). Supplied by the app, which
+/// owns the library; called on control threads only, never with the engine locked.
+pub type LoudnessLookup = std::sync::Arc<dyn Fn(&str) -> Option<(f32, Option<f32>)> + Send + Sync>;
+
 /// Records kept for the caller to collect; older ones are dropped beyond this.
 const MAX_PLAY_RECORDS: usize = 256;
 
@@ -146,6 +151,15 @@ pub struct AudioEngine {
     /// Revision bumps from `append_generated`, which need no session save (the
     /// generator makes them again after a restart).
     generated_bumps: u64,
+    normalization: NormalizationConfig,
+    loudness: Option<LoudnessLookup>,
+    /// Imaging attached to tracks handed to the audio thread, waiting to start, with
+    /// the id of the host item.
+    overlays_pending: Vec<(String, PlaylistItem)>,
+    /// Imaging playing over the current track, and when it started.
+    overlay_on_air: Option<(PlaylistItem, chrono::NaiveDateTime)>,
+    overlays_started_seen: u64,
+    overlays_ended_seen: u64,
     /// Last value of `Shared::switches` seen, to notice the audio thread moving on.
     switches_seen: u64,
     /// `None` when no sound card is available (e.g. a headless server); the engine
@@ -205,6 +219,12 @@ impl AudioEngine {
             play_records: Vec::new(),
             end_reason: None,
             generated_bumps: 0,
+            normalization: NormalizationConfig::default(),
+            loudness: None,
+            overlays_pending: Vec::new(),
+            overlay_on_air: None,
+            overlays_started_seen: 0,
+            overlays_ended_seen: 0,
             switches_seen: 0,
             output,
             crossfade,
@@ -437,6 +457,10 @@ impl AudioEngine {
         if let Some(output) = &self.output {
             output.collect_garbage();
         }
+        let (overlays_started, overlays_ended) = match &self.output {
+            Some(o) => (o.shared.overlays_started.load(Ordering::Relaxed), o.shared.overlays_ended.load(Ordering::Relaxed)),
+            None => (self.overlays_started_seen, self.overlays_ended_seen),
+        };
         // The audio thread switched to the queued track: catch up.
         if switches != self.switches_seen {
             self.switches_seen = switches;
@@ -453,6 +477,7 @@ impl AudioEngine {
             }
         }
 
+        self.follow_overlays(overlays_started, overlays_ended);
         if self.state != PlaybackState::Playing || self.advancing {
             return None;
         }
@@ -588,18 +613,21 @@ impl AudioEngine {
             crossfade: Some(self.crossfade.clone()),
             stream: None,
             dead_air: Some(self.dead_air.clone()),
+            normalization: Some(self.normalization),
         }
     }
 
     /// Changes worth saving at once (not the position, which moves all the time).
     pub fn session_key(&self) -> (u64, u32, u64, bool, bool) {
+        let normalization = (self.normalization.enabled as u64) << 62 ^ (self.normalization.target_lufs.to_bits() as u64) << 20;
         let dead_air = (self.dead_air.enabled as u64) << 63
             ^ (self.dead_air.seconds as u64) << 40
             ^ (self.dead_air.threshold_db.to_bits() as u64) << 8
             ^ self.dead_air.action as u64;
         (
             self.playlist_revision.wrapping_sub(self.generated_bumps).wrapping_add(self.seek_count << 32)
-                ^ dead_air,
+                ^ dead_air
+                ^ normalization,
             self.volume.to_bits(),
             self.crossfade.duration.as_millis() as u64,
             self.crossfade.enabled,
@@ -610,6 +638,9 @@ impl AudioEngine {
     /// Put back a saved playlist (keeping its current item), volume and crossfade.
     /// Playback is resumed by `session::resume`.
     pub fn restore(&mut self, state: &SessionState) {
+        if let Some(normalization) = state.normalization {
+            self.normalization = normalization;
+        }
         if let Some(volume) = state.volume {
             self.set_volume(volume);
         }
@@ -745,6 +776,51 @@ impl AudioEngine {
         &self.crossfade
     }
 
+    pub fn normalization_config(&self) -> NormalizationConfig {
+        self.normalization
+    }
+
+    pub fn set_normalization(&mut self, config: NormalizationConfig) {
+        self.normalization = config;
+    }
+
+    /// Where the engine reads each file's loudness for normalisation.
+    pub fn set_loudness_lookup(&mut self, lookup: LoudnessLookup) {
+        self.loudness = Some(lookup);
+    }
+
+    /// Imaging attached to the player of item `host_id`: its proof of play starts when
+    /// the audio thread starts it.
+    fn note_overlay(&mut self, host_id: &str, overlay: PlaylistItem) {
+        self.overlays_pending.retain(|(host, _)| host != host_id);
+        self.overlays_pending.push((host_id.to_string(), overlay));
+    }
+
+    /// Follow imaging started and ended by the audio thread (from `poll`).
+    fn follow_overlays(&mut self, started: u64, ended: u64) {
+        // An end first: the audio thread retires the old overlay before starting a new one.
+        if ended != self.overlays_ended_seen {
+            self.overlays_ended_seen = ended;
+            if let Some((item, started_at)) = self.overlay_on_air.take() {
+                if self.play_records.len() >= MAX_PLAY_RECORDS {
+                    self.play_records.remove(0);
+                }
+                self.play_records.push(PlayRecord { item, started_at, ended_at: wall_clock(), reason: EndReason::Finished });
+            }
+        }
+        if started != self.overlays_started_seen {
+            self.overlays_started_seen = started;
+            let host = self.on_air.as_ref().map(|(item, _)| item.id.clone());
+            if let Some(pos) = self.overlays_pending.iter().position(|(h, _)| Some(h) == host.as_ref()) {
+                let (_, item) = self.overlays_pending.remove(pos);
+                self.overlay_on_air = Some((item, wall_clock()));
+            }
+        }
+        // Imaging of items that left the air without reaching it never plays.
+        let keep = [self.on_air.as_ref().map(|(i, _)| i.id.clone()), self.queued.as_ref().map(|(i, _)| i.id.clone())];
+        self.overlays_pending.retain(|(host, _)| keep.iter().any(|k| k.as_deref() == Some(host.as_str())));
+    }
+
     pub fn set_crossfade(&mut self, config: CrossfadeConfig) {
         if let Some(output) = &self.output {
             output.shared.set_crossfade(&config);
@@ -767,13 +843,38 @@ pub fn play_index_unlocked(
     // loop and deadlock on the next `lock()`.
     let attempts = lock()?.playlist().len().max(1);
     for _ in 0..attempts {
-        let (path, id) = {
+        let (path, id, item, normalization, loudness) = {
             let engine = lock()?;
-            (engine.item_path(index)?, engine.item_id(index)?)
+            let item = engine.playlist.items.get(index).cloned();
+            (engine.item_path(index)?, engine.item_id(index)?, item, engine.normalization, engine.loudness.clone())
         };
         match TrackPlayer::from_file(Path::new(&path), 44100) {
-            Ok(player) => {
+            Ok(mut player) => {
+                // Gain and imaging are set up here, with no lock held: the loudness
+                // lookup reads the library.
+                let gain_of = |path: &str| {
+                    let (lufs, peak) = loudness.as_ref().and_then(|l| l(path)).map_or((None, None), |(l, p)| (Some(l), p));
+                    db_to_gain(normalization.gain_db(lufs, peak))
+                };
+                player.set_gain(gain_of(&path));
+                let overlay = item.as_ref().and_then(|i| i.overlay.as_deref()).and_then(|spec| {
+                    match TrackPlayer::from_file(Path::new(&spec.item.track_path), 44100) {
+                        Ok(mut over) => {
+                            over.set_gain(gain_of(&spec.item.track_path));
+                            let start_frame = spec.start_ms as f64 * player.sample_rate() as f64 / 1000.0;
+                            player.set_overlay(Overlay { player: Box::new(over), start_frame, duck: db_to_gain(-spec.duck_db.abs()) });
+                            Some(spec.item.clone())
+                        }
+                        Err(e) => {
+                            log::warn!("Cannot load imaging {}: {e}; the track plays without it", spec.item.track_path);
+                            None
+                        }
+                    }
+                });
                 let mut engine = lock()?;
+                if let Some(overlay) = overlay {
+                    engine.note_overlay(&id, overlay);
+                }
                 // The playlist may have changed while decoding: find the item again.
                 let Some(index) = engine.playlist().index_of(&id) else {
                     engine.cancel_advance();

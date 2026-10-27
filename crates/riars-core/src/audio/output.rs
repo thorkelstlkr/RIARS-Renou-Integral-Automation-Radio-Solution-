@@ -35,6 +35,9 @@ pub(crate) struct Shared {
     pub position_ms: AtomicU64,
     /// Incremented by the callback each time it switches to a queued track.
     pub switches: AtomicU64,
+    /// Overlays (imaging over a track) started and ended so far.
+    pub overlays_started: AtomicU64,
+    pub overlays_ended: AtomicU64,
     /// Crossfade length in ms between queued tracks; 0 disables it.
     crossfade_ms: AtomicU64,
     crossfade_curve: AtomicU8,
@@ -75,6 +78,8 @@ impl Shared {
             ramp_ms_per_unit: AtomicU32::new(0),
             position_ms: AtomicU64::new(0),
             switches: AtomicU64::new(0),
+            overlays_started: AtomicU64::new(0),
+            overlays_ended: AtomicU64::new(0),
             crossfade_ms: AtomicU64::new(0),
             crossfade_curve: AtomicU8::new(0),
             peak_bits: [AtomicU32::new(0), AtomicU32::new(0)],
@@ -365,6 +370,12 @@ impl Renderer {
                 &fade,
                 &mut retire,
             );
+            if outcome.overlays_started > 0 {
+                shared.overlays_started.fetch_add(outcome.overlays_started as u64, Ordering::Relaxed);
+            }
+            if outcome.overlays_ended > 0 {
+                shared.overlays_ended.fetch_add(outcome.overlays_ended as u64, Ordering::Relaxed);
+            }
             if outcome.switches > 0 {
                 shared.switches.fetch_add(outcome.switches as u64, Ordering::Relaxed);
             }
@@ -477,14 +488,44 @@ fn run_clock(mut renderer: Renderer, shutdown: Receiver<()>) {
     }
 }
 
-/// The current track and the one queued after it, like the two decks of a DJ mixer.
-#[derive(Default)]
+/// The current track and the one queued after it, like the two decks of a DJ mixer,
+/// plus a third for imaging played over the current track.
 pub(crate) struct Decks {
     pub current: Option<Box<TrackPlayer>>,
     pub next: Option<Box<TrackPlayer>>,
     /// Length in output frames of the crossfade in progress, fixed when it starts, so a
     /// track queued late fades over the time left instead of jumping mid-curve.
     fade_len: Option<f64>,
+    /// Imaging playing over the current track.
+    overlay: Option<Box<TrackPlayer>>,
+    /// Gain of the current track now and where it is heading (ducking).
+    duck_now: f32,
+    duck_target: f32,
+}
+
+impl Default for Decks {
+    fn default() -> Self {
+        Self { current: None, next: None, fade_len: None, overlay: None, duck_now: 1.0, duck_target: 1.0 }
+    }
+}
+
+/// Ducking ramps: quick down so the first word is clear, slower back up.
+const DUCK_ATTACK_MS: f64 = 150.0;
+const DUCK_RELEASE_MS: f64 = 400.0;
+/// The limiter leaves the signal alone below this level.
+const LIMIT_KNEE: f32 = 0.9;
+
+/// Soft limiter: transparent under the knee, then bends smoothly towards full scale,
+/// so normalisation plus imaging over a track never clips hard. Real-time safe.
+#[inline]
+fn limit(x: f32) -> f32 {
+    let a = x.abs();
+    if a <= LIMIT_KNEE {
+        x
+    } else {
+        let room = 1.0 - LIMIT_KNEE;
+        (LIMIT_KNEE + room * ((a - LIMIT_KNEE) / room).tanh()).copysign(x)
+    }
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -493,6 +534,9 @@ pub(crate) struct RenderOutcome {
     pub switches: u32,
     /// `current` ended with nothing queued.
     pub finished: bool,
+    /// Overlays that started and ended during this buffer.
+    pub overlays_started: u32,
+    pub overlays_ended: u32,
 }
 
 impl Decks {
@@ -509,14 +553,36 @@ impl Decks {
         retire: &mut impl FnMut(Box<TrackPlayer>),
     ) -> RenderOutcome {
         let mut outcome = RenderOutcome::default();
+        let attack = (1.0 / (DUCK_ATTACK_MS * out_rate / 1000.0)) as f32;
+        let release = (1.0 / (DUCK_RELEASE_MS * out_rate / 1000.0)) as f32;
         for frame in data.chunks_mut(channels) {
             self.switch_if_finished(&mut outcome, retire);
+            // Imaging attached to the current track starts at its frame.
+            if let Some(due) = self.current.as_mut().and_then(|c| c.take_due_overlay()) {
+                if let Some(old) = self.overlay.replace(due.player) {
+                    retire(old);
+                    outcome.overlays_ended += 1;
+                }
+                self.duck_target = due.duck;
+                outcome.overlays_started += 1;
+            }
+            if self.overlay.as_ref().is_some_and(|o| o.is_finished()) {
+                if let Some(old) = self.overlay.take() {
+                    retire(old);
+                }
+                self.duck_target = 1.0;
+                outcome.overlays_ended += 1;
+            }
+            let step = if self.duck_target < self.duck_now { attack } else { release };
+            self.duck_now += (self.duck_target - self.duck_now).clamp(-step, step);
+
             let Some(cur) = self.current.as_mut().filter(|p| !p.is_finished()) else {
                 frame.fill(T::EQUILIBRIUM);
                 continue;
             };
             let cur_step = cur.sample_rate() as f64 / out_rate;
-            let fading = match self.next.as_mut() {
+            // Crossfade gains when the next track fades in now.
+            let fade_gains = match self.next.as_ref() {
                 Some(next) if fade.enabled && !next.no_overlap() && !cur.no_overlap() => {
                     let next_step = next.sample_rate() as f64 / out_rate;
                     // Never fade over more than half of either track.
@@ -526,24 +592,36 @@ impl Decks {
                     let remaining = cur.remaining_frames() / cur_step;
                     if window >= 1.0 && remaining <= window {
                         let len = *self.fade_len.get_or_insert(remaining.max(1.0));
-                        let (out_gain, in_gain) = fade.gain_at(1.0 - (remaining / len) as f32);
-                        for (channel, out) in frame.iter_mut().enumerate() {
-                            let mixed =
-                                cur.sample(channel) * out_gain + next.sample(channel) * in_gain;
-                            *out = T::from_sample(mixed * volume);
-                        }
-                        next.advance(next_step);
-                        true
+                        Some((fade.gain_at(1.0 - (remaining / len) as f32), next_step))
                     } else {
-                        false
+                        None
                     }
                 }
-                _ => false,
+                _ => None,
             };
-            if !fading {
-                for (channel, out) in frame.iter_mut().enumerate() {
-                    *out = T::from_sample(cur.sample(channel) * volume);
+            let duck = self.duck_now;
+            // Only what RIARS adds can go past full scale (a raised track, imaging on top):
+            // anything else passes untouched, so the clip meter still means the source.
+            let limiting = cur.gain() > 1.0 || self.overlay.is_some() || duck < 1.0;
+            for (channel, out) in frame.iter_mut().enumerate() {
+                let mut mixed = match (fade_gains, self.next.as_ref()) {
+                    (Some(((out_gain, in_gain), _)), Some(next)) => {
+                        cur.sample(channel) * cur.gain() * out_gain + next.sample(channel) * next.gain() * in_gain
+                    }
+                    _ => cur.sample(channel) * cur.gain(),
+                } * duck;
+                if let Some(over) = self.overlay.as_ref() {
+                    mixed += over.sample(channel) * over.gain();
                 }
+                let mixed = mixed * volume;
+                *out = T::from_sample(if limiting { limit(mixed) } else { mixed });
+            }
+            if let (Some((_, next_step)), Some(next)) = (fade_gains, self.next.as_mut()) {
+                next.advance(next_step);
+            }
+            if let Some(over) = self.overlay.as_mut() {
+                let over_step = over.sample_rate() as f64 / out_rate;
+                over.advance(over_step);
             }
             cur.advance(cur_step);
         }
@@ -589,7 +667,7 @@ mod tests {
         let mut out = vec![9.0f32; frames];
         let mut retired = 0;
         let outcome = decks.render(&mut out, 1, 1000.0, 1.0, fade, &mut |_| retired += 1);
-        assert_eq!(retired, outcome.switches as usize);
+        assert_eq!(retired, (outcome.switches + outcome.overlays_ended) as usize);
         (out, outcome)
     }
 
@@ -606,7 +684,7 @@ mod tests {
         let mut decks = Decks { current: Some(track(1.0, 4)), next: Some(track(0.5, 3)), ..Default::default() };
         let (out, outcome) = render(&mut decks, 9, &no_fade());
         assert_eq!(out, [1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 0.0, 0.0]);
-        assert_eq!(outcome, RenderOutcome { switches: 1, finished: true });
+        assert_eq!(outcome, RenderOutcome { switches: 1, finished: true, ..Default::default() });
     }
 
     #[test]
@@ -614,7 +692,7 @@ mod tests {
         let mut decks = Decks { current: Some(track(1.0, 4)), next: Some(track(0.5, 4)), ..Default::default() };
         let (out, outcome) = render(&mut decks, 4, &no_fade());
         assert_eq!(out, [1.0; 4]);
-        assert_eq!(outcome, RenderOutcome { switches: 1, finished: false });
+        assert_eq!(outcome, RenderOutcome { switches: 1, finished: false, ..Default::default() });
         let (out, _) = render(&mut decks, 2, &no_fade());
         assert_eq!(out, [0.5, 0.5]);
     }
@@ -647,6 +725,42 @@ mod tests {
         let mut decks = Decks { current: Some(spot), next: Some(track(1.0, 4)), ..Default::default() };
         let (out, _) = render(&mut decks, 6, &linear(2));
         assert_eq!(out, [0.5, 0.5, 0.5, 0.5, 1.0, 1.0]);
+    }
+
+    #[test]
+    fn overlay_plays_over_the_track_from_its_frame_and_ducks_it() {
+        // 1 kHz: host at 0.5 for 1000 frames; imaging at 0.25 for 100 frames from frame 200,
+        // ducking the host to half. Attack 150 ms = 150 frames, release 400 frames.
+        let mut host = track(0.5, 1000);
+        host.set_overlay(crate::audio::player::Overlay { player: track(0.25, 100), start_frame: 200.0, duck: 0.5 });
+        let mut decks = Decks { current: Some(host), ..Default::default() };
+        let (out, outcome) = render(&mut decks, 1000, &no_fade());
+        assert_eq!(out[199], 0.5); // untouched before the overlay
+        assert!(out[201] > 0.7, "{}", out[201]); // host + imaging
+        assert!(out[299] < out[201], "ducking pulls the host down");
+        assert_eq!((outcome.overlays_started, outcome.overlays_ended), (1, 1));
+        assert!(out[999] > out[350], "released after the overlay");
+    }
+
+    #[test]
+    fn overlay_is_dropped_with_a_track_that_never_reaches_it() {
+        let mut host = track(0.5, 100);
+        host.set_overlay(crate::audio::player::Overlay { player: track(0.25, 50), start_frame: 500.0, duck: 0.5 });
+        let mut decks = Decks { current: Some(host), next: Some(track(0.1, 100)), ..Default::default() };
+        let (_, outcome) = render(&mut decks, 150, &no_fade());
+        assert_eq!((outcome.switches, outcome.overlays_started), (1, 0));
+    }
+
+    #[test]
+    fn gain_and_limiter() {
+        let mut loud = track(0.6, 10);
+        loud.set_gain(2.0); // 1.2 before the limiter
+        let mut decks = Decks { current: Some(loud), ..Default::default() };
+        let (out, _) = render(&mut decks, 5, &no_fade());
+        assert!(out[0] < 1.0 && out[0] > 0.9, "{}", out[0]);
+        assert_eq!(limit(0.5), 0.5);
+        assert!(limit(-3.0) >= -1.0 && limit(-3.0) < -0.95);
+        assert!(limit(0.95) < limit(0.99));
     }
 
     #[test]
@@ -780,6 +894,6 @@ mod tests {
         let mut decks = Decks { current: Some(track(1.0, 3)), ..Default::default() };
         let (out, outcome) = render(&mut decks, 5, &linear(2));
         assert_eq!(out, [1.0, 1.0, 1.0, 0.0, 0.0]);
-        assert_eq!(outcome, RenderOutcome { switches: 0, finished: true });
+        assert_eq!(outcome, RenderOutcome { switches: 0, finished: true, ..Default::default() });
     }
 }

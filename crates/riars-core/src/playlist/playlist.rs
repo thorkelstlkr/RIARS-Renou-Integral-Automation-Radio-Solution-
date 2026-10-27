@@ -35,6 +35,20 @@ pub struct PlaylistItem {
     /// Never crossfade into or out of it (spots, by default).
     #[serde(default)]
     pub no_overlap: bool,
+    /// Imaging to play over this item's intro or outro.
+    #[serde(default)]
+    pub overlay: Option<Box<OverlaySpec>>,
+}
+
+/// Imaging over another item: when it starts and how much it ducks the host.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OverlaySpec {
+    pub item: PlaylistItem,
+    /// From the start of the host file.
+    pub start_ms: u64,
+    /// How far the host is lowered while the imaging plays (dB, 0 = not at all).
+    #[serde(default)]
+    pub duck_db: f32,
 }
 
 /// Role of a playlist item on air.
@@ -69,6 +83,7 @@ impl PlaylistItem {
             planned_at: None,
             generated: false,
             no_overlap: false,
+            overlay: None,
         }
     }
 }

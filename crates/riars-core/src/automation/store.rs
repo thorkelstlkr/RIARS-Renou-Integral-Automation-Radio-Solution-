@@ -119,6 +119,7 @@ pub(crate) fn init_schema(db: &rusqlite::Connection) -> Result<(), String> {
     )
     .map_err(|e| format!("DB error: {e}"))?;
     crate::automation::traffic_store::init_traffic_schema(db)?;
+    crate::analysis::store::init_cues_schema(db)?;
     Ok(())
 }
 
