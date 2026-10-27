@@ -1016,6 +1016,9 @@ impl super::generator::Catalog for MediaLibrary {
     fn campaign_plays(&self, from: NaiveDateTime, to: NaiveDateTime) -> Result<Vec<(i64, NaiveDateTime)>, String> {
         MediaLibrary::campaign_plays(self, from, to)
     }
+    fn track_cues(&self, track_id: i64) -> Result<Option<crate::analysis::TrackCues>, String> {
+        MediaLibrary::track_cues(self, track_id)
+    }
 }
 
 #[cfg(test)]

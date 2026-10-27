@@ -181,10 +181,19 @@ impl AudioEngine {
         Self::with_output(false)
     }
 
+    /// Play on this sound card (by name), or the default one if it is missing.
+    pub fn with_device(device: &str) -> Result<Self, String> {
+        Self::with_choice(super::output::DeviceChoice::Named(device.to_string()))
+    }
+
     fn with_output(use_device: bool) -> Result<Self, String> {
+        Self::with_choice(if use_device { super::output::DeviceChoice::Default } else { super::output::DeviceChoice::Clock })
+    }
+
+    fn with_choice(choice: super::output::DeviceChoice) -> Result<Self, String> {
         let sample_rate = 44100;
         let volume = 0.8;
-        let output = match AudioOutput::open(volume, use_device) {
+        let output = match AudioOutput::open_on(volume, choice) {
             Ok(output) => Some(output),
             Err(e) => {
                 log::warn!("No audio output, running silent: {e}");

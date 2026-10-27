@@ -173,7 +173,15 @@ impl AudioOutput {
     /// Open the default output device and start a silent stream.
     /// Open the default output device, or run on the internal clock when
     /// `use_device` is false or no device works.
-    pub fn open(volume: f32, use_device: bool) -> Result<Self, String> {
+    /// Open on a given sound card. A named card that is missing falls back to the
+    /// default one (with a warning); `Clock` never touches a card.
+    pub fn open_on(volume: f32, choice: DeviceChoice) -> Result<Self, String> {
+        let use_device = !matches!(choice, DeviceChoice::Clock);
+        let strict = matches!(choice, DeviceChoice::Only(_));
+        let name = match &choice {
+            DeviceChoice::Named(n) | DeviceChoice::Only(n) => Some(n.clone()),
+            _ => None,
+        };
         let (cmd_tx, cmd_rx) = bounded::<Command>(16);
         let (garbage_tx, garbage_rx) = bounded::<Box<TrackPlayer>>(16);
         let (shutdown_tx, shutdown_rx) = bounded::<()>(0);
@@ -186,11 +194,15 @@ impl AudioOutput {
             .name("riars-audio-output".into())
             .spawn(move || {
                 if use_device {
-                    match start_stream(parts.clone()) {
+                    match start_stream(parts.clone(), name.as_deref(), strict) {
                         Ok((stream, device_name, tap)) => {
                             let _ = ready_tx.send(Ok((device_name, tap)));
                             let _ = shutdown_rx.recv();
                             drop(stream);
+                            return;
+                        }
+                        Err(e) if strict => {
+                            let _ = ready_tx.send(Err(e));
                             return;
                         }
                         Err(e) => log::warn!("No sound card ({e}); using the internal clock"),
@@ -238,11 +250,46 @@ impl AudioOutput {
     }
 }
 
-fn start_stream(parts: Parts) -> Result<(cpal::Stream, String, StreamTap), String> {
+/// Which sound card an output plays on.
+#[derive(Debug, Clone, PartialEq)]
+pub enum DeviceChoice {
+    /// The internal clock: no card at all.
+    Clock,
+    Default,
+    /// This card, or the default one if it is missing.
+    Named(String),
+    /// This card or nothing (for the preview output: never fall back to the air).
+    Only(String),
+}
+
+/// Names of the sound cards that can play audio.
+pub fn output_devices() -> Vec<String> {
     let host = cpal::default_host();
-    let device = host
-        .default_output_device()
-        .ok_or("No audio output device found")?;
+    host.output_devices()
+        .map(|devices| devices.filter_map(|d| d.name().ok()).collect())
+        .unwrap_or_default()
+}
+
+/// Name of the system's default sound card.
+pub fn default_output_device() -> Option<String> {
+    cpal::default_host().default_output_device().and_then(|d| d.name().ok())
+}
+
+fn start_stream(parts: Parts, name: Option<&str>, strict: bool) -> Result<(cpal::Stream, String, StreamTap), String> {
+    let host = cpal::default_host();
+    let named = name.and_then(|wanted| {
+        host.output_devices().ok()?.find(|d| d.name().is_ok_and(|n| n == wanted))
+    });
+    let device = match (named, name) {
+        (Some(device), _) => device,
+        (None, Some(wanted)) if strict => return Err(format!("Sound card \"{wanted}\" not found")),
+        (None, wanted) => {
+            if let Some(wanted) = wanted {
+                log::warn!("Sound card \"{wanted}\" not found; using the default one");
+            }
+            host.default_output_device().ok_or("No audio output device found")?
+        }
+    };
     let device_name = device.name().unwrap_or_else(|_| "unknown".into());
     let supported = device
         .default_output_config()

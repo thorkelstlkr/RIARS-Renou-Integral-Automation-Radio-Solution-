@@ -51,6 +51,10 @@ pub struct CueAnalysis {
     pub peak_dbfs: f32,
     /// Waveform for editors: peak level per bucket, 0-255.
     pub peaks: Vec<u8>,
+    /// How voice-like each second is, 0-9 (relative to the rest of the track): what an
+    /// AI agent reads to place or check the marks.
+    #[serde(default)]
+    pub vocal_timeline: Vec<u8>,
 }
 
 /// Decode `path` (mono, downsampled) and analyse it. Blocking: seconds on a Raspberry
@@ -281,7 +285,7 @@ pub fn analyze_samples(samples: &[f32], rate: u32, buckets: usize) -> CueAnalysi
     let first = audible.iter().position(|a| *a);
     let last = audible.iter().rposition(|a| *a);
     let (Some(first), Some(last)) = (first, last) else {
-        return CueAnalysis { duration_ms, cue_in_ms: 0, cue_out_ms: duration_ms, intro_ms: None, outro_ms: None, confidence: 0.0, loudness_lufs, peak_dbfs, peaks };
+        return CueAnalysis { duration_ms, cue_in_ms: 0, cue_out_ms: duration_ms, intro_ms: None, outro_ms: None, confidence: 0.0, loudness_lufs, peak_dbfs, peaks, vocal_timeline: Vec::new() };
     };
     let cue_in_ms = to_ms(first);
     let cue_out_ms = (to_ms(last) + (FFT as u64 * 1000 / rate as u64)).min(duration_ms);
@@ -299,9 +303,24 @@ pub fn analyze_samples(samples: &[f32], rate: u32, buckets: usize) -> CueAnalysi
     let active: Vec<f32> = score[first..=last].to_vec();
     let (low, high) = (percentile(&active, 0.2), percentile(&active, 0.8));
     let contrast = high - low;
+    // Frames grouped by the second they start in.
+    let seconds = ((duration_ms + 999) / 1000) as usize;
+    let mut sums = vec![(0.0f32, 0usize); seconds.max(1)];
+    for (i, v) in score.iter().enumerate() {
+        let second = ((i * HOP) as u64 / rate as u64) as usize;
+        if let Some(slot) = sums.get_mut(second) {
+            slot.0 += v;
+            slot.1 += 1;
+        }
+    }
+    let vocal_timeline: Vec<u8> = sums
+        .iter()
+        .take(seconds)
+        .map(|&(sum, n)| if n == 0 { 0 } else { (((sum / n as f32 - low) / contrast.max(0.1)).clamp(0.0, 1.0) * 9.0).round() as u8 })
+        .collect();
     let confidence = ((contrast - 0.3) / 1.2).clamp(0.0, 1.0);
     if confidence < 0.15 {
-        return CueAnalysis { duration_ms, cue_in_ms, cue_out_ms, intro_ms: None, outro_ms: None, confidence, loudness_lufs, peak_dbfs, peaks };
+        return CueAnalysis { duration_ms, cue_in_ms, cue_out_ms, intro_ms: None, outro_ms: None, confidence, loudness_lufs, peak_dbfs, peaks, vocal_timeline };
     }
     let threshold = low + 0.5 * contrast;
     let need = (MIN_VOCAL_SECS * fps) as usize;
@@ -326,7 +345,7 @@ pub fn analyze_samples(samples: &[f32], rate: u32, buckets: usize) -> CueAnalysi
         runs
     };
     let (Some(&(vocal_start, _)), Some(&(_, vocal_end))) = (runs.first(), runs.last()) else {
-        return CueAnalysis { duration_ms, cue_in_ms, cue_out_ms, intro_ms: None, outro_ms: None, confidence: confidence * 0.5, loudness_lufs, peak_dbfs, peaks };
+        return CueAnalysis { duration_ms, cue_in_ms, cue_out_ms, intro_ms: None, outro_ms: None, confidence: confidence * 0.5, loudness_lufs, peak_dbfs, peaks, vocal_timeline };
     };
     // The smoothing spreads the edges by about half a window: pull them in so the
     // marks fall before the voice starts and after it ends, never on it.
@@ -344,6 +363,7 @@ pub fn analyze_samples(samples: &[f32], rate: u32, buckets: usize) -> CueAnalysi
         loudness_lufs,
         peak_dbfs,
         peaks,
+        vocal_timeline,
     }
 }
 
@@ -413,6 +433,10 @@ mod tests {
         assert!((10.0..=12.2).contains(&intro), "intro {intro}");
         assert!((49.8..=52.5).contains(&outro), "outro {outro}");
         assert!(a.confidence > 0.3, "{}", a.confidence);
+        // Seconds 2-8 (intro) read low, 20-40 (singing) high.
+        let t = &a.vocal_timeline;
+        assert_eq!(t.len(), 60);
+        assert!(t[2..9].iter().all(|&v| v <= 3) && t[20..40].iter().all(|&v| v >= 5), "{t:?}");
         assert_eq!(a.peaks.len(), 100);
     }
 
