@@ -126,6 +126,16 @@ export interface ImagingRules {
   sweeper_on_change: number | null;
 }
 
+export interface TalkOverConfig {
+  enabled: boolean;
+  on_intro: boolean;
+  on_outro: boolean;
+  margin_ms: number;
+  duck_db: number;
+  min_confidence: number;
+  kinds: ItemKind[];
+}
+
 export interface AutomationConfig {
   enabled: boolean;
   default_clock: string | null;
@@ -137,6 +147,7 @@ export interface AutomationConfig {
   keep_played: number;
   ad_break_seconds: number;
   no_overlap_kinds: ItemKind[];
+  talk_over: TalkOverConfig;
 }
 
 export interface Advertiser {
@@ -240,6 +251,8 @@ export interface PlaylistItem {
   planned_at?: string | null;
   generated?: boolean;
   no_overlap?: boolean;
+  /** Imaging played over this item's intro or outro. */
+  overlay?: { item: PlaylistItem; start_ms: number; duck_db: number } | null;
 }
 
 /** Payload of the "automation" event (same as the WebSocket message). */

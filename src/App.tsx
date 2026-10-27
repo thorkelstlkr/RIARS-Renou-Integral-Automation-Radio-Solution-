@@ -22,6 +22,7 @@ import LogPanel from "./automation/LogPanel";
 import MenuBar from "./menu/MenuBar";
 import { TABS, TAB_LABEL, useAppMenus, type DialogId, type Tab } from "./menu/useAppMenus";
 import PlaybackSettingsDialog from "./menu/PlaybackSettingsDialog";
+import AudioSettingsDialog from "./menu/AudioSettingsDialog";
 import PreviewDialog from "./menu/PreviewDialog";
 import AboutDialog from "./menu/AboutDialog";
 import HelpDialog from "./help/HelpDialog";
@@ -144,7 +145,10 @@ export default function App() {
       <StatusBar />
 
       {notice && <div style={APP_STYLES.notice} role="status">{notice}</div>}
-      {(dialog === "crossfade" || dialog === "deadAir") && <PlaybackSettingsDialog focus={dialog} onClose={closeDialog} />}
+      {(dialog === "crossfade" || dialog === "deadAir" || dialog === "normalization") && (
+        <PlaybackSettingsDialog focus={dialog} onClose={closeDialog} />
+      )}
+      {dialog === "audio" && <AudioSettingsDialog onClose={closeDialog} />}
       {dialog === "preview" && <PreviewDialog onClose={closeDialog} />}
       {dialog === "about" && <AboutDialog onClose={closeDialog} />}
       <HelpDialog open={help.open} topic={help.topic} onClose={() => setHelp({ open: false })} />

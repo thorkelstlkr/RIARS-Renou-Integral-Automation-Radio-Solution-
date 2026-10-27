@@ -19,7 +19,7 @@ export const TAB_LABEL: Record<Tab, string> = {
   log: "automation.tabs.log",
 };
 
-export type DialogId = "crossfade" | "deadAir" | "preview" | "about";
+export type DialogId = "crossfade" | "deadAir" | "normalization" | "audio" | "preview" | "about";
 const LANGS = ["en", "es", "fr", "de", "pt", "ca"] as const;
 
 interface Options {
@@ -106,6 +106,9 @@ export function useAppMenus({ tab, setTab, openHelp, openDialog, setNotice }: Op
         "separator",
         { label: t("menu.crossfade"), action: () => openDialog("crossfade") },
         { label: t("menu.deadAir"), action: () => openDialog("deadAir") },
+        { label: t("menu.normalization"), action: () => openDialog("normalization") },
+        "separator",
+        { label: t("menu.soundCards"), action: () => openDialog("audio") },
       ] },
       { id: "automation", label: t("menu.automation"), items: [
         { label: t("menu.automationOn"), shortcut: "Ctrl+E", checked: autoOn, action: toggleAutomation },

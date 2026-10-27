@@ -25,6 +25,8 @@ riars-server --api-token MI_TOKEN --scan /home/pi/musica
 | `--db-path <ruta>` | Base de datos de la biblioteca. | `riars_library.db` |
 | `--scan <carpeta>` | Escanear una carpeta al arrancar. | — |
 | `--no-sound-card` | No usar tarjeta de sonido; reproduce con un reloj interno, para servidores que solo emiten por Internet. | — |
+| `--device <nombre>` | Tarjeta de sonido de antena, por su nombre. Si no está, se usa la del sistema. | la del sistema |
+| `--list-devices` | Mostrar las tarjetas de sonido y salir. | — |
 | `--no-resume` | Empezar de cero en vez de seguir donde se quedó. | — |
 | `--lang <idioma>` | Idioma de los mensajes: en, es, fr, de, pt, ca. | en |
 | `--mcp-stdio` | Funcionar como servidor MCP por la entrada estándar, para agentes de IA. | — |

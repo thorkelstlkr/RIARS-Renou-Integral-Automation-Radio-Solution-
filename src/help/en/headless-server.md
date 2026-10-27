@@ -29,6 +29,8 @@ Then open `http://YOUR-SERVER:3100/` in a browser and enter the token. If you do
 | `--db-path` | `riars_library.db` | Path to the library database |
 | `--scan` | none | Folder to scan at startup |
 | `--no-sound-card` | off | Play on the internal clock, for servers that only stream |
+| `--device` | system default | On-air sound card by name; if it is missing, the system default is used |
+| `--list-devices` | — | List the sound cards and exit |
 | `--no-resume` | off | Start fresh instead of restoring the last session |
 | `--mcp-stdio` | off | Run as an MCP server on standard input/output |
 | `--lang` | `en` | Messages: `en`, `es`, `fr`, `de`, `pt` or `ca` |

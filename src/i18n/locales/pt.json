@@ -29,7 +29,12 @@
     "noSaved": "Ainda não há listas guardadas.",
     "deleteSaved": "Apagar lista guardada",
     "headerStart": "Início",
-    "generated": "adicionado pela automação"
+    "generated": "adicionado pela automação",
+    "headerIntro": "Intro",
+    "headerOutro": "Outro",
+    "headerLufs": "LUFS",
+    "overlayIntro": "sobre a intro",
+    "overlayOutro": "sobre a outro"
   },
   "library": {
     "title": "Biblioteca",
@@ -412,7 +417,15 @@
       "membersRange": "{{from}}–{{to}} de {{total}}",
       "previous": "Anterior",
       "next": "Seguinte",
-      "removeSelected": "Remover selecionadas"
+      "removeSelected": "Remover selecionadas",
+      "talkOver": "Locução sobre intros e outros",
+      "talkOverEnabled": "Locução sobre intros ativa",
+      "talkOverIntro": "Sobre intros",
+      "talkOverOutro": "Sobre outros",
+      "talkOverMargin": "Margem (ms)",
+      "talkOverDuck": "Atenuar a música (dB)",
+      "talkOverMinConfidence": "Confiança mínima (0-1)",
+      "talkOverKinds": "Tipos"
     },
     "ads": {
       "title": "Publicidade",
@@ -575,7 +588,16 @@
     "previewEmpty": "Nada para mostrar: verifique o relógio predefinido, a grelha e as categorias.",
     "aboutTitle": "Sobre o RIARS",
     "aboutText": "Automação de rádio de código aberto com suporte nativo a agentes de IA: playlists, relógios, grelha, publicidade e emissão, de um Raspberry Pi ao PC do estúdio.",
-    "aboutLicense": "Licença MIT"
+    "aboutLicense": "Licença MIT",
+    "soundCards": "Placas de som…",
+    "normalization": "Normalização…",
+    "normalizationTitle": "Normalização",
+    "normalizationOn": "Normalizar a sonoridade",
+    "normalizationTarget": "Sonoridade alvo (LUFS)",
+    "normalizationMaxGain": "Subida máxima (dB)",
+    "normalizationMaxCut": "Descida máxima (dB)",
+    "normalizationPeak": "Teto de picos (dBFS)",
+    "normalizationHint": "Um ganho por faixa segundo a sonoridade medida: as fracas sobem e as fortes descem, dentro destes limites."
   },
   "help": {
     "title": "Manual",
@@ -598,6 +620,91 @@
       "logs": "Registos",
       "remote": "Controlo remoto e servidores",
       "reference": "Referência"
+    }
+  },
+  "audio": {
+    "title": "Placas de som",
+    "loading": "A carregar…",
+    "onAir": "Antena",
+    "systemDefault": "A do sistema",
+    "defaultIs": "A do sistema: {{device}}",
+    "inUse": "Em uso agora: {{device}}",
+    "restartNote": "Aplica-se ao reiniciar o RIARS.",
+    "preview": "Pré-escuta",
+    "off": "Desativada",
+    "previewNote": "Aplica-se de imediato.",
+    "sameWarning": "A pré-escuta vai sair no ar."
+  },
+  "analysis": {
+    "source": {
+      "Auto": "Automática",
+      "Manual": "Manual",
+      "Agent": "Agente"
+    },
+    "waveform": {
+      "label": "Forma de onda"
+    },
+    "cueEditor": {
+      "title": "Marcas — {{title}}",
+      "analysing": "A analisar…",
+      "noWaveform": "Sem forma de onda: volte a detetar as marcas.",
+      "cueIn": "Início",
+      "introEnd": "Entra a voz",
+      "outroStart": "Acaba a voz",
+      "cueOut": "Fim",
+      "noIntro": "Sem intro",
+      "noOutro": "Sem outro",
+      "vocalTimeline": "Voz por segundo",
+      "voiceCell": "{{second}} s: voz {{level}}/9",
+      "source": "Origem: {{source}}",
+      "confidence": "Confiança: {{value}}%",
+      "loudness": "Sonoridade: {{value}} LUFS",
+      "peak": "Pico: {{value}} dBFS",
+      "gain": "Normalização: {{value}} dB",
+      "gainOff": "Normalização desativada",
+      "room": "Espaço para locução: intro {{intro}} s · outro {{outro}} s",
+      "prelisten": "Pré-escuta",
+      "fromStart": "▶ Desde o início",
+      "introTail": "▶ Últimos 5 s da intro",
+      "fromVoiceEnd": "▶ Desde o fim da voz",
+      "stop": "■ Parar",
+      "noPreview": "Escolha uma placa de pré-escuta em Reprodução ▸ Placas de som.",
+      "detectAgain": "Detetar de novo",
+      "clearMarks": "Apagar marcas",
+      "confirmClear": "Apagar as marcas desta faixa?",
+      "discard": "Descartar as alterações por guardar?",
+      "saved": "Marcas guardadas.",
+      "cleared": "Marcas apagadas."
+    },
+    "media": {
+      "marks": "Marcas…",
+      "prelisten": "Pré-escuta",
+      "prelistenStarted": "A pré-escutar {{title}}.",
+      "trackActions": "Ações da faixa"
+    },
+    "panel": {
+      "title": "Análise",
+      "statsAnalysed": "{{analyzed}} / {{total}} analisadas",
+      "statsManual": "Manuais: {{count}}",
+      "statsWithIntro": "Com intro: {{count}}",
+      "statsLowConfidence": "Pouca confiança: {{count}}",
+      "analyseLibrary": "Analisar biblioteca",
+      "reanalyseAll": "Voltar a analisar tudo",
+      "analyseCategory": "Analisar esta categoria",
+      "confirmReanalyse": "Voltar a analisar toda a biblioteca? As marcas postas à mão mantêm-se.",
+      "progress": "{{done}} / {{total}}",
+      "current": "Agora: {{file}}",
+      "failed": "Falhadas: {{count}}",
+      "keptManual": "Manuais mantidas: {{count}}",
+      "running": "A analisar…",
+      "detector": "Detetor",
+      "builtin": "Integrado",
+      "external": "Programa externo",
+      "program": "Programa",
+      "args": "Argumentos (um por linha)",
+      "apply": "Aplicar",
+      "agentNote": "Um agente de IA também pode rever as marcas por MCP (list_tracks_needing_review e set_track_cues).",
+      "detectorSaved": "Detetor guardado."
     }
   }
 }

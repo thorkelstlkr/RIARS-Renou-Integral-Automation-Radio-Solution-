@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useCommand } from "../commands";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import CueEditor from "../analysis/CueEditor";
+import { preview } from "../analysis/api";
 
 interface Track {
   id: number;
@@ -26,9 +28,27 @@ const S: Record<string, React.CSSProperties> = {
   list: { flex: 1, overflowY: "auto" },
   count: { padding: "4px 12px", fontSize: 11, color: "var(--text-muted)", borderBottom: "1px solid var(--border)" },
   empty: { padding: "24px 12px", textAlign: "center", color: "var(--text-muted)", fontSize: 13 },
-  track: { padding: "8px 12px", cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.03)" },
+  track: {
+    display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", cursor: "pointer",
+    borderBottom: "1px solid rgba(255,255,255,0.03)",
+  },
+  trackBody: { flex: 1, minWidth: 0 },
   name: { fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
   meta: { display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginTop: 2 },
+  marks: {
+    padding: "2px 7px", borderRadius: 4, fontSize: 13, color: "var(--text-muted)",
+    flexShrink: 0, background: "transparent",
+  },
+  ctxOverlay: { position: "fixed", inset: 0, zIndex: 1000 },
+  ctxMenu: {
+    position: "fixed", minWidth: 160, background: "var(--bg-secondary)", border: "1px solid var(--border)",
+    borderRadius: "var(--radius)", boxShadow: "0 8px 24px rgba(0,0,0,0.5)", padding: 4,
+  },
+  ctxTitle: {
+    padding: "4px 8px 6px", fontSize: 11, color: "var(--text-muted)", borderBottom: "1px solid var(--border)",
+    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const, maxWidth: 240,
+  },
+  ctxItem: { display: "block", width: "100%", textAlign: "left" as const, padding: "6px 8px", fontSize: 12, borderRadius: 4 },
 };
 
 /// Tracks per page: the list grows as it is scrolled, never the whole library at once.
@@ -41,6 +61,8 @@ export default function MediaLibrary() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
+  const [cueTrack, setCueTrack] = useState<Track | null>(null);
+  const [context, setContext] = useState<{ track: Track; x: number; y: number } | null>(null);
   // Which search the loaded pages belong to, so a late page of an old search is dropped.
   const query = useRef({ search: "", busy: false, generation: 0 });
 
@@ -115,6 +137,30 @@ export default function MediaLibrary() {
     }
   }, []);
 
+  const prelisten = useCallback(async (track: Track) => {
+    try {
+      await preview.play(track.id, 0);
+      setNotice({ text: t("analysis.media.prelistenStarted", { title: track.title }) });
+    } catch (e) {
+      setNotice({ text: String(e), error: true });
+    }
+  }, [t]);
+
+  // Dismiss the track menu on any click, scroll or Escape.
+  useEffect(() => {
+    if (!context) return;
+    const dismiss = () => setContext(null);
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setContext(null); };
+    window.addEventListener("click", dismiss);
+    window.addEventListener("scroll", dismiss, true);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("click", dismiss);
+      window.removeEventListener("scroll", dismiss, true);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [context]);
+
   const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value), []);
 
   const fmt = (ms: number) => {
@@ -149,15 +195,52 @@ export default function MediaLibrary() {
         {tracks.map((tr) => (
           <div key={tr.id} style={S.track}
             title={tr.file_path}
-            onDoubleClick={() => addToPlaylist(tr)}>
-            <div style={S.name}>{tr.title}</div>
-            <div style={S.meta}>
-              <span>{tr.artist || t("library.unknownArtist")}</span>
-              {tr.duration_ms > 0 && <span style={{ fontFamily: "var(--font-mono)" }}>{fmt(tr.duration_ms)}</span>}
+            onDoubleClick={() => addToPlaylist(tr)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setContext({ track: tr, x: e.clientX, y: e.clientY });
+            }}>
+            <div style={S.trackBody}>
+              <div style={S.name}>{tr.title}</div>
+              <div style={S.meta}>
+                <span>{tr.artist || t("library.unknownArtist")}</span>
+                {tr.duration_ms > 0 && <span style={{ fontFamily: "var(--font-mono)" }}>{fmt(tr.duration_ms)}</span>}
+              </div>
             </div>
+            <button style={S.marks} title={t("analysis.media.marks")}
+              aria-label={t("analysis.media.marks")}
+              onClick={(e) => { e.stopPropagation(); setCueTrack(tr); }}
+              onDoubleClick={(e) => e.stopPropagation()}>✎</button>
           </div>
         ))}
       </div>
+
+      {context && (
+        <div style={S.ctxOverlay} onMouseDown={() => setContext(null)}
+          onContextMenu={(e) => { e.preventDefault(); setContext(null); }}>
+          <div style={{
+            ...S.ctxMenu,
+            left: Math.min(context.x, Math.max(0, window.innerWidth - 200)),
+            top: Math.min(context.y, Math.max(0, window.innerHeight - 110)),
+          }}
+            role="menu" aria-label={t("analysis.media.trackActions")}
+            onMouseDown={(e) => e.stopPropagation()}>
+            <div style={S.ctxTitle}>{context.track.title}</div>
+            <button style={S.ctxItem} role="menuitem"
+              onClick={() => { setCueTrack(context.track); setContext(null); }}>
+              {t("analysis.media.marks")}
+            </button>
+            <button style={S.ctxItem} role="menuitem"
+              onClick={() => { void prelisten(context.track); setContext(null); }}>
+              {t("analysis.media.prelisten")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {cueTrack && (
+        <CueEditor trackId={cueTrack.id} title={cueTrack.title} onClose={() => setCueTrack(null)} />
+      )}
     </div>
   );
 }
