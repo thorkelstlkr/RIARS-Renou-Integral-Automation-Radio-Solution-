@@ -125,6 +125,7 @@ export const audio = {
 export const preview = {
   /** Pre-listen a library track from `fromMs`, at its normalised level. */
   play: (trackId: number, fromMs = 0) => invoke<PreviewState>("preview_play", { trackId, fromMs }),
+  playPath: (path: string, fromMs: number) => invoke<PreviewState>("preview_play_path", { path, fromMs }),
   stop: () => invoke<PreviewState>("preview_stop"),
   state: () => invoke<PreviewState>("preview_state"),
 };

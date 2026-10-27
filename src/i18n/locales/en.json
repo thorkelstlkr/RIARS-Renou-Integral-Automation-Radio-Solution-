@@ -706,5 +706,32 @@
       "agentNote": "An AI agent can also review marks over MCP (list_tracks_needing_review and set_track_cues).",
       "detectorSaved": "Detector saved."
     }
+  },
+  "contextMenu": {
+    "selected": "{{count}} selected",
+    "playNow": "Play now",
+    "playNext": "Play next",
+    "prelisten": "Pre-listen",
+    "marks": "Marks…",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "moveTop": "Move to top",
+    "moveBottom": "Move to bottom",
+    "removeFromPlaylist": "Remove from playlist",
+    "removePlayed": "Remove played items",
+    "clearPlaylist": "Clear the playlist",
+    "confirmClear": "Clear the whole playlist?",
+    "openFolder": "Show in folder",
+    "copyPath": "Copy path",
+    "notInLibrary": "This file is not in the library.",
+    "addToPlaylist": "Add to playlist",
+    "detectMarks": "Detect marks",
+    "analysing": "Analysing {{count}} tracks…",
+    "removeFromLibrary": "Remove from library…",
+    "confirmRemoveTracks": "Remove {{count}} tracks from the library? The files stay on disk, and the tracks leave their categories.",
+    "removedTracks": "{{count}} tracks removed from the library.",
+    "pathCopied": "Path copied.",
+    "keyEnter": "Enter",
+    "keyDelete": "Del"
   }
 }

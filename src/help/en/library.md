@@ -28,7 +28,24 @@ The counter under the search box shows the number of matching tracks. The list l
 
 ## Add a track to the playlist
 
-**Double-click** a track to add it to the **Playlist**. It goes at the end of the current list. You can then start it from the playlist, or let it wait its turn.
+**Double-click** a track, or press **Enter**, to add it to the **Playlist**. It goes at the end of the current list. You can then start it from the playlist, or let it wait its turn.
+
+You can select several tracks: **Ctrl+click** adds or removes one, **Shift+click** selects a range and **Ctrl+A** selects all.
+
+## Right-click menu
+
+Right-click a track, or the selection:
+
+| Option | What it does |
+|---|---|
+| **Add to playlist** | At the end of the playlist. |
+| **Play next** | Right after what is playing now. |
+| **Pre-listen** | On the [pre-listen card](topic:sound-cards), not on air. |
+| **Marks…** | Opens the [intro and outro](topic:intro-outro) editor. |
+| **Detect marks** | Analyses the chosen tracks; hand-set marks are kept. |
+| **Show in folder** | Shows the file in the file manager. |
+| **Copy path** | Copies the file path. |
+| **Remove from library…** | Asks first. The file **stays on disk**, but the track leaves its categories. **Delete** does the same. |
 
 > Tip: the library list is for choosing music. For the order of the show, use the [Playlist](topic:playlist) tab.
 

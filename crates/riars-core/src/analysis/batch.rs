@@ -349,7 +349,8 @@ mod tests {
         let (program, args): (&str, Vec<String>) = if cfg!(windows) {
             ("powershell", vec!["-NoProfile".into(), "-Command".into(), "Start-Sleep 30;".into()])
         } else {
-            ("sleep", vec!["30".into()])
+            // The file name becomes `$0` of the script and is ignored.
+            ("sh", vec!["-c".into(), "sleep 30".into()])
         };
         let cancel = Arc::new(AtomicBool::new(false));
         let flag = Arc::clone(&cancel);

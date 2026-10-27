@@ -146,6 +146,50 @@ impl Playlist {
         }
     }
 
+    /// Insert `items` at `index` (clamped to the end), keeping the item on air current.
+    pub fn insert_items(&mut self, index: usize, items: Vec<PlaylistItem>) {
+        let index = index.min(self.items.len());
+        let count = items.len();
+        let shifts_current = !self.items.is_empty() && index <= self.current_index;
+        self.items.splice(index..index, items);
+        if shifts_current {
+            self.current_index += count;
+        }
+    }
+
+    /// Where "play next" inserts: right after the item on air (the start when empty).
+    pub fn next_position(&self) -> usize {
+        if self.items.is_empty() { 0 } else { self.current_index + 1 }
+    }
+
+    /// Remove the items at `indexes` (any order, duplicates and unknown ones ignored).
+    /// Returns how many went.
+    pub fn remove_items(&mut self, indexes: &[usize]) -> usize {
+        let mut sorted: Vec<usize> = indexes.iter().copied().filter(|&i| i < self.items.len()).collect();
+        sorted.sort_unstable();
+        sorted.dedup();
+        for &index in sorted.iter().rev() {
+            self.remove_item(index);
+        }
+        sorted.len()
+    }
+
+    /// Remove the items with these ids. Ids, not positions, so a list that changed in
+    /// the meantime (automation, auto-advance) never loses the wrong item.
+    pub fn remove_ids(&mut self, ids: &[String]) -> usize {
+        let indexes: Vec<usize> = ids.iter().filter_map(|id| self.index_of(id)).collect();
+        self.remove_items(&indexes)
+    }
+
+    /// Move the item at `from` right after the item on air.
+    pub fn move_to_next(&mut self, from: usize) {
+        if from >= self.items.len() || from == self.current_index {
+            return;
+        }
+        let to = if from > self.current_index { self.current_index + 1 } else { self.current_index };
+        self.move_item(from, to);
+    }
+
     pub fn move_item(&mut self, from: usize, to: usize) {
         if from < self.items.len() && to < self.items.len() {
             let item = self.items.remove(from);
@@ -266,5 +310,55 @@ mod tests {
         assert!(p.advance().is_none());
         p.repeat_mode = RepeatMode::All;
         assert_eq!(p.advance().unwrap().title, "a");
+    }
+
+    fn titles(p: &Playlist) -> Vec<&str> {
+        p.items.iter().map(|i| i.title.as_str()).collect()
+    }
+
+    fn five() -> Playlist {
+        let mut p = Playlist::new("t".into());
+        for t in ["a", "b", "c", "d", "e"] {
+            p.add_item(format!("{t}.mp3"), t.to_string(), String::new(), 0);
+        }
+        p
+    }
+
+    #[test]
+    fn insert_keeps_the_item_on_air() {
+        let mut p = five();
+        p.current_index = 2;
+        let at = p.next_position();
+        p.insert_items(at, vec![PlaylistItem::new("x.mp3".into(), "x".into(), String::new(), 0)]);
+        assert_eq!(titles(&p), ["a", "b", "c", "x", "d", "e"]);
+        assert_eq!(p.current_item().unwrap().title, "c");
+        p.insert_items(0, vec![PlaylistItem::new("y.mp3".into(), "y".into(), String::new(), 0)]);
+        assert_eq!(p.current_item().unwrap().title, "c");
+        p.insert_items(99, vec![PlaylistItem::new("z.mp3".into(), "z".into(), String::new(), 0)]);
+        assert_eq!(p.items.last().unwrap().title, "z");
+        let mut empty = Playlist::new("e".into());
+        let at = empty.next_position();
+        empty.insert_items(at, vec![PlaylistItem::new("x.mp3".into(), "x".into(), String::new(), 0)]);
+        assert_eq!((empty.len(), empty.current_index), (1, 0));
+    }
+
+    #[test]
+    fn remove_many_and_move_to_next() {
+        let mut p = five();
+        p.current_index = 2;
+        assert_eq!(p.remove_items(&[4, 0, 0, 9]), 2);
+        assert_eq!(titles(&p), ["b", "c", "d"]);
+        assert_eq!(p.current_item().unwrap().title, "c");
+        let mut p = five();
+        p.current_index = 2;
+        p.move_to_next(4);
+        assert_eq!(titles(&p), ["a", "b", "c", "e", "d"]);
+        p.move_to_next(0);
+        assert_eq!(titles(&p), ["b", "c", "a", "e", "d"]);
+        assert_eq!(p.current_item().unwrap().title, "c");
+        let ids = vec![p.items[0].id.clone(), "gone".to_string()];
+        assert_eq!(p.remove_ids(&ids), 1);
+        assert_eq!(titles(&p), ["c", "a", "e", "d"]);
+        assert_eq!(p.current_item().unwrap().title, "c");
     }
 }

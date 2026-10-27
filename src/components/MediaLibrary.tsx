@@ -4,7 +4,8 @@ import { useCommand } from "../commands";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import CueEditor from "../analysis/CueEditor";
-import { preview } from "../analysis/api";
+import { analysis, preview } from "../analysis/api";
+import ContextMenu, { type ContextEntry } from "../menu/ContextMenu";
 
 interface Track {
   id: number;
@@ -25,11 +26,12 @@ const S: Record<string, React.CSSProperties> = {
   search: { padding: "8px 12px", borderBottom: "1px solid var(--border)" },
   input: { width: "100%", fontSize: 13 },
   notice: { padding: "6px 12px", fontSize: 12, borderBottom: "1px solid var(--border)", wordBreak: "break-word" },
-  list: { flex: 1, overflowY: "auto" },
+  list: { flex: 1, overflowY: "auto", outline: "none" },
+  selected: { background: "rgba(233,69,96,0.18)" },
   count: { padding: "4px 12px", fontSize: 11, color: "var(--text-muted)", borderBottom: "1px solid var(--border)" },
   empty: { padding: "24px 12px", textAlign: "center", color: "var(--text-muted)", fontSize: 13 },
   track: {
-    display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", cursor: "pointer",
+    display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", cursor: "pointer", userSelect: "none",
     borderBottom: "1px solid rgba(255,255,255,0.03)",
   },
   trackBody: { flex: 1, minWidth: 0 },
@@ -39,16 +41,6 @@ const S: Record<string, React.CSSProperties> = {
     padding: "2px 7px", borderRadius: 4, fontSize: 13, color: "var(--text-muted)",
     flexShrink: 0, background: "transparent",
   },
-  ctxOverlay: { position: "fixed", inset: 0, zIndex: 1000 },
-  ctxMenu: {
-    position: "fixed", minWidth: 160, background: "var(--bg-secondary)", border: "1px solid var(--border)",
-    borderRadius: "var(--radius)", boxShadow: "0 8px 24px rgba(0,0,0,0.5)", padding: 4,
-  },
-  ctxTitle: {
-    padding: "4px 8px 6px", fontSize: 11, color: "var(--text-muted)", borderBottom: "1px solid var(--border)",
-    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const, maxWidth: 240,
-  },
-  ctxItem: { display: "block", width: "100%", textAlign: "left" as const, padding: "6px 8px", fontSize: 12, borderRadius: 4 },
 };
 
 /// Tracks per page: the list grows as it is scrolled, never the whole library at once.
@@ -62,7 +54,10 @@ export default function MediaLibrary() {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
   const [cueTrack, setCueTrack] = useState<Track | null>(null);
-  const [context, setContext] = useState<{ track: Track; x: number; y: number } | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [anchor, setAnchor] = useState<number | null>(null);
+  const [ctx, setCtx] = useState<{ x: number; y: number } | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   // Which search the loaded pages belong to, so a late page of an old search is dropped.
   const query = useRef({ search: "", busy: false, generation: 0 });
 
@@ -125,10 +120,14 @@ export default function MediaLibrary() {
   useCommand("library.addFolder", addFolder);
   useCommand("library.search", useCallback(() => searchInput.current?.focus(), []));
 
-  const addToPlaylist = useCallback(async (track: Track) => {
+  const insertTracks = useCallback(async (list: Track[], position: "End" | "Next") => {
+    if (list.length === 0) return;
     try {
-      await invoke("playlist_add", {
-        path: track.file_path, title: track.title, artist: track.artist, durationMs: track.duration_ms,
+      await invoke("playlist_insert", {
+        tracks: list.map((track) => ({
+          path: track.file_path, title: track.title, artist: track.artist, durationMs: track.duration_ms,
+        })),
+        position,
       });
       window.dispatchEvent(new Event("playlist-changed"));
       setNotice(null);
@@ -136,6 +135,8 @@ export default function MediaLibrary() {
       setNotice({ text: String(e), error: true });
     }
   }, []);
+
+  const addToPlaylist = useCallback((track: Track) => { void insertTracks([track], "End"); }, [insertTracks]);
 
   const prelisten = useCallback(async (track: Track) => {
     try {
@@ -146,20 +147,163 @@ export default function MediaLibrary() {
     }
   }, [t]);
 
-  // Dismiss the track menu on any click, scroll or Escape.
+  // Forget the rows that left the list (new search, removed tracks).
   useEffect(() => {
-    if (!context) return;
-    const dismiss = () => setContext(null);
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setContext(null); };
-    window.addEventListener("click", dismiss);
-    window.addEventListener("scroll", dismiss, true);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("click", dismiss);
-      window.removeEventListener("scroll", dismiss, true);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [context]);
+    setSelected((prev) => {
+      if (prev.size === 0) return prev;
+      const valid = new Set(tracks.map((tr) => tr.id));
+      let changed = false;
+      const next = new Set<number>();
+      for (const id of prev) {
+        if (valid.has(id)) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+    setAnchor((prev) => (prev !== null && tracks.some((tr) => tr.id === prev) ? prev : null));
+  }, [tracks]);
+
+  const selectedTracks = () => tracks.filter((tr) => selected.has(tr.id));
+  const selectedIndexes = () => tracks.map((tr, i) => (selected.has(tr.id) ? i : -1)).filter((i) => i >= 0);
+
+  const selectOnly = (id: number) => {
+    setSelected(new Set([id]));
+    setAnchor(id);
+  };
+
+  const selectRange = (from: number, to: number) => {
+    const set = new Set<number>();
+    for (let i = Math.min(from, to); i <= Math.max(from, to); i++) set.add(tracks[i].id);
+    setSelected(set);
+  };
+
+  const onRowClick = (e: React.MouseEvent, i: number) => {
+    const id = tracks[i].id;
+    if (e.shiftKey && anchor !== null) {
+      const a = tracks.findIndex((tr) => tr.id === anchor);
+      if (a >= 0) { selectRange(a, i); return; }
+    }
+    if (e.ctrlKey || e.metaKey) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+      setAnchor(id);
+      return;
+    }
+    selectOnly(id);
+  };
+
+  const onRowContext = (e: React.MouseEvent, i: number) => {
+    e.preventDefault();
+    const id = tracks[i].id;
+    if (!selected.has(id)) selectOnly(id);
+    setCtx({ x: e.clientX, y: e.clientY });
+  };
+
+  const moveSelection = (dir: 1 | -1, extend: boolean) => {
+    if (tracks.length === 0) return;
+    const idxs = selectedIndexes();
+    const current = idxs.length > 0 ? idxs[idxs.length - 1] : -1;
+    const next = Math.max(0, Math.min(tracks.length - 1, current + dir));
+    if (!extend) {
+      selectOnly(tracks[next].id);
+      return;
+    }
+    const a = anchor !== null ? tracks.findIndex((tr) => tr.id === anchor) : -1;
+    const from = a >= 0 ? a : current >= 0 ? current : next;
+    selectRange(from, next);
+    setAnchor(tracks[from].id);
+  };
+
+  const openMenuAtSelection = () => {
+    if (tracks.length === 0) return;
+    let idxs = selectedIndexes();
+    if (idxs.length === 0) {
+      selectOnly(tracks[0].id);
+      idxs = [0];
+    }
+    const row = listRef.current?.querySelector<HTMLElement>(`[data-row-index="${idxs[0]}"]`);
+    const rect = row?.getBoundingClientRect();
+    setCtx({
+      x: rect ? rect.left + 40 : 80,
+      y: rect ? rect.top + rect.height / 2 : 80,
+    });
+  };
+
+  const removeFromLibrary = async () => {
+    const list = selectedTracks();
+    if (list.length === 0) return;
+    if (!window.confirm(t("contextMenu.confirmRemoveTracks", { count: list.length }))) return;
+    try {
+      const removed = await invoke<number>("library_remove_tracks", { ids: list.map((tr) => tr.id) });
+      await loadTracks();
+      setNotice({ text: t("contextMenu.removedTracks", { count: removed }) });
+      window.dispatchEvent(new Event("playlist-changed"));
+    } catch (e) {
+      setNotice({ text: String(e), error: true });
+    }
+  };
+
+  const detectMarks = async () => {
+    const ids = selectedTracks().map((tr) => tr.id);
+    if (ids.length === 0) return;
+    try {
+      await analysis.batchStart({ Tracks: { track_ids: ids } }, true);
+      setNotice({ text: t("contextMenu.analysing", { count: ids.length }) });
+    } catch (e) {
+      setNotice({ text: String(e), error: true });
+    }
+  };
+
+  const copyPaths = async () => {
+    const paths = selectedTracks().map((tr) => tr.file_path);
+    if (paths.length === 0) return;
+    try {
+      await navigator.clipboard.writeText(paths.join("\n"));
+      setNotice({ text: t("contextMenu.pathCopied") });
+    } catch (e) {
+      setNotice({ text: String(e), error: true });
+    }
+  };
+
+  const onListKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+    const idxs = selectedIndexes();
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      moveSelection(e.key === "ArrowDown" ? 1 : -1, e.shiftKey);
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+      e.preventDefault();
+      setSelected(new Set(tracks.map((tr) => tr.id)));
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setSelected(new Set());
+      setAnchor(null);
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (idxs.length > 0) void insertTracks(selectedTracks(), "End");
+      return;
+    }
+    if (e.key === "Delete") {
+      e.preventDefault();
+      if (idxs.length > 0) void removeFromLibrary();
+      return;
+    }
+    if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) {
+      e.preventDefault();
+      openMenuAtSelection();
+    }
+  };
 
   const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value), []);
 
@@ -167,6 +311,50 @@ export default function MediaLibrary() {
     const s = Math.floor(ms / 1000);
     return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
   };
+
+  const menuTracks = selectedTracks();
+  const menuTrack = menuTracks.length === 1 ? menuTracks[0] : null;
+  const menuTitle = menuTrack ? menuTrack.title : t("contextMenu.selected", { count: selected.size });
+
+  const libraryMenu = (): ContextEntry[] => [
+    {
+      label: t("contextMenu.addToPlaylist"), shortcut: t("contextMenu.keyEnter"), disabled: menuTracks.length === 0,
+      action: () => { void insertTracks(menuTracks, "End"); },
+    },
+    {
+      label: t("contextMenu.playNext"), disabled: menuTracks.length === 0,
+      action: () => { void insertTracks(menuTracks, "Next"); },
+    },
+    {
+      label: t("contextMenu.prelisten"), disabled: menuTrack === null,
+      action: () => { if (menuTrack) void prelisten(menuTrack); },
+    },
+    {
+      label: t("contextMenu.marks"), disabled: menuTrack === null,
+      action: () => { if (menuTrack) setCueTrack(menuTrack); },
+    },
+    {
+      label: t("contextMenu.detectMarks"), disabled: menuTracks.length === 0,
+      action: () => { void detectMarks(); },
+    },
+    "separator",
+    {
+      label: t("contextMenu.openFolder"), disabled: menuTrack === null,
+      action: () => {
+        if (menuTrack) invoke("reveal_in_folder", { path: menuTrack.file_path }).catch((e) => setNotice({ text: String(e), error: true }));
+      },
+    },
+    {
+      label: t("contextMenu.copyPath"), disabled: menuTracks.length === 0,
+      action: () => { void copyPaths(); },
+    },
+    "separator",
+    {
+      label: t("contextMenu.removeFromLibrary"), shortcut: t("contextMenu.keyDelete"), danger: true,
+      disabled: menuTracks.length === 0,
+      action: () => { void removeFromLibrary(); },
+    },
+  ];
 
   return (
     <div style={S.wrap}>
@@ -187,19 +375,19 @@ export default function MediaLibrary() {
         </div>
       )}
       <div style={S.count} data-testid="library-count">{t("library.count", { count: total })}</div>
-      <div style={S.list} onScroll={onScroll} data-testid="library-list">
+      <div ref={listRef} style={S.list} onScroll={onScroll} tabIndex={0} onKeyDown={onListKeyDown}
+        onClick={() => listRef.current?.focus()} data-testid="library-list">
         {loading && <div style={S.empty}>{t("library.loading")}</div>}
         {!loading && tracks.length === 0 && (
           <div style={S.empty}>{t("library.empty")}</div>
         )}
-        {tracks.map((tr) => (
-          <div key={tr.id} style={S.track}
+        {tracks.map((tr, i) => (
+          <div key={tr.id} data-row-index={i}
+            style={{ ...S.track, ...(selected.has(tr.id) ? S.selected : {}) }}
             title={tr.file_path}
-            onDoubleClick={() => addToPlaylist(tr)}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setContext({ track: tr, x: e.clientX, y: e.clientY });
-            }}>
+            onClick={(e) => onRowClick(e, i)}
+            onContextMenu={(e) => onRowContext(e, i)}
+            onDoubleClick={() => addToPlaylist(tr)}>
             <div style={S.trackBody}>
               <div style={S.name}>{tr.title}</div>
               <div style={S.meta}>
@@ -215,27 +403,8 @@ export default function MediaLibrary() {
         ))}
       </div>
 
-      {context && (
-        <div style={S.ctxOverlay} onMouseDown={() => setContext(null)}
-          onContextMenu={(e) => { e.preventDefault(); setContext(null); }}>
-          <div style={{
-            ...S.ctxMenu,
-            left: Math.min(context.x, Math.max(0, window.innerWidth - 200)),
-            top: Math.min(context.y, Math.max(0, window.innerHeight - 110)),
-          }}
-            role="menu" aria-label={t("analysis.media.trackActions")}
-            onMouseDown={(e) => e.stopPropagation()}>
-            <div style={S.ctxTitle}>{context.track.title}</div>
-            <button style={S.ctxItem} role="menuitem"
-              onClick={() => { setCueTrack(context.track); setContext(null); }}>
-              {t("analysis.media.marks")}
-            </button>
-            <button style={S.ctxItem} role="menuitem"
-              onClick={() => { void prelisten(context.track); setContext(null); }}>
-              {t("analysis.media.prelisten")}
-            </button>
-          </div>
-        </div>
+      {ctx && (
+        <ContextMenu x={ctx.x} y={ctx.y} title={menuTitle} items={libraryMenu()} onClose={() => setCtx(null)} />
       )}
 
       {cueTrack && (

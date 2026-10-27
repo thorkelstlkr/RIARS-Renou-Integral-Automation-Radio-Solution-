@@ -706,5 +706,32 @@
       "agentNote": "Un agent d'IA també pot revisar les marques per MCP (list_tracks_needing_review i set_track_cues).",
       "detectorSaved": "Detector desat."
     }
+  },
+  "contextMenu": {
+    "selected": "{{count}} seleccionades",
+    "playNow": "Reprodueix ara",
+    "playNext": "Reprodueix a continuació",
+    "prelisten": "Preescolta",
+    "marks": "Marques…",
+    "moveUp": "Puja",
+    "moveDown": "Baixa",
+    "moveTop": "Al principi",
+    "moveBottom": "Al final",
+    "removeFromPlaylist": "Treu de la llista",
+    "removePlayed": "Treu les ja emeses",
+    "clearPlaylist": "Buida la llista",
+    "confirmClear": "Vols buidar tota la llista de reproducció?",
+    "openFolder": "Obre la carpeta del fitxer",
+    "copyPath": "Copia el camí",
+    "notInLibrary": "Aquest fitxer no és a la biblioteca.",
+    "addToPlaylist": "Afegeix a la llista",
+    "detectMarks": "Detecta les marques",
+    "analysing": "S'estan analitzant {{count}} pistes…",
+    "removeFromLibrary": "Treu de la biblioteca…",
+    "confirmRemoveTracks": "Vols treure {{count}} pistes de la biblioteca? Els fitxers no s'esborren del disc, i les pistes surten de les seves categories.",
+    "removedTracks": "{{count}} pistes tretes de la biblioteca.",
+    "pathCopied": "Camí copiat.",
+    "keyEnter": "Retorn",
+    "keyDelete": "Supr"
   }
 }

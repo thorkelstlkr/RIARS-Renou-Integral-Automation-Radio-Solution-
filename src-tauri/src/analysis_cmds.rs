@@ -353,37 +353,43 @@ pub async fn preview_play(
     track_id: i64,
     from_ms: u64,
 ) -> Result<PreviewState, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        let state = app.state::<AppState>();
-        let path = {
-            let library = state.library.lock().map_err(|e| e.to_string())?;
-            library
-                .get_track(track_id)?
-                .ok_or_else(|| format!("No track {track_id}"))?
-                .file_path
-        };
-        let config = {
-            let engine = state.engine.lock().map_err(|e| e.to_string())?;
-            engine.normalization_config()
-        };
-        let (loudness, peak) = {
-            let library = state.library.lock().map_err(|e| e.to_string())?;
-            library
-                .loudness_by_path(&path)?
-                .map_or((None, None), |(loudness, peak)| (Some(loudness), peak))
-        };
-        let gain = config.gain_db(loudness, peak);
-        if state.preview.lock().map_err(|e| e.to_string())?.device().is_none() {
-            return Err("No pre-listen sound card chosen".to_string());
-        }
-        // Decode with no lock held, so polling the state and Stop stay responsive.
-        let player = PreviewPlayer::load(Path::new(&path), gain)?;
-        let mut preview = state.preview.lock().map_err(|e| e.to_string())?;
-        preview.play_loaded(player, Path::new(&path), from_ms)?;
-        Ok(preview.state())
+    blocking(app, move |state| {
+        let path = state
+            .library
+            .lock()
+            .map_err(|e| e.to_string())?
+            .get_track(track_id)?
+            .ok_or_else(|| format!("No track {track_id}"))?
+            .file_path;
+        play_path(state, &path, from_ms)
     })
     .await
-    .map_err(|e| e.to_string())?
+}
+
+/// Pre-listen a file by path, for playlist items that are not in the library.
+#[tauri::command]
+pub async fn preview_play_path(app: AppHandle, path: String, from_ms: u64) -> Result<PreviewState, String> {
+    blocking(app, move |state| play_path(state, &path, from_ms)).await
+}
+
+/// Pre-listen `path` at the gain it would get on air.
+fn play_path(state: &AppState, path: &str, from_ms: u64) -> Result<PreviewState, String> {
+    let config = state.engine.lock().map_err(|e| e.to_string())?.normalization_config();
+    let (loudness, peak) = state
+        .library
+        .lock()
+        .map_err(|e| e.to_string())?
+        .loudness_by_path(path)?
+        .map_or((None, None), |(loudness, peak)| (Some(loudness), peak));
+    let gain = config.gain_db(loudness, peak);
+    if state.preview.lock().map_err(|e| e.to_string())?.device().is_none() {
+        return Err("No pre-listen sound card chosen".to_string());
+    }
+    // Decode with no lock held, so polling the state and Stop stay responsive.
+    let player = PreviewPlayer::load(Path::new(path), gain)?;
+    let mut preview = state.preview.lock().map_err(|e| e.to_string())?;
+    preview.play_loaded(player, Path::new(path), from_ms)?;
+    Ok(preview.state())
 }
 
 #[tauri::command]

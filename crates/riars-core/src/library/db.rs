@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::playlist::playlist::Playlist;
 use serde::{Deserialize, Serialize};
@@ -302,6 +302,19 @@ impl MediaLibrary {
         Ok(track)
     }
 
+    /// The track whose file is `file_path`, if it is in the library.
+    pub fn track_by_path(&self, file_path: &str) -> Result<Option<Track>, String> {
+        let id: Option<i64> = self
+            .db
+            .query_row("SELECT id FROM tracks WHERE file_path = ?1", params![file_path], |row| row.get(0))
+            .optional()
+            .map_err(|e| format!("Query error: {e}"))?;
+        match id {
+            Some(id) => self.get_track(id),
+            None => Ok(None),
+        }
+    }
+
     /// Save `playlist` under `name`, replacing a saved playlist of the same name
     /// (case-insensitive). Returns the saved playlist's id.
     pub fn save_playlist(&mut self, name: &str, playlist: &Playlist) -> Result<String, String> {
@@ -595,6 +608,22 @@ fn read_tags(path: &Path) -> TrackTags {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn track_by_path_and_removal() {
+        let mut lib = MediaLibrary::open(":memory:").unwrap();
+        lib.conn_mut()
+            .execute(
+                "INSERT INTO tracks (title, artist, album, genre, duration_ms, file_path) VALUES ('A', '', '', '', 1000, '/m/a.mp3')",
+                [],
+            )
+            .unwrap();
+        let track = lib.track_by_path("/m/a.mp3").unwrap().unwrap();
+        assert_eq!(track.title, "A");
+        assert!(lib.track_by_path("/m/b.mp3").unwrap().is_none());
+        assert!(lib.delete_track(track.id).unwrap());
+        assert!(lib.track_by_path("/m/a.mp3").unwrap().is_none());
+    }
 
     #[test]
     fn save_load_list_delete_playlists() {

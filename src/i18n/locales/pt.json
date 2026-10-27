@@ -706,5 +706,32 @@
       "agentNote": "Um agente de IA também pode rever as marcas por MCP (list_tracks_needing_review e set_track_cues).",
       "detectorSaved": "Detetor guardado."
     }
+  },
+  "contextMenu": {
+    "selected": "{{count}} selecionadas",
+    "playNow": "Reproduzir agora",
+    "playNext": "Reproduzir a seguir",
+    "prelisten": "Pré-escuta",
+    "marks": "Marcas…",
+    "moveUp": "Subir",
+    "moveDown": "Descer",
+    "moveTop": "Para o início",
+    "moveBottom": "Para o fim",
+    "removeFromPlaylist": "Retirar da lista",
+    "removePlayed": "Retirar as já emitidas",
+    "clearPlaylist": "Limpar a lista",
+    "confirmClear": "Limpar toda a lista de reprodução?",
+    "openFolder": "Abrir a pasta do ficheiro",
+    "copyPath": "Copiar o caminho",
+    "notInLibrary": "Este ficheiro não está na biblioteca.",
+    "addToPlaylist": "Adicionar à lista",
+    "detectMarks": "Detetar marcas",
+    "analysing": "A analisar {{count}} faixas…",
+    "removeFromLibrary": "Retirar da biblioteca…",
+    "confirmRemoveTracks": "Retirar {{count}} faixas da biblioteca? Os ficheiros ficam no disco, e as faixas saem das suas categorias.",
+    "removedTracks": "{{count}} faixas retiradas da biblioteca.",
+    "pathCopied": "Caminho copiado.",
+    "keyEnter": "Enter",
+    "keyDelete": "Del"
   }
 }

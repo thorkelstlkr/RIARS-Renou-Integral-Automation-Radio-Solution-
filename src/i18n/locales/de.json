@@ -706,5 +706,32 @@
       "agentNote": "Ein KI-Agent kann die Marken auch über MCP prüfen (list_tracks_needing_review und set_track_cues).",
       "detectorSaved": "Erkennung gespeichert."
     }
+  },
+  "contextMenu": {
+    "selected": "{{count}} ausgewählt",
+    "playNow": "Jetzt abspielen",
+    "playNext": "Als Nächstes abspielen",
+    "prelisten": "Vorhören",
+    "marks": "Marken…",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "moveTop": "Ganz nach oben",
+    "moveBottom": "Ganz nach unten",
+    "removeFromPlaylist": "Aus der Playlist entfernen",
+    "removePlayed": "Gespielte entfernen",
+    "clearPlaylist": "Playlist leeren",
+    "confirmClear": "Die ganze Playlist leeren?",
+    "openFolder": "Im Ordner anzeigen",
+    "copyPath": "Pfad kopieren",
+    "notInLibrary": "Diese Datei ist nicht in der Bibliothek.",
+    "addToPlaylist": "Zur Playlist hinzufügen",
+    "detectMarks": "Marken erkennen",
+    "analysing": "{{count}} Titel werden analysiert…",
+    "removeFromLibrary": "Aus der Bibliothek entfernen…",
+    "confirmRemoveTracks": "{{count}} Titel aus der Bibliothek entfernen? Die Dateien bleiben auf der Festplatte, und die Titel verlassen ihre Kategorien.",
+    "removedTracks": "{{count}} Titel aus der Bibliothek entfernt.",
+    "pathCopied": "Pfad kopiert.",
+    "keyEnter": "Eingabe",
+    "keyDelete": "Entf"
   }
 }

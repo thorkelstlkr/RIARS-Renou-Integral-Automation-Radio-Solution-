@@ -24,7 +24,9 @@ The dot colour follows the item kind: music, **Jingle**, **Bumper**, **Station I
 
 ## Reorder and edit
 
-Use the arrows on each row for **Move up** and **Move down**, the cross for **Remove**, or **Clear** to empty the list. **Double-click** a row to jump to it and start playing.
+Use the arrows on each row for **Move up** and **Move down** (or **Alt+Up / Alt+Down**), the cross for **Remove** (or **Delete**, also for several selected items), or **Clear** to empty the list. **Double-click** a row, or press **Enter**, to jump to it and start playing. **Ctrl+click**, **Shift+click** and **Ctrl+A** select several items.
+
+**Right-click** an item for: Play now, Play next, Pre-listen, Marks…, Move up, Move down, Move to top, Move to bottom, Remove from playlist, Remove played items, Clear the playlist, Show in folder and Copy path.
 
 Items added by the automation appear at the end. You can move or remove them; the generator respects what you leave and only fills the end of the list. It does not rewrite the items already there.
 

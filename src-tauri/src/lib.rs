@@ -446,6 +446,100 @@ fn playlist_move(from: usize, to: usize, state: State<AppState>) -> Result<Playl
     Ok(engine.playlist().clone())
 }
 
+/// A library track to put in the playlist.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct NewItem {
+    path: String,
+    title: String,
+    artist: String,
+    duration_ms: u64,
+}
+
+#[derive(serde::Deserialize)]
+enum InsertPosition {
+    End,
+    /// Right after the item on air.
+    Next,
+}
+
+#[tauri::command]
+fn playlist_insert(tracks: Vec<NewItem>, position: InsertPosition, state: State<AppState>) -> Result<Playlist, String> {
+    if tracks.len() > 10_000 {
+        return Err("At most 10000 tracks at once".to_string());
+    }
+    let items = tracks
+        .into_iter()
+        .map(|t| riars_core::playlist::playlist::PlaylistItem::new(t.path, t.title, t.artist, t.duration_ms))
+        .collect();
+    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+    let playlist = engine.playlist_mut();
+    let at = match position {
+        InsertPosition::End => playlist.len(),
+        InsertPosition::Next => playlist.next_position(),
+    };
+    playlist.insert_items(at, items);
+    Ok(engine.playlist().clone())
+}
+
+#[tauri::command]
+fn playlist_remove_many(ids: Vec<String>, state: State<AppState>) -> Result<Playlist, String> {
+    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+    engine.playlist_mut().remove_ids(&ids);
+    Ok(engine.playlist().clone())
+}
+
+#[tauri::command]
+fn playlist_remove_played(state: State<AppState>) -> Result<Playlist, String> {
+    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+    engine.playlist_mut().prune_played(0);
+    Ok(engine.playlist().clone())
+}
+
+#[tauri::command]
+fn playlist_play_next(id: String, state: State<AppState>) -> Result<Playlist, String> {
+    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+    let playlist = engine.playlist_mut();
+    if let Some(index) = playlist.index_of(&id) {
+        playlist.move_to_next(index);
+    }
+    Ok(engine.playlist().clone())
+}
+
+/// Remove tracks from the library (the files stay on disk). Returns how many went.
+#[tauri::command]
+fn library_remove_tracks(ids: Vec<i64>, state: State<AppState>) -> Result<usize, String> {
+    let mut library = state.library.lock().map_err(|e| e.to_string())?;
+    let mut removed = 0;
+    for id in ids {
+        if library.delete_track(id)? {
+            removed += 1;
+        }
+    }
+    Ok(removed)
+}
+
+#[tauri::command]
+fn library_track_by_path(path: String, state: State<AppState>) -> Result<Option<Track>, String> {
+    state.library.lock().map_err(|e| e.to_string())?.track_by_path(&path)
+}
+
+/// Show `path` selected in the system file manager.
+#[tauri::command]
+fn reveal_in_folder(path: String) -> Result<(), String> {
+    let file = std::path::Path::new(&path);
+    if !file.is_file() {
+        return Err(format!("The file is not there: {path}"));
+    }
+    #[cfg(target_os = "windows")]
+    let result = std::process::Command::new("explorer").arg(format!("/select,{}", file.display())).spawn();
+    #[cfg(target_os = "macos")]
+    let result = std::process::Command::new("open").arg("-R").arg(file).spawn();
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    let result = std::process::Command::new("xdg-open").arg(file.parent().unwrap_or(file)).spawn();
+    result.map(|_| ()).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn playlist_clear(state: State<AppState>) -> Result<Playlist, String> {
     let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
@@ -687,6 +781,14 @@ pub fn run() {
             analysis_cmds::analysis_clear_track_cues,
             analysis_cmds::analysis_analyze_track,
             analysis_cmds::analysis_paths_cues,
+            analysis_cmds::preview_play_path,
+            playlist_insert,
+            playlist_remove_many,
+            playlist_remove_played,
+            playlist_play_next,
+            library_remove_tracks,
+            library_track_by_path,
+            reveal_in_folder,
             analysis_cmds::analysis_batch_start,
             analysis_cmds::analysis_batch_cancel,
             analysis_cmds::analysis_batch_status,

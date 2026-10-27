@@ -706,5 +706,32 @@
       "agentNote": "Un agent d'IA peut aussi vérifier les repères par MCP (list_tracks_needing_review et set_track_cues).",
       "detectorSaved": "Détecteur enregistré."
     }
+  },
+  "contextMenu": {
+    "selected": "{{count}} sélectionnés",
+    "playNow": "Lire maintenant",
+    "playNext": "Lire ensuite",
+    "prelisten": "Pré-écoute",
+    "marks": "Repères…",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "moveTop": "Tout en haut",
+    "moveBottom": "Tout en bas",
+    "removeFromPlaylist": "Retirer de la playlist",
+    "removePlayed": "Retirer les titres diffusés",
+    "clearPlaylist": "Vider la playlist",
+    "confirmClear": "Vider toute la playlist ?",
+    "openFolder": "Afficher dans le dossier",
+    "copyPath": "Copier le chemin",
+    "notInLibrary": "Ce fichier n'est pas dans la bibliothèque.",
+    "addToPlaylist": "Ajouter à la playlist",
+    "detectMarks": "Détecter les repères",
+    "analysing": "Analyse de {{count}} titres…",
+    "removeFromLibrary": "Retirer de la bibliothèque…",
+    "confirmRemoveTracks": "Retirer {{count}} titres de la bibliothèque ? Les fichiers restent sur le disque, et les titres quittent leurs catégories.",
+    "removedTracks": "{{count}} titres retirés de la bibliothèque.",
+    "pathCopied": "Chemin copié.",
+    "keyEnter": "Entrée",
+    "keyDelete": "Suppr"
   }
 }
