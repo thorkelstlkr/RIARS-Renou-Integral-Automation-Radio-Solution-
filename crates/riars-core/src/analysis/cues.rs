@@ -17,6 +17,8 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use super::loudness::LoudnessMeter;
+
 /// Analysis sample rate: voice-band features need no more than this.
 const RATE: u32 = 11_025;
 const FFT: usize = 512;
@@ -43,6 +45,10 @@ pub struct CueAnalysis {
     pub outro_ms: Option<u64>,
     /// 0 to 1: how clearly the vocal sections stand out.
     pub confidence: f32,
+    /// Integrated loudness (EBU R128) of the file as decoded, all channels.
+    pub loudness_lufs: Option<f32>,
+    /// Highest sample level (dBFS).
+    pub peak_dbfs: f32,
     /// Waveform for editors: peak level per bucket, 0-255.
     pub peaks: Vec<u8>,
 }
@@ -50,12 +56,19 @@ pub struct CueAnalysis {
 /// Decode `path` (mono, downsampled) and analyse it. Blocking: seconds on a Raspberry
 /// Pi for a song; run it on a worker thread, never on the audio thread.
 pub fn analyze_file(path: &Path, buckets: usize) -> Result<CueAnalysis, String> {
-    let (mono, rate) = decode_mono(path)?;
+    let (mono, rate, meter) = decode_mono(path)?;
     let samples = resample(&mono, rate, RATE);
-    Ok(analyze_samples(&samples, RATE, buckets))
+    let mut analysis = analyze_samples(&samples, RATE, buckets);
+    // Loudness from the file itself (full band, every channel), not the analysis copy.
+    if let Some(meter) = meter {
+        analysis.loudness_lufs = meter.integrated();
+        analysis.peak_dbfs = meter.peak_dbfs();
+    }
+    Ok(analysis)
 }
 
-fn decode_mono(path: &Path) -> Result<(Vec<f32>, u32), String> {
+/// Mono samples at the file's rate, and the loudness measured while decoding.
+fn decode_mono(path: &Path) -> Result<(Vec<f32>, u32, Option<LoudnessMeter>), String> {
     use symphonia::core::audio::SampleBuffer;
     use symphonia::core::codecs::DecoderOptions;
     use symphonia::core::formats::FormatOptions;
@@ -81,6 +94,7 @@ fn decode_mono(path: &Path) -> Result<(Vec<f32>, u32), String> {
         .map_err(|e| format!("Cannot decode {}: {e}", path.display()))?;
     let mut mono = Vec::new();
     let mut buffer: Option<SampleBuffer<f32>> = None;
+    let mut meter: Option<LoudnessMeter> = None;
     while let Ok(packet) = format.next_packet() {
         if packet.track_id() != track_id {
             continue;
@@ -93,9 +107,10 @@ fn decode_mono(path: &Path) -> Result<(Vec<f32>, u32), String> {
             *buf = SampleBuffer::new(decoded.capacity() as u64, spec);
         }
         buf.copy_interleaved_ref(decoded);
+        meter.get_or_insert_with(|| LoudnessMeter::new(rate, channels)).push(buf.samples());
         mono.extend(buf.samples().chunks(channels).map(|f| f.iter().sum::<f32>() / channels as f32));
     }
-    Ok((mono, rate))
+    Ok((mono, rate, meter))
 }
 
 /// Box-filter decimation (plus linear stepping for non-integer ratios): good enough
@@ -256,6 +271,9 @@ fn smooth(x: &[f32], half: usize) -> Vec<f32> {
 pub fn analyze_samples(samples: &[f32], rate: u32, buckets: usize) -> CueAnalysis {
     let duration_ms = samples.len() as u64 * 1000 / rate.max(1) as u64;
     let peaks = waveform(samples, buckets);
+    let mut meter = LoudnessMeter::new(rate, 1);
+    meter.push(samples);
+    let (loudness_lufs, peak_dbfs) = (meter.integrated(), meter.peak_dbfs());
     let frames = frames(samples, rate);
     let fps = rate as f32 / HOP as f32;
     let to_ms = |frame: usize| ((frame * HOP) as f32 * 1000.0 / rate as f32) as u64;
@@ -263,7 +281,7 @@ pub fn analyze_samples(samples: &[f32], rate: u32, buckets: usize) -> CueAnalysi
     let first = audible.iter().position(|a| *a);
     let last = audible.iter().rposition(|a| *a);
     let (Some(first), Some(last)) = (first, last) else {
-        return CueAnalysis { duration_ms, cue_in_ms: 0, cue_out_ms: duration_ms, intro_ms: None, outro_ms: None, confidence: 0.0, peaks };
+        return CueAnalysis { duration_ms, cue_in_ms: 0, cue_out_ms: duration_ms, intro_ms: None, outro_ms: None, confidence: 0.0, loudness_lufs, peak_dbfs, peaks };
     };
     let cue_in_ms = to_ms(first);
     let cue_out_ms = (to_ms(last) + (FFT as u64 * 1000 / rate as u64)).min(duration_ms);
@@ -281,9 +299,9 @@ pub fn analyze_samples(samples: &[f32], rate: u32, buckets: usize) -> CueAnalysi
     let active: Vec<f32> = score[first..=last].to_vec();
     let (low, high) = (percentile(&active, 0.2), percentile(&active, 0.8));
     let contrast = high - low;
-    let confidence = ((contrast - 0.4) / 1.2).clamp(0.0, 1.0);
+    let confidence = ((contrast - 0.3) / 1.2).clamp(0.0, 1.0);
     if confidence < 0.15 {
-        return CueAnalysis { duration_ms, cue_in_ms, cue_out_ms, intro_ms: None, outro_ms: None, confidence, peaks };
+        return CueAnalysis { duration_ms, cue_in_ms, cue_out_ms, intro_ms: None, outro_ms: None, confidence, loudness_lufs, peak_dbfs, peaks };
     }
     let threshold = low + 0.5 * contrast;
     let need = (MIN_VOCAL_SECS * fps) as usize;
@@ -308,7 +326,7 @@ pub fn analyze_samples(samples: &[f32], rate: u32, buckets: usize) -> CueAnalysi
         runs
     };
     let (Some(&(vocal_start, _)), Some(&(_, vocal_end))) = (runs.first(), runs.last()) else {
-        return CueAnalysis { duration_ms, cue_in_ms, cue_out_ms, intro_ms: None, outro_ms: None, confidence: confidence * 0.5, peaks };
+        return CueAnalysis { duration_ms, cue_in_ms, cue_out_ms, intro_ms: None, outro_ms: None, confidence: confidence * 0.5, loudness_lufs, peak_dbfs, peaks };
     };
     // The smoothing spreads the edges by about half a window: pull them in so the
     // marks fall before the voice starts and after it ends, never on it.
@@ -323,6 +341,8 @@ pub fn analyze_samples(samples: &[f32], rate: u32, buckets: usize) -> CueAnalysi
         intro_ms: Some(if intro.saturating_sub(cue_in_ms) < min_intro { cue_in_ms } else { intro }),
         outro_ms: Some(if cue_out_ms.saturating_sub(outro) < min_intro { cue_out_ms } else { outro }),
         confidence,
+        loudness_lufs,
+        peak_dbfs,
         peaks,
     }
 }
@@ -435,5 +455,41 @@ mod tests {
         let mags: Vec<f32> = (0..32).map(|k| (re[k] * re[k] + im[k] * im[k]).sqrt()).collect();
         let max = mags.iter().enumerate().max_by(|a, b| a.1.total_cmp(b.1)).unwrap().0;
         assert_eq!(max, 8);
+    }
+}
+
+/// Analyse every MP3/FLAC/WAV under `RIARS_ANALYZE_DIR` and print the marks (run with
+/// `cargo test --release -p riars-core analyze_folder -- --ignored --nocapture`).
+#[cfg(test)]
+#[test]
+#[ignore]
+fn analyze_folder() {
+    let Some(dir) = std::env::var_os("RIARS_ANALYZE_DIR") else { return };
+    let mut files = Vec::new();
+    let mut pending = vec![std::path::PathBuf::from(dir)];
+    while let Some(d) = pending.pop() {
+        for entry in std::fs::read_dir(&d).into_iter().flatten().flatten() {
+            let p = entry.path();
+            if p.is_dir() {
+                pending.push(p);
+            } else if matches!(p.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase()).as_deref(), Some("mp3" | "flac" | "wav")) {
+                files.push(p);
+            }
+        }
+    }
+    files.sort();
+    let s = |ms: Option<u64>| ms.map_or("—".to_string(), |ms| format!("{:.1}", ms as f32 / 1000.0));
+    println!("file\tlength\tcue_in\tintro\toutro\tcue_out\tconf\tLUFS\tpeak\tms");
+    for f in files {
+        let started = std::time::Instant::now();
+        match analyze_file(&f, 0) {
+            Ok(a) => println!(
+                "{}\t{}\t{}\t{}\t{}\t{}\t{:.2}\t{}\t{:.1}\t{}",
+                f.file_name().unwrap().to_string_lossy(),
+                s(Some(a.duration_ms)), s(Some(a.cue_in_ms)), s(a.intro_ms), s(a.outro_ms), s(Some(a.cue_out_ms)),
+                a.confidence, a.loudness_lufs.map_or("—".into(), |l| format!("{l:.1}")), a.peak_dbfs, started.elapsed().as_millis()
+            ),
+            Err(e) => println!("{}\tERROR {e}", f.display()),
+        }
     }
 }

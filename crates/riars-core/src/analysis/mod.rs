@@ -3,5 +3,7 @@
 //! outro without covering a voice.
 
 pub mod cues;
+pub mod loudness;
 
 pub use cues::{analyze_file, analyze_samples, CueAnalysis};
+pub use loudness::LoudnessMeter;
