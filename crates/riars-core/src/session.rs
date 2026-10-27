@@ -19,6 +19,10 @@ pub struct SessionState {
     pub stream: Option<IcecastConfig>,
     pub dead_air: Option<crate::audio::engine::DeadAirConfig>,
     pub normalization: Option<crate::audio::normalize::NormalizationConfig>,
+    #[serde(default)]
+    pub play_mode: Option<crate::audio::engine::PlayMode>,
+    #[serde(default)]
+    pub mic: Option<crate::audio::live::MicConfig>,
 }
 
 impl SessionState {

@@ -14,6 +14,7 @@ use cpal::{FromSample, SizedSample};
 use crossbeam_channel::{bounded, Receiver, Sender};
 
 use super::crossfade::{CrossfadeConfig, FadeCurve};
+use super::live::{CartStatus, CartVoice, Carts, MicControls, MicFeed, LIVE_BLOCK};
 use super::player::TrackPlayer;
 
 pub(crate) enum Command {
@@ -21,6 +22,12 @@ pub(crate) enum Command {
     /// Play this track the moment the current one ends (gapless).
     Queue(Box<TrackPlayer>),
     Seek(Duration),
+    /// Start reading this microphone (or stop reading it with `None`).
+    Mic(Option<Box<MicFeed>>),
+    /// Play a sound-bank sound over everything.
+    CartPlay(CartVoice),
+    /// Fade out the bank sounds of a button (all of them with `None`).
+    CartStop(Option<u32>),
 }
 
 /// State shared between the engine and the audio callback.
@@ -54,6 +61,8 @@ pub(crate) struct Shared {
     silence_level_bits: AtomicU32,
     /// Output sample rate, to turn `silent_frames` into seconds.
     pub out_rate: AtomicU32,
+    pub mic: MicControls,
+    pub carts: CartStatus,
 }
 
 /// Counted as clipping: the loudest 16-bit sample (32767/32768), since material at
@@ -87,6 +96,8 @@ impl Shared {
             silent_frames: AtomicU64::new(0),
             silence_level_bits: AtomicU32::new(0.0f32.to_bits()),
             out_rate: AtomicU32::new(44_100),
+            mic: MicControls::new(),
+            carts: CartStatus::new(),
         }
     }
 
@@ -161,6 +172,7 @@ pub(crate) struct AudioOutput {
     commands: Sender<Command>,
     /// Players replaced in the callback come back here to be freed off the audio thread.
     garbage: Receiver<Box<TrackPlayer>>,
+    mic_garbage: Receiver<Box<MicFeed>>,
     pub shared: Arc<Shared>,
     device_name: String,
     tap: Option<StreamTap>,
@@ -183,13 +195,15 @@ impl AudioOutput {
             _ => None,
         };
         let (cmd_tx, cmd_rx) = bounded::<Command>(16);
-        let (garbage_tx, garbage_rx) = bounded::<Box<TrackPlayer>>(16);
+        // Room for a whole bank of voices retired in one buffer.
+        let (garbage_tx, garbage_rx) = bounded::<Box<TrackPlayer>>(32);
+        let (mic_garbage_tx, mic_garbage_rx) = bounded::<Box<MicFeed>>(4);
         let (shutdown_tx, shutdown_rx) = bounded::<()>(0);
         let (ready_tx, ready_rx) = bounded::<Result<(String, StreamTap), String>>(1);
         let shared = Arc::new(Shared::new(volume));
         let callback_shared = Arc::clone(&shared);
 
-        let parts = Parts { commands: cmd_rx, garbage: garbage_tx, shared: callback_shared };
+        let parts = Parts { commands: cmd_rx, garbage: garbage_tx, mic_garbage: mic_garbage_tx, shared: callback_shared };
         let thread = std::thread::Builder::new()
             .name("riars-audio-output".into())
             .spawn(move || {
@@ -221,6 +235,7 @@ impl AudioOutput {
         Ok(Self {
             commands: cmd_tx,
             garbage: garbage_rx,
+            mic_garbage: mic_garbage_rx,
             shared,
             device_name,
             tap: Some(tap),
@@ -240,6 +255,7 @@ impl AudioOutput {
     /// Free players the audio thread retired (they can hold a whole decoded track).
     pub fn collect_garbage(&self) {
         while self.garbage.try_recv().is_ok() {}
+        while self.mic_garbage.try_recv().is_ok() {}
     }
 
     pub fn send(&self, command: Command) {
@@ -328,6 +344,12 @@ struct Renderer {
     out_rate: f64,
     /// Volume applied now, moving towards the shared target.
     volume_now: f32,
+    mic: Option<Box<MicFeed>>,
+    carts: Carts,
+    /// Scratch for the live layer, allocated once: the microphone (mono) and the bank
+    /// (interleaved), one pass of `LIVE_BLOCK` frames at a time.
+    mic_buf: Vec<f32>,
+    live_buf: Vec<f32>,
 }
 
 /// The engine-side handles, cloneable so a failed device can fall back to the clock.
@@ -335,6 +357,7 @@ struct Renderer {
 struct Parts {
     commands: Receiver<Command>,
     garbage: Sender<Box<TrackPlayer>>,
+    mic_garbage: Sender<Box<MicFeed>>,
     shared: Arc<Shared>,
 }
 
@@ -352,6 +375,10 @@ impl Renderer {
             out_channels: channels as usize,
             out_rate: sample_rate as f64,
             volume_now,
+            mic: None,
+            carts: Carts::default(),
+            mic_buf: vec![0.0; LIVE_BLOCK],
+            live_buf: vec![0.0; LIVE_BLOCK * channels as usize],
         };
         (renderer, StreamTap { consumer, sample_rate, channels })
     }
@@ -362,7 +389,7 @@ impl Renderer {
         T: SizedSample + FromSample<f32>,
         f32: FromSample<T>,
     {
-        let Parts { commands, garbage, shared } = &self.parts;
+        let Parts { commands, garbage, mic_garbage, shared } = &self.parts;
         let decks = &mut self.decks;
         while let Ok(command) = commands.try_recv() {
             match command {
@@ -388,8 +415,25 @@ impl Renderer {
                     }
                     shared.finished.store(false, Ordering::Relaxed);
                 }
+                Command::Mic(feed) => {
+                    if let Some(old) = std::mem::replace(&mut self.mic, feed) {
+                        let _ = mic_garbage.try_send(old);
+                    }
+                }
+                Command::CartPlay(voice) => {
+                    self.carts.start(voice, &mut |old| {
+                        let _ = garbage.try_send(old);
+                    });
+                }
+                Command::CartStop(button) => self.carts.stop(button),
             }
         }
+        // The music heads lower while the microphone or a ducking bank sound is on.
+        let live_duck = self
+            .mic
+            .as_ref()
+            .map_or(1.0, |m| m.duck(&shared.mic))
+            .min(self.carts.duck());
 
         let target = shared.volume();
         let ramp = shared.ramp_ms_per_unit.load(Ordering::Relaxed);
@@ -414,6 +458,7 @@ impl Renderer {
                 self.out_channels,
                 self.out_rate,
                 self.volume_now,
+                live_duck,
                 &fade,
                 &mut retire,
             );
@@ -431,6 +476,39 @@ impl Renderer {
                 shared.finished.store(true, Ordering::Relaxed);
             }
         }
+
+        // The live layer goes over the music, playing or not: the microphone and the bank.
+        if self.mic.is_some() || self.carts.is_active() {
+            let mic_on = self.mic.as_ref().is_some_and(|m| m.audible(&shared.mic));
+            let channels = self.out_channels;
+            for chunk in data.chunks_mut(LIVE_BLOCK * channels) {
+                let frames = chunk.len() / channels;
+                let live = &mut self.live_buf[..chunk.len()];
+                live.fill(0.0);
+                let mut retire = |old| {
+                    let _ = garbage.try_send(old);
+                };
+                let carts_on = self.carts.is_active();
+                self.carts.mix(live, channels, self.out_rate, &mut retire);
+                if let Some(mic) = self.mic.as_mut() {
+                    // Always run, so the meter and the speaking flag work with it closed.
+                    let voice = &mut self.mic_buf[..frames];
+                    mic.render(voice, self.out_rate, &shared.mic);
+                    if mic_on {
+                        for (frame, value) in live.chunks_mut(channels).zip(voice.iter()) {
+                            frame.iter_mut().for_each(|s| *s += value);
+                        }
+                    }
+                }
+                if mic_on || carts_on {
+                    for (out, value) in chunk.iter_mut().zip(live.iter()) {
+                        let mixed = f32::from_sample_(*out) + value * self.volume_now;
+                        *out = T::from_sample(limit(mixed));
+                    }
+                }
+            }
+        }
+        self.carts.publish(&shared.carts);
 
         // Levels of what actually goes out (after volume). Channels past the first two
         // count as right; mono feeds both sides.
@@ -596,6 +674,7 @@ impl Decks {
         channels: usize,
         out_rate: f64,
         volume: f32,
+        live_duck: f32,
         fade: &CrossfadeConfig,
         retire: &mut impl FnMut(Box<TrackPlayer>),
     ) -> RenderOutcome {
@@ -620,8 +699,9 @@ impl Decks {
                 self.duck_target = 1.0;
                 outcome.overlays_ended += 1;
             }
-            let step = if self.duck_target < self.duck_now { attack } else { release };
-            self.duck_now += (self.duck_target - self.duck_now).clamp(-step, step);
+            let target = self.duck_target.min(live_duck);
+            let step = if target < self.duck_now { attack } else { release };
+            self.duck_now += (target - self.duck_now).clamp(-step, step);
 
             let Some(cur) = self.current.as_mut().filter(|p| !p.is_finished()) else {
                 frame.fill(T::EQUILIBRIUM);
@@ -713,7 +793,7 @@ mod tests {
     fn render(decks: &mut Decks, frames: usize, fade: &CrossfadeConfig) -> (Vec<f32>, RenderOutcome) {
         let mut out = vec![9.0f32; frames];
         let mut retired = 0;
-        let outcome = decks.render(&mut out, 1, 1000.0, 1.0, fade, &mut |_| retired += 1);
+        let outcome = decks.render(&mut out, 1, 1000.0, 1.0, 1.0, fade, &mut |_| retired += 1);
         assert_eq!(retired, (outcome.switches + outcome.overlays_ended) as usize);
         (out, outcome)
     }
@@ -838,7 +918,7 @@ mod tests {
         let (_cmd_tx, commands) = crossbeam_channel::bounded(4);
         let (garbage, _garbage_rx) = crossbeam_channel::bounded(4);
         let shared = Arc::new(Shared::new(0.0));
-        let parts = Parts { commands, garbage, shared: Arc::clone(&shared) };
+        let parts = Parts { commands, garbage, mic_garbage: crossbeam_channel::bounded(4).0, shared: Arc::clone(&shared) };
         let (mut renderer, _tap) = Renderer::new(parts, 1000, 1);
         renderer.decks.current = Some(track(1.0, 1000));
         shared.playing.store(true, Ordering::Relaxed);
@@ -867,7 +947,7 @@ mod tests {
         let (_cmd_tx, commands) = crossbeam_channel::bounded(4);
         let (garbage, _garbage_rx) = crossbeam_channel::bounded(4);
         let shared = Arc::new(Shared::new(1.0));
-        let parts = Parts { commands, garbage, shared: Arc::clone(&shared) };
+        let parts = Parts { commands, garbage, mic_garbage: crossbeam_channel::bounded(4).0, shared: Arc::clone(&shared) };
         let (mut renderer, _tap) = Renderer::new(parts, 1000, 2);
         // Stereo source: left 0.5, right 0.25.
         let samples = [0.5f32, 0.25].repeat(100);
@@ -904,7 +984,7 @@ mod tests {
         let (_cmd_tx, commands) = crossbeam_channel::bounded(4);
         let (garbage, _garbage_rx) = crossbeam_channel::bounded(4);
         let shared = Arc::new(Shared::new(1.0));
-        let parts = Parts { commands, garbage, shared: Arc::clone(&shared) };
+        let parts = Parts { commands, garbage, mic_garbage: crossbeam_channel::bounded(4).0, shared: Arc::clone(&shared) };
         let (mut renderer, _tap) = Renderer::new(parts, 1000, 1);
         shared.set_silence_level(0.01);
         shared.playing.store(true, Ordering::Relaxed);
@@ -942,5 +1022,55 @@ mod tests {
         let (out, outcome) = render(&mut decks, 5, &linear(2));
         assert_eq!(out, [1.0, 1.0, 1.0, 0.0, 0.0]);
         assert_eq!(outcome, RenderOutcome { switches: 0, finished: true, ..Default::default() });
+    }
+
+    #[test]
+    fn live_layer_plays_over_silence_and_ducks_the_music() {
+        // 1 kHz mono output, a 1 kHz microphone fed at a steady 0.25.
+        let (cmd_tx, commands) = crossbeam_channel::bounded(8);
+        let (garbage, _garbage_rx) = crossbeam_channel::bounded(8);
+        let shared = Arc::new(Shared::new(1.0));
+        let parts = Parts { commands, garbage, mic_garbage: crossbeam_channel::bounded(4).0, shared: Arc::clone(&shared) };
+        let (mut renderer, _tap) = Renderer::new(parts, 1000, 1);
+        shared.mic.apply(&crate::audio::live::MicConfig { high_pass: false, compressor: false, ..Default::default() });
+        let (mut mic_in, mic_out) = rtrb::RingBuffer::new(4096);
+        cmd_tx.send(Command::Mic(Some(Box::new(MicFeed::new(mic_out, 1000))))).unwrap();
+        let mut block = |renderer: &mut Renderer, frames: usize| {
+            let mut out = vec![0.0f32; frames];
+            for chunk in out.chunks_mut(10) {
+                while mic_in.slots() > 4096 - 30 {
+                    mic_in.push(0.25).unwrap();
+                }
+                renderer.process(chunk);
+            }
+            out
+        };
+
+        // Nothing playing and the microphone closed: silence.
+        assert!(block(&mut renderer, 100).iter().all(|v| *v == 0.0));
+
+        // A bank sound plays with the playlist stopped.
+        cmd_tx
+            .send(Command::CartPlay(CartVoice { player: track(0.5, 50), button: 7, serial: 1, looping: false, duck: false, gain: 1.0 }))
+            .unwrap();
+        let out = block(&mut renderer, 40);
+        assert!((out[5] - 0.5).abs() < 1e-6, "{out:?}");
+        assert_eq!(shared.carts.button[0].load(Ordering::Relaxed), 7);
+        block(&mut renderer, 40);
+        assert_eq!(shared.carts.serial[0].load(Ordering::Relaxed), 0, "over and retired");
+
+        // Music at 0.5; opening the microphone ducks it 12 dB and adds the voice.
+        renderer.decks.current = Some(track(0.5, 100_000));
+        shared.playing.store(true, Ordering::Relaxed);
+        assert!((block(&mut renderer, 50)[49] - 0.5).abs() < 1e-6);
+        shared.mic.on.store(true, Ordering::Relaxed);
+        let out = block(&mut renderer, 600);
+        let expected = 0.5 * 10f32.powf(-12.0 / 20.0) + 0.25;
+        assert!((out[599] - expected).abs() < 0.01, "{} vs {expected}", out[599]);
+
+        // Closing it brings the music back and the voice goes.
+        shared.mic.on.store(false, Ordering::Relaxed);
+        let out = block(&mut renderer, 1000);
+        assert!((out[999] - 0.5).abs() < 1e-3, "{}", out[999]);
     }
 }
