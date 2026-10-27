@@ -104,9 +104,12 @@ export default function App() {
     <div style={APP_STYLES.app}>
       <MenuBar menus={menus} onOpen={onMenuOpen} />
       <header style={APP_STYLES.header}>
-        <div style={APP_STYLES.logo}>
-          RIARS
-          <span style={APP_STYLES.logoSub}>{t("app.subtitle")}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <img src="/logo-64.png" alt="" width={34} height={34} />
+          <div style={APP_STYLES.logo}>
+            RIARS
+            <span style={APP_STYLES.logoSub}>{t("app.subtitle")}</span>
+          </div>
         </div>
         <TransportControls volume={volume} onVolumeChange={setVolume} />
         <StreamStatus />
