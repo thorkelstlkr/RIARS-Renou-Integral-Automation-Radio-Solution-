@@ -11,6 +11,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 mod analysis_cmds;
 mod automation_cmds;
+mod live_cmds;
 
 #[tauri::command]
 fn set_locale(lang: String) -> Result<(), String> {
@@ -124,9 +125,12 @@ fn stream_stop(state: State<AppState>) -> StreamInfo {
 }
 
 #[tauri::command]
-fn engine_play(state: State<AppState>) -> Result<(), String> {
-    state.engine.lock().map_err(|e| e.to_string())?.play();
-    Ok(())
+async fn engine_play(app: AppHandle) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        riars_core::play_unlocked(&app.state::<AppState>().engine)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -803,6 +807,26 @@ pub fn run() {
             analysis_cmds::preview_play,
             analysis_cmds::preview_stop,
             analysis_cmds::preview_state,
+            live_cmds::live_status,
+            live_cmds::live_set_mode,
+            live_cmds::live_mic_open,
+            live_cmds::live_mic_close,
+            live_cmds::live_set_mic,
+            live_cmds::live_mic_config,
+            live_cmds::live_set_mic_config,
+            live_cmds::live_input_devices,
+            live_cmds::live_banks,
+            live_cmds::live_bank,
+            live_cmds::live_save_bank,
+            live_cmds::live_delete_bank,
+            live_cmds::live_active_bank,
+            live_cmds::live_set_active_bank,
+            live_cmds::live_set_button,
+            live_cmds::live_clear_button,
+            live_cmds::live_preload,
+            live_cmds::live_fire,
+            live_cmds::live_stop,
+            live_cmds::playlist_set_stop_after,
         ])
         .run(tauri::generate_context!())
         .expect("error while running RIARS");

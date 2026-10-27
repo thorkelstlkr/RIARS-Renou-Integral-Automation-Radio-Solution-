@@ -675,4 +675,21 @@ mod tests {
         feed.render(&mut out, 1000.0, &controls);
         assert!(feed.consumer.slots() <= 20, "{}", feed.consumer.slots());
     }
+
+    /// Opens the real default input card for a moment. Run by hand:
+    /// `cargo test -p riars-core --lib real_microphone -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn real_microphone() {
+        println!("inputs: {:?}, default {:?}", input_devices(), default_input_device());
+        let (input, mut feed) = MicInput::open(None).expect("open");
+        println!("opened {}", input.device_name);
+        let controls = MicControls::new();
+        let mut out = vec![0.0f32; 4410];
+        for _ in 0..20 {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            feed.render(&mut out, 44_100.0, &controls);
+        }
+        println!("peak {} alive {}", controls.take_peak(), input.alive.load(Ordering::Relaxed));
+    }
 }

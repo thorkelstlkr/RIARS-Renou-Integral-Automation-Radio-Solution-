@@ -597,7 +597,8 @@
     "normalizationMaxGain": "Most gain (dB)",
     "normalizationMaxCut": "Most cut (dB)",
     "normalizationPeak": "Peak ceiling (dBFS)",
-    "normalizationHint": "One gain per track from its measured loudness: quiet tracks are raised, loud ones lowered, within these limits."
+    "normalizationHint": "One gain per track from its measured loudness: quiet tracks are raised, loud ones lowered, within these limits.",
+    "microphone": "Microphone…"
   },
   "help": {
     "title": "Manual",
@@ -633,7 +634,9 @@
     "preview": "Pre-listen",
     "off": "Off",
     "previewNote": "Applies at once.",
-    "sameWarning": "Pre-listening will be heard on air."
+    "sameWarning": "Pre-listening will be heard on air.",
+    "micSection": "Microphone",
+    "micNote": "The microphone has its own settings in Playback ▸ Microphone…."
   },
   "analysis": {
     "source": {
@@ -732,6 +735,70 @@
     "removedTracks": "{{count}} tracks removed from the library.",
     "pathCopied": "Path copied.",
     "keyEnter": "Enter",
-    "keyDelete": "Del"
+    "keyDelete": "Del",
+    "stopAfter": "Stop after this item"
+  },
+  "live": {
+    "title": "On air",
+    "mic": "MIC",
+    "onAir": "ON AIR",
+    "speaking": "Speaking",
+    "micSettings": "Microphone…",
+    "inputDevice": "Input card",
+    "systemDefault": "System default",
+    "playMode": "Play mode",
+    "mode": {
+      "Automatic": "Automatic",
+      "Assisted": "Assisted",
+      "Manual": "Manual"
+    },
+    "modeHint": {
+      "Automatic": "The playlist moves on by itself and the automation fills it.",
+      "Assisted": "The playlist moves on by itself, but the automation adds nothing.",
+      "Manual": "Every item stops at its end and waits for Play or Next (F8)."
+    },
+    "introLeft": "Intro: {{s}} s",
+    "next": "Next: {{title}}",
+    "stopAll": "Stop all",
+    "secondsLeft": "{{s}} s",
+    "bank": "Sound bank",
+    "noBank": "No bank yet.",
+    "newBank": "New bank",
+    "renameBank": "Rename bank",
+    "deleteBank": "Delete bank",
+    "confirmDeleteBank": "Delete this bank and all its buttons?",
+    "defaultBankName": "My bank",
+    "page": "Page {{n}}",
+    "emptyButton": "Empty — drop a track here",
+    "cartMode": {
+      "Fire": "Fire",
+      "Toggle": "Fire / stop",
+      "Loop": "Loop"
+    },
+    "buttonMode": "Mode",
+    "editButton": "Edit…",
+    "buttonEditor": "Edit button",
+    "prelisten": "Pre-listen",
+    "clearButton": "Clear",
+    "chooseTrack": "Choose a track…",
+    "duck": "Lower the music while it plays",
+    "gain": "Gain",
+    "color": "Colour",
+    "label": "Label",
+    "file": "File",
+    "noColor": "No colour",
+    "labelRequired": "The button needs a label.",
+    "fileRequired": "Choose a track for the button.",
+    "highPass": "Low cut (80 Hz)",
+    "gate": "Noise gate",
+    "gateThreshold": "Gate threshold",
+    "compressor": "Compressor",
+    "ducking": "Music ducking",
+    "duckMusic": "Lower the music by",
+    "duckMode": "When to lower it",
+    "duckWhileOpen": "While the microphone is open",
+    "duckWhileSpeaking": "While speaking",
+    "allowRemote": "Let the API and AI agents open the microphone",
+    "allowRemoteHint": "Off by default: an agent should never open a microphone without the presenter knowing."
   }
 }

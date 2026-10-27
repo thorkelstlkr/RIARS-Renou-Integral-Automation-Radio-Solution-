@@ -19,12 +19,14 @@ import GridPanel from "./automation/GridPanel";
 import CategoriesPanel from "./automation/CategoriesPanel";
 import AdsPanel from "./automation/AdsPanel";
 import LogPanel from "./automation/LogPanel";
+import LivePanel from "./live/LivePanel";
 import MenuBar from "./menu/MenuBar";
 import { TABS, TAB_LABEL, useAppMenus, type DialogId, type Tab } from "./menu/useAppMenus";
 import PlaybackSettingsDialog from "./menu/PlaybackSettingsDialog";
 import AudioSettingsDialog from "./menu/AudioSettingsDialog";
 import PreviewDialog from "./menu/PreviewDialog";
 import AboutDialog from "./menu/AboutDialog";
+import MicSettingsDialog from "./live/MicSettingsDialog";
 import HelpDialog from "./help/HelpDialog";
 
 const APP_STYLES: Record<string, React.CSSProperties> = {
@@ -68,6 +70,7 @@ function TabContent({ tab }: { tab: Tab }) {
     case "categories": return <CategoriesPanel />;
     case "ads": return <AdsPanel />;
     case "log": return <LogPanel />;
+    case "live": return <LivePanel />;
   }
 }
 
@@ -145,6 +148,7 @@ export default function App() {
         <PlaybackSettingsDialog focus={dialog} onClose={closeDialog} />
       )}
       {dialog === "audio" && <AudioSettingsDialog onClose={closeDialog} />}
+      {dialog === "mic" && <MicSettingsDialog onClose={closeDialog} />}
       {dialog === "preview" && <PreviewDialog onClose={closeDialog} />}
       {dialog === "about" && <AboutDialog onClose={closeDialog} />}
       <HelpDialog open={help.open} topic={help.topic} onClose={() => setHelp({ open: false })} />

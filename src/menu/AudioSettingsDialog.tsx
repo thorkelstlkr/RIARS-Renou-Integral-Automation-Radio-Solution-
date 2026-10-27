@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Dialog from "./Dialog";
 import { audio, type AudioDevices } from "../analysis/api";
+import { live, type MicConfig } from "../live/api";
 
 const S: Record<string, React.CSSProperties> = {
   section: { marginBottom: 18 },
@@ -21,11 +22,15 @@ const S: Record<string, React.CSSProperties> = {
 export default function AudioSettingsDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const [devices, setDevices] = useState<AudioDevices | null>(null);
+  const [inputs, setInputs] = useState<{ devices: string[]; default: string | null }>({ devices: [], default: null });
+  const [mic, setMic] = useState<MicConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
     audio.devices().then((value) => { if (alive) setDevices(value); }).catch((e) => { if (alive) setError(String(e)); });
+    live.inputDevices().then((value) => { if (alive) setInputs(value); }).catch((e) => { if (alive) setError(String(e)); });
+    live.micConfig().then((value) => { if (alive) setMic(value); }).catch((e) => { if (alive) setError(String(e)); });
     return () => { alive = false; };
   }, []);
 
@@ -47,8 +52,23 @@ export default function AudioSettingsDialog({ onClose }: { onClose: () => void }
     }
   };
 
+  const setMicDevice = async (value: string) => {
+    if (!mic) return;
+    const next = { ...mic, device: value || null };
+    try {
+      await live.setMicConfig(next);
+      setMic(next);
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
   const onAir = devices ? devices.main ?? devices.default : null;
   const same = devices?.preview != null && devices.preview === onAir;
+  const inputDevices = Array.from(
+    new Set([...inputs.devices, ...(mic?.device ? [mic.device] : [])]),
+  );
 
   return (
     <Dialog title={t("audio.title")} width={520} onClose={onClose}>
@@ -75,6 +95,17 @@ export default function AudioSettingsDialog({ onClose }: { onClose: () => void }
               {devices.devices.map((device) => <option key={device} value={device}>{device}</option>)}
             </select>
             <div style={S.hint}>{t("audio.previewNote")}</div>
+          </div>
+
+          <div style={S.section}>
+            <div style={S.title}>{t("audio.micSection")}</div>
+            <select style={S.select} value={mic?.device ?? ""} aria-label={t("audio.micSection")}
+              disabled={!mic} onChange={(e) => setMicDevice(e.target.value)}>
+              <option value="">{t("audio.systemDefault")}</option>
+              {inputDevices.map((device) => <option key={device} value={device}>{device}</option>)}
+            </select>
+            {inputs.default && <div style={S.hint}>{t("audio.defaultIs", { device: inputs.default })}</div>}
+            <div style={S.hint}>{t("audio.micNote")}</div>
           </div>
 
           {same && <div style={S.warning} role="status">{t("audio.sameWarning")}</div>}

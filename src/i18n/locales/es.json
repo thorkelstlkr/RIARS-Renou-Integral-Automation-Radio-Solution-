@@ -597,7 +597,8 @@
     "normalizationMaxGain": "Subida máxima (dB)",
     "normalizationMaxCut": "Bajada máxima (dB)",
     "normalizationPeak": "Techo de picos (dBFS)",
-    "normalizationHint": "Una ganancia por pista según su sonoridad medida: las flojas suben y las fuertes bajan, dentro de estos límites."
+    "normalizationHint": "Una ganancia por pista según su sonoridad medida: las flojas suben y las fuertes bajan, dentro de estos límites.",
+    "microphone": "Micrófono…"
   },
   "help": {
     "title": "Manual",
@@ -633,7 +634,9 @@
     "preview": "Preescucha",
     "off": "Desactivada",
     "previewNote": "Se aplica al momento.",
-    "sameWarning": "La preescucha saldrá al aire."
+    "sameWarning": "La preescucha saldrá al aire.",
+    "micSection": "Micrófono",
+    "micNote": "El micrófono tiene sus propios ajustes en Reproducción ▸ Micrófono…."
   },
   "analysis": {
     "source": {
@@ -732,6 +735,70 @@
     "removedTracks": "{{count}} pistas quitadas de la biblioteca.",
     "pathCopied": "Ruta copiada.",
     "keyEnter": "Intro",
-    "keyDelete": "Supr"
+    "keyDelete": "Supr",
+    "stopAfter": "Parar tras esta pista"
+  },
+  "live": {
+    "title": "En directo",
+    "mic": "MIC",
+    "onAir": "EN EL AIRE",
+    "speaking": "Hablando",
+    "micSettings": "Micrófono…",
+    "inputDevice": "Tarjeta de entrada",
+    "systemDefault": "La del sistema",
+    "playMode": "Modo de la lista",
+    "mode": {
+      "Automatic": "Automático",
+      "Assisted": "Asistido",
+      "Manual": "Manual"
+    },
+    "modeHint": {
+      "Automatic": "La lista avanza sola y la automatización la rellena.",
+      "Assisted": "La lista avanza sola, pero la automatización no añade nada.",
+      "Manual": "Cada elemento se para al acabar y espera a Reproducir o Siguiente (F8)."
+    },
+    "introLeft": "Intro: {{s}} s",
+    "next": "Siguiente: {{title}}",
+    "stopAll": "Parar todo",
+    "secondsLeft": "{{s}} s",
+    "bank": "Banco de sonidos",
+    "noBank": "Todavía no hay ningún banco.",
+    "newBank": "Banco nuevo",
+    "renameBank": "Renombrar el banco",
+    "deleteBank": "Borrar el banco",
+    "confirmDeleteBank": "¿Borrar este banco y todos sus botones?",
+    "defaultBankName": "Mi banco",
+    "page": "Página {{n}}",
+    "emptyButton": "Vacío: arrastra aquí una pista",
+    "cartMode": {
+      "Fire": "Disparar",
+      "Toggle": "Disparar/parar",
+      "Loop": "Bucle"
+    },
+    "buttonMode": "Modo",
+    "editButton": "Editar…",
+    "buttonEditor": "Editar el botón",
+    "prelisten": "Preescucha",
+    "clearButton": "Quitar",
+    "chooseTrack": "Elegir una pista…",
+    "duck": "Bajar la música mientras suena",
+    "gain": "Ganancia",
+    "color": "Color",
+    "label": "Texto",
+    "file": "Archivo",
+    "noColor": "Sin color",
+    "labelRequired": "El botón necesita un texto.",
+    "fileRequired": "Elige una pista para el botón.",
+    "highPass": "Filtro de graves (80 Hz)",
+    "gate": "Puerta de ruido",
+    "gateThreshold": "Umbral de la puerta",
+    "compressor": "Compresor",
+    "ducking": "Bajar la música",
+    "duckMusic": "Bajar la música",
+    "duckMode": "Cuándo bajarla",
+    "duckWhileOpen": "Mientras el micrófono está abierto",
+    "duckWhileSpeaking": "Mientras se habla",
+    "allowRemote": "Permitir que la API y los agentes de IA abran el micrófono",
+    "allowRemoteHint": "Desactivado por defecto: un agente nunca debería abrir un micrófono sin que lo sepa el locutor."
   }
 }

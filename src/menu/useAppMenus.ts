@@ -4,10 +4,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { save } from "@tauri-apps/plugin-dialog";
 import { automation, today } from "../automation/api";
+import { live, type PlayMode } from "../live/api";
 import { runCommand, type CommandId } from "../commands";
 import type { Menu, MenuEntry } from "./MenuBar";
 
-export const TABS = ["playlist", "schedule", "clocks", "grid", "categories", "ads", "log"] as const;
+export const TABS = ["playlist", "schedule", "clocks", "grid", "categories", "ads", "log", "live"] as const;
 export type Tab = (typeof TABS)[number];
 export const TAB_LABEL: Record<Tab, string> = {
   playlist: "playlist.title",
@@ -17,9 +18,10 @@ export const TAB_LABEL: Record<Tab, string> = {
   categories: "automation.tabs.categories",
   ads: "automation.tabs.ads",
   log: "automation.tabs.log",
+  live: "live.title",
 };
 
-export type DialogId = "crossfade" | "deadAir" | "normalization" | "audio" | "preview" | "about";
+export type DialogId = "crossfade" | "deadAir" | "normalization" | "audio" | "preview" | "about" | "mic";
 const LANGS = ["en", "es", "fr", "de", "pt", "ca"] as const;
 
 interface Options {
@@ -34,11 +36,31 @@ interface Options {
 export function useAppMenus({ tab, setTab, openHelp, openDialog, setNotice }: Options) {
   const { t, i18n } = useTranslation();
   const [autoOn, setAutoOn] = useState(false);
+  const [mode, setMode] = useState<PlayMode>("Automatic");
 
   const refreshAuto = useCallback(() => {
     automation.status().then((s) => setAutoOn(s.enabled)).catch(() => {});
   }, []);
   useEffect(refreshAuto, [refreshAuto]);
+
+  const refreshMode = useCallback(() => {
+    live.status().then((s) => setMode(s.mode)).catch(() => {});
+  }, []);
+  useEffect(refreshMode, [refreshMode]);
+
+  const setPlayMode = useCallback(async (next: PlayMode) => {
+    try {
+      await live.setMode(next);
+      setMode(next);
+    } catch (e) { setNotice(String(e)); }
+  }, [setNotice]);
+
+  const toggleMic = useCallback(async () => {
+    try {
+      const status = await live.status();
+      await live.setMic(!status.mic.on);
+    } catch (e) { setNotice(String(e)); }
+  }, [setNotice]);
 
   // Panel commands need their panel on screen: show it, then send the command.
   const onTab = useCallback((target: Tab, id: CommandId) => {
@@ -109,10 +131,15 @@ export function useAppMenus({ tab, setTab, openHelp, openDialog, setNotice }: Op
         { label: t("menu.normalization"), action: () => openDialog("normalization") },
         "separator",
         { label: t("menu.soundCards"), action: () => openDialog("audio") },
+        { label: t("menu.microphone"), action: () => openDialog("mic") },
       ] },
       { id: "automation", label: t("menu.automation"), items: [
         { label: t("menu.automationOn"), shortcut: "Ctrl+E", checked: autoOn, action: toggleAutomation },
         { label: t("menu.preview"), action: () => openDialog("preview") },
+        "separator",
+        { label: t("live.mode.Automatic"), checked: mode === "Automatic", action: () => { void setPlayMode("Automatic"); } },
+        { label: t("live.mode.Assisted"), checked: mode === "Assisted", action: () => { void setPlayMode("Assisted"); } },
+        { label: t("live.mode.Manual"), checked: mode === "Manual", action: () => { void setPlayMode("Manual"); } },
         "separator",
         { label: t("automation.tabs.clocks"), action: () => setTab("clocks") },
         { label: t("automation.tabs.grid"), action: () => setTab("grid") },
@@ -137,12 +164,13 @@ export function useAppMenus({ tab, setTab, openHelp, openDialog, setNotice }: Op
     ];
     // `call` is rebuilt every render but only closes over setNotice.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t, i18n.language, tab, autoOn, setTab, onTab, exportLog, quit, setLanguage, openDialog, toggleAutomation, openHelp]);
+  }, [t, i18n.language, tab, autoOn, mode, setTab, onTab, exportLog, quit, setLanguage, openDialog, toggleAutomation, setPlayMode, openHelp]);
 
   // Global shortcuts. F-keys and Ctrl combinations work even inside text fields.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (document.querySelector("[role=dialog]") && e.key !== "F1") return;
+      // The microphone toggle (F9) also works with a dialog open.
+      if (document.querySelector("[role=dialog]") && e.key !== "F1" && e.key !== "F9") return;
       const ctrl = e.ctrlKey || e.metaKey;
       const action: (() => void) | undefined = (() => {
         if (!ctrl && !e.altKey) {
@@ -152,6 +180,7 @@ export function useAppMenus({ tab, setTab, openHelp, openDialog, setNotice }: Op
             case "F6": return call("engine_pause");
             case "F7": return call("engine_stop");
             case "F8": return call("engine_next");
+            case "F9": return () => { void toggleMic(); };
           }
           return undefined;
         }
@@ -159,7 +188,7 @@ export function useAppMenus({ tab, setTab, openHelp, openDialog, setNotice }: Op
         const key = e.key.toLowerCase();
         if (e.shiftKey && key === "a") return () => runCommand("library.addFolder");
         if (e.shiftKey) return undefined;
-        if (key >= "1" && key <= "7") return () => setTab(TABS[Number(key) - 1]);
+        if (key >= "1" && key <= "8") return () => setTab(TABS[Number(key) - 1]);
         switch (key) {
           case "o": return () => onTab("playlist", "playlist.open");
           case "s": return () => onTab("playlist", "playlist.save");
@@ -177,7 +206,12 @@ export function useAppMenus({ tab, setTab, openHelp, openDialog, setNotice }: Op
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openHelp, setTab, onTab, toggleAutomation, quit]);
+  }, [openHelp, setTab, onTab, toggleAutomation, toggleMic, quit]);
 
-  return { menus, onMenuOpen: (id: string) => { if (id === "automation") refreshAuto(); } };
+  return {
+    menus,
+    onMenuOpen: (id: string) => {
+      if (id === "automation") { refreshAuto(); refreshMode(); }
+    },
+  };
 }
