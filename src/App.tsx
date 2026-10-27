@@ -33,8 +33,6 @@ const APP_STYLES: Record<string, React.CSSProperties> = {
     display: "flex", alignItems: "center", gap: 16, padding: "6px 16px",
     background: "var(--bg-secondary)", borderBottom: "1px solid var(--border)", minHeight: 48,
   },
-  logo: { fontSize: 16, fontWeight: 700, color: "var(--accent)", whiteSpace: "nowrap" as const, letterSpacing: -0.3 },
-  logoSub: { fontSize: 10, color: "var(--text-muted)", fontWeight: 400, display: "block", letterSpacing: 0.5 },
   main: { display: "flex", flex: 1, overflow: "hidden" },
   sidebar: {
     width: 280, minWidth: 200, borderRight: "1px solid var(--border)",
@@ -104,13 +102,8 @@ export default function App() {
     <div style={APP_STYLES.app}>
       <MenuBar menus={menus} onOpen={onMenuOpen} />
       <header style={APP_STYLES.header}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <img src="/logo-64.png" alt="" width={34} height={34} />
-          <div style={APP_STYLES.logo}>
-            RIARS
-            <span style={APP_STYLES.logoSub}>{t("app.subtitle")}</span>
-          </div>
-        </div>
+        <img src="/logo-horizontal-120.png" alt="RIARS" title={t("app.subtitle")} height={36}
+          style={{ display: "block", width: "auto", flexShrink: 0 }} />
         <TransportControls volume={volume} onVolumeChange={setVolume} />
         <StreamStatus />
         <LanguageSelector />
