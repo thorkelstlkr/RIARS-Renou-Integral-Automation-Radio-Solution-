@@ -89,6 +89,7 @@ pub fn api_routes() -> Router<Arc<AppState>> {
         .route("/playlist/play", post(playlist_play))
         .merge(crate::analysis_routes::analysis_routes())
         .merge(crate::automation_routes::automation_routes())
+        .merge(crate::live_routes::router())
 }
 
 #[derive(Deserialize)]
@@ -286,7 +287,7 @@ async fn schedule_remove(State(state): State<Arc<AppState>>, Json(req): Json<Eve
 
 async fn schedule_toggle(State(state): State<Arc<AppState>>, Json(req): Json<EventIdRequest>) -> Result<Json<Vec<ScheduledEvent>>, ApiError> {
     let mut scheduler = state.scheduler.lock().map_err(ApiError::internal)?;
-    if let Some(_) = scheduler.toggle_event(&req.id) {
+    if scheduler.toggle_event(&req.id).is_some() {
         scheduler.save(&state.schedule_path)?;
         Ok(Json(scheduler.events().to_vec()))
     } else {
@@ -421,7 +422,9 @@ async fn status(State(state): State<Arc<AppState>>) -> Result<Json<StatusRespons
 }
 
 async fn play(State(state): State<Arc<AppState>>) -> Result<&'static str, ApiError> {
-    state.engine.lock().map_err(ApiError::internal)?.play();
+    tokio::task::spawn_blocking(move || riars_core::play_unlocked(&state.engine))
+        .await
+        .map_err(ApiError::internal)??;
     Ok("ok")
 }
 
