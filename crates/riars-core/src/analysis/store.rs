@@ -151,6 +151,23 @@ impl MediaLibrary {
         raw.map(cues_from_raw).transpose()
     }
 
+    /// Cues of the track at `file_path`, for playlist items that carry no track id
+    /// (added by hand, loaded from a saved playlist or over the API).
+    pub fn track_cues_by_path(&self, file_path: &str) -> Result<Option<TrackCues>, String> {
+        let raw = self
+            .conn()
+            .query_row(
+                &format!(
+                    "SELECT {CUES_COLUMNS} FROM tracks WHERE file_path = ?1 AND cues_source IS NOT NULL"
+                ),
+                params![file_path],
+                raw_from_row,
+            )
+            .optional()
+            .map_err(|e| format!("DB error: {e}"))?;
+        raw.map(cues_from_raw).transpose()
+    }
+
     pub fn save_analysis(&mut self, cues: &TrackCues) -> Result<bool, String> {
         let stored: Option<(Option<String>, i64)> = self
             .conn()
@@ -217,30 +234,49 @@ impl MediaLibrary {
         Ok(true)
     }
 
+    /// Save marks set by hand or by an agent. They are checked against the length stored
+    /// for the track, not the one in `cues`. An agent cannot replace hand-set marks: the
+    /// operator clears them first. Loudness and peak are written only when given.
     pub fn set_track_cues(&mut self, cues: &TrackCues) -> Result<(), String> {
-        cues.validate()?;
         let confidence = match cues.source {
             CueSource::Manual => 1.0,
-            CueSource::Agent => cues.confidence,
+            CueSource::Agent => cues.confidence.clamp(0.0, 1.0),
             CueSource::Auto => {
                 return Err("Automatic marks must be saved with save_analysis".to_string());
             }
         };
-        let exists = self
+        let stored: Option<(i64, Option<String>)> = self
             .conn()
-            .query_row("SELECT 1 FROM tracks WHERE id = ?1", params![cues.track_id], |_| Ok(()))
+            .query_row(
+                "SELECT duration_ms, cues_source FROM tracks WHERE id = ?1",
+                params![cues.track_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
             .optional()
             .map_err(|e| format!("DB error: {e}"))?;
-        if exists.is_none() {
+        let Some((duration_ms, stored_source)) = stored else {
             return Err(format!("No track {}", cues.track_id));
+        };
+        if cues.source == CueSource::Agent && stored_source.as_deref() == Some("Manual") {
+            return Err(format!(
+                "Track {} has hand-set marks; the operator must clear them first",
+                cues.track_id
+            ));
         }
+        let duration_ms = u64::try_from(duration_ms).unwrap_or(0);
+        let checked = TrackCues {
+            duration_ms: if duration_ms > 0 { duration_ms } else { cues.duration_ms },
+            ..cues.clone()
+        };
+        checked.validate()?;
         let source = enum_text(&cues.source)?;
         self.conn()
             .execute(
                 "UPDATE tracks SET
                     cue_in_ms = ?1, cue_out_ms = ?2, intro_end_ms = ?3, outro_start_ms = ?4,
-                    cues_source = ?5, cues_confidence = ?6
-                 WHERE id = ?7",
+                    cues_source = ?5, cues_confidence = ?6,
+                    loudness_lufs = COALESCE(?7, loudness_lufs), peak_dbfs = COALESCE(?8, peak_dbfs)
+                 WHERE id = ?9",
                 params![
                     to_i64(cues.cue_in_ms),
                     to_i64(cues.cue_out_ms),
@@ -248,6 +284,8 @@ impl MediaLibrary {
                     cues.outro_start_ms.map(to_i64),
                     source,
                     confidence as f64,
+                    cues.loudness_lufs.map(|value| value as f64),
+                    cues.peak_dbfs.map(|value| value as f64),
                     cues.track_id
                 ],
             )
@@ -584,9 +622,41 @@ mod tests {
         missing.source = CueSource::Agent;
         assert!(lib.set_track_cues(&missing).is_err());
 
-        assert!(lib.set_track_cues(&manual_cues(track)).is_ok());
-        assert_eq!(lib.track_cues(track).unwrap().unwrap().source, CueSource::Manual);
+        // The stored length counts, not the one sent: no end mark past the real end.
+        let mut too_long = manual_cues(track);
+        too_long.source = CueSource::Agent;
+        too_long.duration_ms = 0;
+        too_long.cue_out_ms = 999_999_999;
+        too_long.outro_start_ms = None;
+        assert!(lib.set_track_cues(&too_long).is_err());
 
+        // An agent may set marks and loudness while nobody has set them by hand...
+        let mut agent = manual_cues(track);
+        agent.source = CueSource::Agent;
+        agent.confidence = 0.7;
+        agent.loudness_lufs = Some(-12.5);
+        assert!(lib.set_track_cues(&agent).is_ok());
+        let saved = lib.track_cues(track).unwrap().unwrap();
+        assert_eq!((saved.source, saved.loudness_lufs), (CueSource::Agent, Some(-12.5)));
+
+        assert!(lib.set_track_cues(&manual_cues(track)).is_ok());
+        let saved = lib.track_cues(track).unwrap().unwrap();
+        assert_eq!((saved.source, saved.loudness_lufs), (CueSource::Manual, Some(-12.5)));
+        // ...but not over hand-set marks.
+        assert!(lib.set_track_cues(&agent).is_err());
+
+        drop(lib);
+        remove_db_files(&db_path);
+    }
+
+    #[test]
+    fn cues_by_path() {
+        let (mut lib, db_path) = temp_db("by-path");
+        let track = insert_track(&lib, "A", "/m/a.mp3", 200_000);
+        assert!(lib.track_cues_by_path("/m/a.mp3").unwrap().is_none());
+        lib.set_track_cues(&manual_cues(track)).unwrap();
+        assert_eq!(lib.track_cues_by_path("/m/a.mp3").unwrap().unwrap().track_id, track);
+        assert!(lib.track_cues_by_path("/m/other.mp3").unwrap().is_none());
         drop(lib);
         remove_db_files(&db_path);
     }

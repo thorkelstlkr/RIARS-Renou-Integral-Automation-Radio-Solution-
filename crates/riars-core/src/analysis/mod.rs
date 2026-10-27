@@ -11,4 +11,4 @@ pub mod store;
 pub use cues::{analyze_file, analyze_samples, CueAnalysis};
 pub use loudness::LoudnessMeter;
 pub use model::{AnalysisStats, CueSource, TrackCues};
-pub use batch::{analyze_track, BatchAnalyzer, BatchScope, BatchStatus, CueDetector, LibraryAccess};
+pub use batch::{analyze_track, analyze_track_detailed, BatchAnalyzer, BatchScope, BatchStatus, CueDetector, LibraryAccess};

@@ -53,9 +53,20 @@ impl PreviewPlayer {
     /// Play `path` from `from_ms` at `gain_db` (the track's normalisation, so it sounds
     /// as on air). Decodes the file: call it from a worker thread, not the UI one.
     pub fn play(&mut self, path: &Path, from_ms: u64, gain_db: f32) -> Result<(), String> {
-        let output = self.output.as_ref().ok_or("No pre-listen sound card chosen")?;
+        let player = Self::load(path, gain_db)?;
+        self.play_loaded(player, path, from_ms)
+    }
+
+    /// Decode `path` for [`Self::play_loaded`], holding no preview lock while it reads.
+    pub fn load(path: &Path, gain_db: f32) -> Result<TrackPlayer, String> {
         let mut player = TrackPlayer::from_file(path, 44_100)?;
         player.set_gain(super::normalize::db_to_gain(gain_db));
+        Ok(player)
+    }
+
+    /// Start a track decoded with [`Self::load`]. Quick: it only hands it to the card.
+    pub fn play_loaded(&mut self, player: TrackPlayer, path: &Path, from_ms: u64) -> Result<(), String> {
+        let output = self.output.as_ref().ok_or("No pre-listen sound card chosen")?;
         self.duration_ms = player.duration().as_millis() as u64;
         output.shared.position_ms.store(0, Ordering::Relaxed);
         output.shared.finished.store(false, Ordering::Relaxed);

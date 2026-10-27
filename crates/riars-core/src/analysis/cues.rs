@@ -29,6 +29,8 @@ const FPS: f32 = RATE as f32 / HOP as f32;
 const SILENCE_DB: f32 = -45.0;
 /// Vocals must last this long to count (a shout or a sample does not start a verse).
 const MIN_VOCAL_SECS: f32 = 2.0;
+/// Quiet stretches inside the voice that do not end it (seconds).
+const MAX_DIP_SECS: f32 = 2.0;
 /// Intros shorter than this are not worth talking over.
 const MIN_INTRO_SECS: f32 = 2.0;
 
@@ -304,7 +306,7 @@ pub fn analyze_samples(samples: &[f32], rate: u32, buckets: usize) -> CueAnalysi
     let (low, high) = (percentile(&active, 0.2), percentile(&active, 0.8));
     let contrast = high - low;
     // Frames grouped by the second they start in.
-    let seconds = ((duration_ms + 999) / 1000) as usize;
+    let seconds = duration_ms.div_ceil(1000) as usize;
     let mut sums = vec![(0.0f32, 0usize); seconds.max(1)];
     for (i, v) in score.iter().enumerate() {
         let second = ((i * HOP) as u64 / rate as u64) as usize;
@@ -344,9 +346,36 @@ pub fn analyze_samples(samples: &[f32], rate: u32, buckets: usize) -> CueAnalysi
         }
         runs
     };
-    let (Some(&(vocal_start, _)), Some(&(_, vocal_end))) = (runs.first(), runs.last()) else {
+    let (Some(&(strong_start, _)), Some(&(_, strong_end))) = (runs.first(), runs.last()) else {
         return CueAnalysis { duration_ms, cue_in_ms, cue_out_ms, intro_ms: None, outro_ms: None, confidence: confidence * 0.5, loudness_lufs, peak_dbfs, peaks, vocal_timeline };
     };
+    // Hysteresis, to stay on the safe side: the voice is found with the half-way
+    // threshold, but its edges are pushed outwards while the score stays above a
+    // quarter of the way, across dips of up to MAX_DIP_SECS (a singer fading out, a
+    // breath, a softer line). A smaller intro or outro is fine; covering a voice is not.
+    let weak = low + 0.25 * contrast;
+    let max_dip = (MAX_DIP_SECS * fps) as usize;
+    let extend = |from: usize, forward: bool| {
+        let (mut edge, mut i, mut dip) = (from, from, 0usize);
+        loop {
+            let next = if forward { i + 1 } else { i.wrapping_sub(1) };
+            if next < first || next > last || (forward && next >= score.len()) {
+                return edge;
+            }
+            i = next;
+            if score[i] > weak {
+                edge = i;
+                dip = 0;
+            } else {
+                dip += 1;
+                if dip > max_dip {
+                    return edge;
+                }
+            }
+        }
+    };
+    let vocal_start = extend(strong_start, false);
+    let vocal_end = extend(strong_end.saturating_sub(1), true) + 1;
     // The smoothing spreads the edges by about half a window: pull them in so the
     // marks fall before the voice starts and after it ends, never on it.
     let pad = (0.5 * fps) as usize;
@@ -395,14 +424,17 @@ mod tests {
     /// A sung line: a harmonic voice around 220 Hz with formants, gliding pitch and
     /// syllables at about 4.5 per second.
     fn voice(t: f32) -> f32 {
-        let f0 = 220.0 * (1.0 + 0.06 * (2.0 * std::f32::consts::PI * 0.7 * t).sin());
+        // Phase of 220 Hz with a 6 % vibrato at 0.7 Hz, integrated (not f0 * t, which
+        // would sweep wider and wider as t grows).
+        let vib = 0.06 * 220.0 / (2.0 * std::f32::consts::PI * 0.7);
+        let phase0 = 2.0 * std::f32::consts::PI * 220.0 * t - 2.0 * std::f32::consts::PI * vib * ((2.0 * std::f32::consts::PI * 0.7 * t).cos() - 1.0);
         let syllable = (0.5 + 0.5 * (2.0 * std::f32::consts::PI * 4.5 * t).sin()).powf(2.0);
         let mut v = 0.0;
         for h in 1..=14 {
-            let f = f0 * h as f32;
+            let f = 220.0 * h as f32;
             // Formant-ish envelope: emphasis around 700 Hz and 1200 Hz.
             let gain = (-((f - 700.0) / 350.0).powi(2)).exp() + 0.7 * (-((f - 1200.0) / 400.0).powi(2)).exp() + 0.05;
-            v += gain * (2.0 * std::f32::consts::PI * f * t).sin();
+            v += gain * (phase0 * h as f32).sin();
         }
         v * 0.12 * syllable
     }
@@ -514,6 +546,11 @@ fn analyze_folder() {
                 a.confidence, a.loudness_lufs.map_or("—".into(), |l| format!("{l:.1}")), a.peak_dbfs, started.elapsed().as_millis()
             ),
             Err(e) => println!("{}\tERROR {e}", f.display()),
+        }
+        if std::env::var_os("RIARS_ANALYZE_TIMELINE").is_some() {
+            if let Ok(a) = analyze_file(&f, 0) {
+                println!("  {}", a.vocal_timeline.iter().map(|v| v.to_string()).collect::<String>());
+            }
         }
     }
 }

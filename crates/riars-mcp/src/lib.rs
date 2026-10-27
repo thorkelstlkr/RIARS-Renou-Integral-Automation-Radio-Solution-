@@ -1,3 +1,4 @@
+pub mod analysis_tools;
 pub mod automation_tools;
 pub mod tools;
 
@@ -21,6 +22,28 @@ pub struct McpState {
     pub session: Mutex<riars_core::session::SessionSaver>,
     /// Long-term automation: playlist generator and proof-of-play log.
     pub automation: Arc<Mutex<riars_core::automation::Automation>>,
+    #[cfg(not(test))]
+    pub analysis: riars_core::analysis::BatchAnalyzer,
+}
+
+impl McpState {
+    pub fn analysis(&self) -> &riars_core::analysis::BatchAnalyzer {
+        #[cfg(not(test))]
+        {
+            &self.analysis
+        }
+        #[cfg(test)]
+        {
+            test_analyzer()
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn test_analyzer() -> &'static riars_core::analysis::BatchAnalyzer {
+    static ANALYZER: std::sync::OnceLock<riars_core::analysis::BatchAnalyzer> =
+        std::sync::OnceLock::new();
+    ANALYZER.get_or_init(riars_core::analysis::BatchAnalyzer::new)
 }
 
 #[derive(Deserialize)]

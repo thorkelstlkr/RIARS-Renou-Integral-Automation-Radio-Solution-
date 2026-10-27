@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use riars_core::{AudioEngine, EngineStateInfo, MediaLibrary, Playlist, Track};
 use std::path::PathBuf;
@@ -9,6 +9,7 @@ use riars_core::{DeadAirConfig, IcecastConfig, SavedPlaylist, Scheduler};
 use riars_stream::{StreamService, StreamState, StreamStatus};
 use tauri::{AppHandle, Emitter, Manager, State};
 
+mod analysis_cmds;
 mod automation_cmds;
 
 #[tauri::command]
@@ -36,6 +37,12 @@ pub struct AppState {
     pub session: Mutex<riars_core::session::SessionSaver>,
     /// Long-term automation: playlist generator and proof-of-play log.
     pub automation: Mutex<riars_core::automation::Automation>,
+    /// Background cue-point and loudness analysis.
+    pub analysis: riars_core::analysis::BatchAnalyzer,
+    /// Pre-listening on its own sound card.
+    pub preview: Mutex<riars_core::audio::preview::PreviewPlayer>,
+    /// Sound cards chosen in the settings (`riars_audio.json`).
+    pub audio_settings_path: PathBuf,
 }
 
 #[tauri::command]
@@ -484,9 +491,6 @@ async fn playlists_load(id: String, play: bool, app: AppHandle) -> Result<Playli
 pub fn run() {
     env_logger::init();
 
-    let mut engine = AudioEngine::new().expect("Failed to initialize audio engine");
-    let stream = engine.take_stream_tap().map(StreamService::new);
-
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -503,11 +507,21 @@ pub fn run() {
             let library = MediaLibrary::open(&db_path.to_string_lossy())?;
             let schedule_path = data_dir.join("riars_schedule.json");
             let session_path = data_dir.join("riars_session.json");
+            let audio_settings_path = data_dir.join("riars_audio.json");
             let scheduler = Scheduler::load(&schedule_path).unwrap_or_else(|e| {
                 log::warn!("{e}; starting with an empty schedule");
                 Scheduler::new()
             });
             log::info!("Media library: {}", db_path.display());
+
+            // Sound cards chosen last time: the on-air one before the engine opens.
+            let audio_settings = analysis_cmds::AudioSettings::load(&audio_settings_path);
+            let mut engine = match &audio_settings.main_device {
+                Some(name) => AudioEngine::with_device(name),
+                None => AudioEngine::new(),
+            }
+            .expect("Failed to initialize audio engine");
+            let stream = engine.take_stream_tap().map(StreamService::new);
 
             app.manage(AppState {
                 stream,
@@ -518,7 +532,41 @@ pub fn run() {
                 engine: Mutex::new(engine),
                 library: Mutex::new(library),
                 automation: Mutex::new(riars_core::automation::Automation::new()),
+                analysis: riars_core::analysis::BatchAnalyzer::new(),
+                preview: Mutex::new(riars_core::audio::preview::PreviewPlayer::new()),
+                audio_settings_path,
             });
+
+            // Normalisation reads each file's loudness from the library; the closure
+            // never runs with the engine locked (see `play_index_unlocked`).
+            let lookup_app = app.handle().clone();
+            {
+                let state = app.state::<AppState>();
+                match state.engine.lock() {
+                    Ok(mut engine) => engine.set_loudness_lookup(Arc::new(move |path| {
+                        lookup_app
+                            .state::<AppState>()
+                            .library
+                            .lock()
+                            .ok()?
+                            .loudness_by_path(path)
+                            .ok()
+                            .flatten()
+                    })),
+                    Err(e) => log::warn!("Cannot set the loudness lookup: {e}"),
+                };
+            }
+            if let Some(name) = audio_settings.preview_device {
+                let opened = app
+                    .state::<AppState>()
+                    .preview
+                    .lock()
+                    .map_err(|e| e.to_string())
+                    .and_then(|mut preview| preview.set_device(Some(name)));
+                if let Err(e) = opened {
+                    log::warn!("Cannot open the pre-listen sound card: {e}");
+                }
+            }
             // Carry on where the last run stopped (decodes a track: off the main thread).
             let resume_app = app.handle().clone();
             std::thread::Builder::new().name("riars-resume".into()).spawn(move || {
@@ -633,6 +681,26 @@ pub fn run() {
             automation_cmds::automation_log,
             automation_cmds::automation_delivery,
             automation_cmds::automation_export_csv,
+            analysis_cmds::analysis_track_cues,
+            analysis_cmds::analysis_tracks_cues,
+            analysis_cmds::analysis_set_track_cues,
+            analysis_cmds::analysis_clear_track_cues,
+            analysis_cmds::analysis_analyze_track,
+            analysis_cmds::analysis_paths_cues,
+            analysis_cmds::analysis_batch_start,
+            analysis_cmds::analysis_batch_cancel,
+            analysis_cmds::analysis_batch_status,
+            analysis_cmds::analysis_stats,
+            analysis_cmds::analysis_get_detector,
+            analysis_cmds::analysis_set_detector,
+            analysis_cmds::audio_devices,
+            analysis_cmds::audio_set_main_device,
+            analysis_cmds::audio_set_preview_device,
+            analysis_cmds::normalization_get,
+            analysis_cmds::normalization_set,
+            analysis_cmds::preview_play,
+            analysis_cmds::preview_stop,
+            analysis_cmds::preview_state,
         ])
         .run(tauri::generate_context!())
         .expect("error while running RIARS");

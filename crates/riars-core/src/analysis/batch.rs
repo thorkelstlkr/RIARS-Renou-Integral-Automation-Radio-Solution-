@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use super::cues::analyze_file;
+use super::cues::{analyze_file, CueAnalysis};
 use super::model::TrackCues;
 use crate::library::db::MediaLibrary;
 
@@ -72,31 +72,88 @@ struct CommandMarks {
     confidence: Option<f32>,
 }
 
-/// Run the external detector on `path`; its marks, or why not.
-fn run_command(program: &str, args: &[String], path: &Path) -> Result<CommandMarks, String> {
-    let output = std::process::Command::new(program)
+/// Longest an external detector may take on one file.
+const DETECTOR_TIMEOUT: Duration = Duration::from_secs(120);
+
+/// Run the external detector on `path`; its marks, or why not. It is killed when it
+/// takes longer than [`DETECTOR_TIMEOUT`] or when `cancel` is set.
+fn run_command(program: &str, args: &[String], path: &Path, cancel: &AtomicBool) -> Result<CommandMarks, String> {
+    use std::io::Read;
+    use std::process::Stdio;
+    let mut child = std::process::Command::new(program)
         .args(args)
         .arg(path)
-        .output()
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
         .map_err(|e| format!("Cannot run {program}: {e}"))?;
-    if !output.status.success() {
-        return Err(format!("{program} failed: {}", String::from_utf8_lossy(&output.stderr).trim()));
+    // Read both pipes on their own threads so a chatty program never blocks on a full pipe.
+    let drain = |pipe: Option<Box<dyn Read + Send>>| {
+        std::thread::spawn(move || {
+            let mut out = Vec::new();
+            if let Some(mut pipe) = pipe {
+                let _ = pipe.read_to_end(&mut out);
+            }
+            out
+        })
+    };
+    let stdout = drain(child.stdout.take().map(|p| Box::new(p) as Box<dyn Read + Send>));
+    let stderr = drain(child.stderr.take().map(|p| Box::new(p) as Box<dyn Read + Send>));
+    let started = std::time::Instant::now();
+    let status = loop {
+        if let Some(status) = child.try_wait().map_err(|e| e.to_string())? {
+            break status;
+        }
+        let why = if cancel.load(Ordering::Relaxed) {
+            Some("cancelled".to_string())
+        } else if started.elapsed() > DETECTOR_TIMEOUT {
+            Some(format!("took more than {} s", DETECTOR_TIMEOUT.as_secs()))
+        } else {
+            None
+        };
+        if let Some(why) = why {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(format!("{program} {why}"));
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    };
+    let stdout = stdout.join().unwrap_or_default();
+    let stderr = stderr.join().unwrap_or_default();
+    if !status.success() {
+        return Err(format!("{program} failed: {}", String::from_utf8_lossy(&stderr).trim()));
     }
-    serde_json::from_slice(&output.stdout).map_err(|e| format!("{program} printed no valid JSON: {e}"))
+    serde_json::from_slice(&stdout).map_err(|e| format!("{program} printed no valid JSON: {e}"))
 }
 
 /// Analyse one file: the built-in analysis, with the detector's marks if it has one.
 pub fn analyze_track(track_id: i64, path: &Path, detector: &CueDetector) -> Result<TrackCues, String> {
-    let analysis = analyze_file(path, 0)?;
+    analyze_track_detailed(track_id, path, 0, detector, &AtomicBool::new(false)).map(|(_, cues)| cues)
+}
+
+/// [`analyze_track`] that also returns the analysis itself, with a waveform of `buckets`
+/// columns, decoding the file once. `cancel` stops an external detector.
+pub fn analyze_track_detailed(
+    track_id: i64,
+    path: &Path,
+    buckets: usize,
+    detector: &CueDetector,
+    cancel: &AtomicBool,
+) -> Result<(CueAnalysis, TrackCues), String> {
+    let mut analysis = analyze_file(path, buckets)?;
     let mut cues = TrackCues::from_analysis(track_id, &analysis, chrono::Local::now().naive_local());
     if let CueDetector::Command { program, args } = detector {
-        let marks = run_command(program, args, path)?;
+        let marks = run_command(program, args, path, cancel)?;
         cues.intro_end_ms = marks.intro_ms.map(|ms| ms.clamp(cues.cue_in_ms, cues.cue_out_ms));
         cues.outro_start_ms = marks.outro_ms.map(|ms| ms.clamp(cues.intro_end_ms.unwrap_or(cues.cue_in_ms), cues.cue_out_ms));
         cues.confidence = marks.confidence.unwrap_or(0.9).clamp(0.0, 1.0);
+        analysis.intro_ms = cues.intro_end_ms;
+        analysis.outro_ms = cues.outro_start_ms;
+        analysis.confidence = cues.confidence;
     }
     cues.validate()?;
-    Ok(cues)
+    Ok((analysis, cues))
 }
 
 impl BatchAnalyzer {
@@ -152,7 +209,7 @@ impl BatchAnalyzer {
             status.total = tracks.len();
         }
         let (status, cancel) = (Arc::clone(&self.status), Arc::clone(&self.cancel));
-        std::thread::Builder::new()
+        let spawned = std::thread::Builder::new()
             .name("riars-analysis".into())
             .spawn(move || {
                 for (n, (id, path)) in tracks.into_iter().enumerate() {
@@ -166,7 +223,7 @@ impl BatchAnalyzer {
                         s.current = Some(path.clone());
                     }
                     // Decoding and analysis without any lock; the library only to save.
-                    let result = analyze_track(id, Path::new(&path), &detector).and_then(|cues| {
+                    let result = analyze_track_detailed(id, Path::new(&path), 0, &detector, &cancel).and_then(|(_, cues)| {
                         let mut wrote = true;
                         library.with_library(&mut |lib| {
                             wrote = lib.save_analysis(&cues)?;
@@ -191,8 +248,14 @@ impl BatchAnalyzer {
                     s.running = false;
                     s.current = None;
                 }
-            })
-            .map_err(|e| e.to_string())?;
+            });
+        if let Err(e) = spawned {
+            if let Ok(mut s) = self.status.lock() {
+                s.running = false;
+                s.last_error = Some(e.to_string());
+            }
+            return Err(e.to_string());
+        }
         Ok(())
     }
 }
@@ -279,5 +342,25 @@ mod tests {
         assert!(loud[2] - loud[0] > 15.0, "{loud:?}");
         drop(lib);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_cancelled_detector_is_killed() {
+        let (program, args): (&str, Vec<String>) = if cfg!(windows) {
+            ("powershell", vec!["-NoProfile".into(), "-Command".into(), "Start-Sleep 30;".into()])
+        } else {
+            ("sleep", vec!["30".into()])
+        };
+        let cancel = Arc::new(AtomicBool::new(false));
+        let flag = Arc::clone(&cancel);
+        let stopper = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(300));
+            flag.store(true, Ordering::Relaxed);
+        });
+        let started = std::time::Instant::now();
+        let result = run_command(program, &args, Path::new("x.wav"), &cancel);
+        stopper.join().unwrap();
+        assert!(result.err().is_some_and(|e| e.contains("cancelled")));
+        assert!(started.elapsed() < Duration::from_secs(10));
     }
 }

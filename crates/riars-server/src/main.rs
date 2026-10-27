@@ -31,6 +31,14 @@ struct Cli {
     #[arg(long)]
     no_sound_card: bool,
 
+    /// On-air sound card by name (ignored with --no-sound-card)
+    #[arg(long)]
+    device: Option<String>,
+
+    /// List the sound cards and exit
+    #[arg(long)]
+    list_devices: bool,
+
     /// Start fresh instead of resuming the last session (playlist, position,
     /// volume, crossfade, streaming).
     #[arg(long)]
@@ -64,10 +72,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     set_language(&cli.lang);
 
+    if cli.list_devices {
+        let default = riars_core::audio::default_output_device();
+        let devices = riars_core::audio::output_devices();
+        if devices.is_empty() {
+            println!("No output devices");
+        } else {
+            for device in devices {
+                if default.as_deref() == Some(device.as_str()) {
+                    println!("{device} (default)");
+                } else {
+                    println!("{device}");
+                }
+            }
+        }
+        return Ok(());
+    }
+
     log::info!("{} v{}", t("server_starting"), env!("CARGO_PKG_VERSION"));
 
     let mut engine = if cli.no_sound_card {
         AudioEngine::new_headless()
+    } else if let Some(device) = cli.device.as_deref() {
+        AudioEngine::with_device(device)
     } else {
         AudioEngine::new()
     }
@@ -102,7 +129,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             schedule_path,
             session,
             automation: Arc::new(Mutex::new(riars_core::automation::Automation::new())),
+            analysis: riars_core::analysis::BatchAnalyzer::new(),
         };
+        {
+            let lookup_library = Arc::clone(&mcp_state.library);
+            mcp_state.engine.lock().map_err(|e| e.to_string())?.set_loudness_lookup(Arc::new(
+                move |path| {
+                    lookup_library
+                        .lock()
+                        .ok()?
+                        .loudness_by_path(path)
+                        .ok()
+                        .flatten()
+                },
+            ));
+        }
         if !cli.no_resume {
             let engine = Arc::clone(&mcp_state.engine);
             let path = session_path.clone();
@@ -135,7 +176,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             scheduler: Mutex::new(scheduler),
             automation: Mutex::new(riars_core::automation::Automation::new()),
             automation_events: tokio::sync::broadcast::channel(64).0,
+            analysis: riars_core::analysis::BatchAnalyzer::new(),
         });
+        {
+            let lookup_state = Arc::downgrade(&state);
+            state.engine.lock().map_err(|e| e.to_string())?.set_loudness_lookup(Arc::new(
+                move |path| {
+                    let state = lookup_state.upgrade()?;
+                    let library = state.library.lock().ok()?;
+                    let loudness = library.loudness_by_path(path).ok().flatten();
+                    loudness
+                },
+            ));
+        }
         if !cli.no_resume {
             let resume_state = Arc::clone(&state);
             let path = session_path.clone();
