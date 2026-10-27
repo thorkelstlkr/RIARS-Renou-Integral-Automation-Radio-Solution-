@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { analysis, preview } from "../analysis/api";
 import ContextMenu, { type ContextEntry } from "../menu/ContextMenu";
@@ -66,6 +66,9 @@ export default function CartGrid({ carts }: { carts: CartPlaying[] }) {
   const [ctx, setCtx] = useState<{ x: number; y: number; slot: number } | null>(null);
   const [editing, setEditing] = useState<{ slot: number; button: CartButton | null } | null>(null);
   const [durations, setDurations] = useState<Record<string, number>>({});
+  // Time left when each playing button was first seen: the bar's length for files
+  // never analysed. Kept in a ref: it changes during render, nothing re-renders for it.
+  const firstLeft = useRef<Record<number, number>>({});
 
   const reloadBank = useCallback(async (id: number | null) => {
     if (id == null) {
@@ -316,7 +319,6 @@ export default function CartGrid({ carts }: { carts: CartPlaying[] }) {
   return (
     <div style={S.wrap}>
       <div style={S.toolbar}>
-        <span style={S.title}>{t("live.bank")}</span>
         <select style={S.select} value={activeId ?? ""} aria-label={t("live.bank")}
           disabled={banks.length === 0} onChange={(e) => { void selectBank(Number(e.target.value)); }}>
           {banks.length === 0 && <option value="">{t("live.noBank")}</option>}
@@ -356,7 +358,11 @@ export default function CartGrid({ carts }: { carts: CartPlaying[] }) {
           const button = bySlot.get(cartId(page, slot));
           const cart = playing.get(cartId(page, slot));
           const loop = button?.mode === "Loop";
-          const duration = button ? durations[button.file_path] : undefined;
+          const id = cartId(page, slot);
+          // A Fire button pressed again starts over: more time left than first seen.
+          if (cart?.left_ms != null && !(cart.left_ms <= (firstLeft.current[id] ?? -1))) firstLeft.current[id] = cart.left_ms;
+          if (!cart) delete firstLeft.current[id];
+          const duration = button ? durations[button.file_path] ?? firstLeft.current[id] : undefined;
           const elapsed = cart && cart.left_ms != null && duration
             ? Math.max(0, Math.min(1, 1 - cart.left_ms / duration))
             : loop ? 1 : 0;
@@ -376,7 +382,7 @@ export default function CartGrid({ carts }: { carts: CartPlaying[] }) {
               onDrop={(e) => { void dropTrack(e, slot); }}>
               {key && <span style={S.keyHint}>{key}</span>}
               <span style={S.label}>
-                {button ? button.label : <span style={S.emptyLabel}>{t("live.emptyButton")}</span>}
+                {button ? button.label : <span style={S.emptyLabel} aria-hidden>+</span>}
               </span>
               <span style={S.bottom}>
                 <span style={S.mode}>
