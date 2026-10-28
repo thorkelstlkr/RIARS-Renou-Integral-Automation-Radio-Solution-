@@ -48,7 +48,35 @@
     "empty": "Sem faixas. Use «Adicionar pasta» para analisar a sua música.",
     "unknownArtist": "Desconhecido",
     "count": "{{count}} faixas",
-    "count_one": "{{count}} faixa"
+    "count_one": "{{count}} faixa",
+    "folders": {
+      "tabLibrary": "Biblioteca",
+      "tabFolders": "Pastas",
+      "libraryFolders": "Pastas da biblioteca",
+      "none": "Ainda não há pastas na biblioteca. Marque uma pasta na árvore ou clique em Adicionar.",
+      "add": "Adicionar…",
+      "rescan": "Reanalisar",
+      "thisComputer": "Este computador",
+      "include": "Incluir na biblioteca",
+      "includedBy": "Incluída através de {{folder}}",
+      "tracks": "{{count}} faixas",
+      "tracks_one": "{{count}} faixa",
+      "scanning": "A analisar {{folder}}…",
+      "scanned": "{{folder}}: {{count}} faixas novas",
+      "scanError": "{{folder}}: {{error}}",
+      "scanFinished": "Análise concluída: {{count}} faixas novas",
+      "removeTitle": "Remover {{folder}} da biblioteca",
+      "removeText": "A pasta deixará de ser analisada. Remover também as suas faixas da biblioteca?",
+      "removeWithTracks": "Remover pasta e faixas",
+      "removeKeepTracks": "Remover só a pasta",
+      "removed": "Pasta removida; {{count}} faixas fora da biblioteca",
+      "cancel": "Cancelar",
+      "empty": "Não há ficheiros de áudio nesta pasta",
+      "pick": "Escolha uma pasta para ver os seus ficheiros",
+      "notInLibrary": "Não está na biblioteca",
+      "loading": "A carregar…",
+      "readError": "Não é possível ler a pasta: {{error}}"
+    }
   },
   "nowPlaying": {
     "onAir": "NO AR",
@@ -799,6 +827,10 @@
     "duckWhileOpen": "Enquanto o microfone está aberto",
     "duckWhileSpeaking": "Enquanto se fala",
     "allowRemote": "Permitir que a API e os agentes de IA abram o microfone",
-    "allowRemoteHint": "Desativado por omissão: um agente nunca deve abrir um microfone sem o locutor saber."
+    "allowRemoteHint": "Desativado por omissão: um agente nunca deve abrir um microfone sem o locutor saber.",
+    "directMonitor": "A placa de som já reproduz o microfone (monitorização direta)",
+    "directMonitorHint": "Marque se se ouve duas vezes, a segunda com atraso, como um eco. A placa já envia o microfone para a sua saída, por isso o RIARS só o junta à emissão pela Internet; a música continua a baixar.",
+    "chooseFile": "Escolher ficheiro…",
+    "searchLibrary": "Pesquisar na biblioteca…"
   }
 }

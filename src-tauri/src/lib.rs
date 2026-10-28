@@ -11,6 +11,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 mod analysis_cmds;
 mod automation_cmds;
+mod folder_cmds;
 mod live_cmds;
 
 #[tauri::command]
@@ -380,13 +381,17 @@ fn engine_load_track(path: String, state: State<AppState>) -> Result<(), String>
         .load_track(&path)
 }
 
+/// Add `path` as a library folder and scan it now; returns the new tracks.
+/// The lock is held only to store them, so playback and the UI carry on meanwhile.
 #[tauri::command]
-fn library_scan_folder(path: String, state: State<AppState>) -> Result<usize, String> {
-    state
-        .library
-        .lock()
-        .map_err(|e| e.to_string())?
-        .scan_folder(&path)
+async fn library_scan_folder(path: String, app: AppHandle) -> Result<usize, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let state = app.state::<AppState>();
+        let folder = state.library.lock().map_err(|e| e.to_string())?.add_folder(&path)?;
+        folder_cmds::scan_now(&app, &folder)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// One page of the library: the UI loads pages as it scrolls instead of everything.
@@ -665,6 +670,8 @@ pub fn run() {
                     log::warn!("Cannot open the pre-listen sound card: {e}");
                 }
             }
+            // Pick up files added to the library folders since the last run.
+            folder_cmds::spawn_rescan(app.handle().clone());
             // Carry on where the last run stopped (decodes a track: off the main thread).
             let resume_app = app.handle().clone();
             std::thread::Builder::new().name("riars-resume".into()).spawn(move || {
@@ -733,6 +740,13 @@ pub fn run() {
             stream_stop,
             engine_load_track,
             library_scan_folder,
+            folder_cmds::fs_roots,
+            folder_cmds::fs_list_dir,
+            folder_cmds::library_folders,
+            folder_cmds::library_add_folders,
+            folder_cmds::library_remove_folder,
+            folder_cmds::library_rescan,
+            folder_cmds::library_track_for_file,
             library_get_tracks,
             library_query,
             library_search,

@@ -112,10 +112,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let session_path = std::path::Path::new(&cli.db_path).with_file_name("riars_session.json");
     let session = Mutex::new(riars_core::session::SessionSaver::new(session_path.clone()));
 
+    // --scan adds a library folder; every library folder is rescanned in the
+    // background once the server is up, without holding the library lock.
     if let Some(ref folder) = cli.scan {
-        match library.scan_folder(folder) {
-            Ok(count) => log::info!("{} {folder}: {count} {}", t("auto_scanned"), t("tracks_added")),
-            Err(e) => log::warn!("{} {folder}: {e}", t("scan_failed")),
+        if let Err(e) = library.add_folder(folder) {
+            log::warn!("{} {folder}: {e}", t("scan_failed"));
         }
     }
 
@@ -144,6 +145,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 },
             ));
         }
+        let scan_library = Arc::clone(&mcp_state.library);
+        tokio::task::spawn_blocking(move || rescan_library(&scan_library));
         if !cli.no_resume {
             let engine = Arc::clone(&mcp_state.engine);
             let path = session_path.clone();
@@ -189,6 +192,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 },
             ));
         }
+        let scan_state = Arc::clone(&state);
+        tokio::task::spawn_blocking(move || rescan_library(&scan_state.library));
         if !cli.no_resume {
             let resume_state = Arc::clone(&state);
             let path = session_path.clone();
@@ -206,4 +211,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+/// Pick up files added to the library folders since the last run.
+fn rescan_library(library: &Mutex<MediaLibrary>) {
+    match riars_core::library::folders::rescan_all(library) {
+        Ok(count) => log::info!("{}: {count} {}", t("auto_scanned"), t("tracks_added")),
+        Err(e) => log::warn!("{}: {e}", t("scan_failed")),
+    }
 }

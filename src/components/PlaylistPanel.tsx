@@ -375,10 +375,12 @@ export default function PlaylistPanel() {
   const openMarks = async () => {
     if (!menuItem) return;
     try {
-      const track = await invoke<{ id: number; title: string } | null>(
-        "library_track_by_path", { path: menuItem.track_path });
-      if (track) setCueItem({ trackId: track.id, title: track.title });
-      else setError(t("contextMenu.notInLibrary"));
+      // A file not in the library yet (dropped from the Folders tab, a folder not
+      // scanned yet) joins it here: marks are kept per library track.
+      const track = await invoke<{ id: number; title: string }>(
+        "library_track_for_file", { path: menuItem.track_path });
+      setCueItem({ trackId: track.id, title: track.title });
+      window.dispatchEvent(new Event("library-changed"));
     } catch (e) {
       setError(String(e));
     }

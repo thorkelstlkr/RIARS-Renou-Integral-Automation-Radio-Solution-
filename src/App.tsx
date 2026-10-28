@@ -41,7 +41,7 @@ const APP_STYLES: Record<string, React.CSSProperties> = {
     background: "var(--bg-secondary)", display: "flex", flexDirection: "column" as const,
   },
   library: { flex: 1, minHeight: 0, overflowY: "auto" as const },
-  log: { height: "34%", minHeight: 120 },
+  log: { flex: 1, minHeight: 160, display: "flex", flexDirection: "column" as const },
   center: { flex: 1, minWidth: 0, background: "var(--bg-primary)", display: "flex", flexDirection: "column" as const },
   right: {
     width: 260, minWidth: 200, borderLeft: "1px solid var(--border)",
@@ -116,7 +116,6 @@ export default function App() {
       <main style={APP_STYLES.main}>
         <aside style={APP_STYLES.sidebar}>
           <div style={APP_STYLES.library}><MediaLibrary /></div>
-          <div style={APP_STYLES.log}><LogPane /></div>
         </aside>
         <section style={APP_STYLES.center}>
           <nav style={APP_STYLES.tabs} role="tablist">
@@ -137,6 +136,7 @@ export default function App() {
         <aside style={APP_STYLES.right}>
           <NowPlaying />
           <VuMeter />
+          <div style={APP_STYLES.log}><LogPane /></div>
           <AutomationCard />
         </aside>
       </main>

@@ -25,11 +25,11 @@ Items that are not music show their kind next to the label, such as **Jingle**, 
 
 ## Left, centre and right
 
-The left sidebar contains the **Library** and, underneath it, the **Log** pane with recent proof-of-play entries and automation warnings.
+The left sidebar contains the [Library](topic:library), with its **Library** and **Folders** tabs.
 
 The centre holds seven tabs: **Playlist**, **Schedule**, **Clocks**, **Grid**, **Categories**, **Advertising** and **Log**. **Ctrl+1** to **Ctrl+7** switch between them in that order.
 
-The right sidebar contains the **Now Playing** card, the **VU Meter** and the **Automation** card with its **ON**/**OFF** toggle.
+The right sidebar contains the **Now Playing** card, the **VU Meter**, the **Log** pane with recent proof-of-play entries and automation warnings, and the **Automation** card with its **ON**/**OFF** toggle.
 
 The bottom **StatusBar** shows the silence detector (**Silence detector: on** or **off**, or a red **SILENCE ON AIR**), the automation state (**Automation: on** or **off**), the number of active scheduled events and the RIARS version.
 

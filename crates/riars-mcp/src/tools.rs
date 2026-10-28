@@ -266,6 +266,7 @@ pub fn list_tools() -> ToolList {
         .into_iter()
         .chain(crate::analysis_tools::tool_defs())
         .chain(crate::automation_tools::tool_defs())
+        .chain(crate::folder_tools::tool_defs())
         .chain(crate::live_tools::tool_defs())
         .collect(),
     }
@@ -276,6 +277,9 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
         return result;
     }
     if let Some(result) = crate::automation_tools::handle(name, args, state) {
+        return result;
+    }
+    if let Some(result) = crate::folder_tools::handle(name, args, state) {
         return result;
     }
     if let Some(result) = crate::live_tools::handle(name, args, state) {
@@ -353,11 +357,12 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
         }
         "scan_folder" => {
             let path = args["path"].as_str().ok_or(t("missing_path"))?;
-            let count = state
+            let stored = state
                 .library
                 .lock()
                 .map_err(|e| e.to_string())?
-                .scan_folder(path)?;
+                .add_folder(path)?;
+            let count = riars_core::library::folders::scan_into(&state.library, &stored)?;
             Ok(text_result(&format!(
                 "{}: {count} {}",
                 t("scanned_folder"),

@@ -3,7 +3,7 @@ id: live
 title: Live broadcasting
 section: onair
 order: 9
-keywords: live, microphone, mic, sound bank, cartwall, jingles, effects, manual mode, assisted, on air, presenter, DJ
+keywords: live, microphone, mic, sound bank, cartwall, jingles, effects, manual mode, assisted, on air, presenter, DJ, echo, direct monitoring
 ---
 
 # Live broadcasting
@@ -22,6 +22,7 @@ The **On air** tab (**Ctrl+8**) brings together what a presenter needs: the **mi
 | Setting | Default |
 |---|---|
 | Input card | The system one |
+| The sound card already plays the microphone (direct monitoring) | No |
 | Gain | 0 dB |
 | Low cut (removes pops and hum below 80 Hz) | Yes |
 | Noise gate (silences room noise between phrases) | No |
@@ -31,11 +32,17 @@ The **On air** tab (**Ctrl+8**) brings together what a presenter needs: the **mi
 
 RIARS does not send the microphone to the [pre-listen](topic:sound-cards) headphones: to hear yourself, use the mixing desk or your audio interface's direct monitoring.
 
+### If you hear an echo
+
+Many audio interfaces (a Roland UA-4FX, for example) send the microphone input straight to their output, with no delay. If RIARS plays it on that card as well, you hear yourself twice: the second copy arrives a fraction of a second late and sounds like an echo. If the card output is your on-air signal, listeners hear it too.
+
+Tick **The sound card already plays the microphone (direct monitoring)**. RIARS then stops playing the microphone on the card, which already does so with no delay, and adds it only to the [Internet stream](topic:streaming). The music still ducks when the microphone opens and the meter still works. If your interface has no direct monitoring, leave the box unticked; otherwise the microphone would not reach the card at all.
+
 ## Sound bank
 
 A grid of **6 × 4 buttons** with **8 pages**, for jingles, effects, sweepers and music beds. You can keep several banks, one per show for example, and pick the active one at the top.
 
-- **Assign a sound:** drag a track from the library onto a button, or click an empty button and search for it.
+- **Assign a sound:** drag a track from the library (or a file from the **Folders** tab) onto a button, or click an empty button. In the editor, clicking **Choose a track…** shows the library list, which filters as you type; **Choose file…** takes any audio file on disk, in the library or not.
 - **Fire:** click the button, or keys **1–0** and **Q–P** for the first twenty buttons of the visible page. **Page Up / Page Down** change page. **Esc** or **Stop all** stops every bank sound.
 - Each button shows the time it has left while it plays. Up to **8** can play at once, over the music, and with the playlist stopped too.
 - **Right-click** a button: **Edit…** (label, colour, gain, mode and whether it lowers the music), **Pre-listen** and **Clear**.

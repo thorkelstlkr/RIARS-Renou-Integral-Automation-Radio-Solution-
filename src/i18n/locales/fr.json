@@ -48,7 +48,35 @@
     "empty": "Aucune piste. Utilisez « Ajouter un dossier » pour analyser votre musique.",
     "unknownArtist": "Inconnu",
     "count": "{{count}} pistes",
-    "count_one": "{{count}} piste"
+    "count_one": "{{count}} piste",
+    "folders": {
+      "tabLibrary": "Bibliothèque",
+      "tabFolders": "Dossiers",
+      "libraryFolders": "Dossiers de la bibliothèque",
+      "none": "Aucun dossier dans la bibliothèque. Cochez un dossier dans l'arborescence ou cliquez sur Ajouter.",
+      "add": "Ajouter…",
+      "rescan": "Réanalyser",
+      "thisComputer": "Cet ordinateur",
+      "include": "Inclure dans la bibliothèque",
+      "includedBy": "Inclus via {{folder}}",
+      "tracks": "{{count}} titres",
+      "tracks_one": "{{count}} titre",
+      "scanning": "Analyse de {{folder}}…",
+      "scanned": "{{folder}} : {{count}} nouveaux titres",
+      "scanError": "{{folder}} : {{error}}",
+      "scanFinished": "Analyse terminée : {{count}} nouveaux titres",
+      "removeTitle": "Retirer {{folder}} de la bibliothèque",
+      "removeText": "Le dossier ne sera plus analysé. Retirer aussi ses titres de la bibliothèque ?",
+      "removeWithTracks": "Retirer le dossier et les titres",
+      "removeKeepTracks": "Retirer seulement le dossier",
+      "removed": "Dossier retiré ; {{count}} titres sortis de la bibliothèque",
+      "cancel": "Annuler",
+      "empty": "Aucun fichier audio dans ce dossier",
+      "pick": "Choisissez un dossier pour voir ses fichiers",
+      "notInLibrary": "Pas dans la bibliothèque",
+      "loading": "Chargement…",
+      "readError": "Impossible de lire le dossier : {{error}}"
+    }
   },
   "nowPlaying": {
     "onAir": "À L'ANTENNE",
@@ -799,6 +827,10 @@
     "duckWhileOpen": "Tant que le micro est ouvert",
     "duckWhileSpeaking": "Pendant la parole",
     "allowRemote": "Autoriser l'API et les agents d'IA à ouvrir le micro",
-    "allowRemoteHint": "Désactivé par défaut : un agent ne devrait jamais ouvrir un micro à l'insu de l'animateur."
+    "allowRemoteHint": "Désactivé par défaut : un agent ne devrait jamais ouvrir un micro à l'insu de l'animateur.",
+    "directMonitor": "La carte son diffuse déjà le micro (monitoring direct)",
+    "directMonitorHint": "Cochez si vous vous entendez deux fois, la seconde avec un retard, comme un écho. La carte envoie déjà le micro sur sa sortie, donc RIARS l'ajoute seulement au flux Internet ; la musique baisse toujours.",
+    "chooseFile": "Choisir un fichier…",
+    "searchLibrary": "Rechercher dans la bibliothèque…"
   }
 }

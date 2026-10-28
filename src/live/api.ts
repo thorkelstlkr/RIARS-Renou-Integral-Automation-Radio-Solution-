@@ -25,6 +25,8 @@ export interface MicConfig {
   duck: MicDuck;
   /** Let the API and AI agents open the microphone. */
   allow_remote: boolean;
+  /** The input card plays the microphone itself: RIARS adds it only to the stream. */
+  direct_monitor: boolean;
 }
 
 export interface MicStatus {

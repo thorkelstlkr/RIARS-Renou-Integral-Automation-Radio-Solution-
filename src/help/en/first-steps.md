@@ -12,7 +12,7 @@ This is the shortest path from an empty RIARS to a station that plays by itself.
 
 ## 1. Add music to the library
 
-Open the desktop app and find the **Library** area on the left. Click **Add folder** and choose a folder of audio files. RIARS scans it and adds the tracks to the library database. A message tells you how many new tracks were added. You can add more folders later; the list grows as you scroll.
+Open the desktop app and find the **Library** area on the left. Click **Add folder** and choose one or more folders of audio files, or tick them in the **Folders** tab. RIARS scans them in the background and adds the tracks to the library database; a message tells you how many new tracks were added. RIARS remembers these folders and rescans them every time it starts.
 
 ## 2. Build a playlist
 

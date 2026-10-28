@@ -112,7 +112,8 @@ const metaFromAnalysis = (result: CueAnalysis): Meta => ({
   confidence: result.confidence,
   loudness: result.loudness_lufs,
   peak: result.peak_dbfs,
-  analyzedAt: new Date().toISOString(),
+  // The backend stamps the time of a save; a browser clock in UTC is not wanted.
+  analyzedAt: null,
 });
 
 const gainDb = (config: NormalizationConfig, loudness: number | null, peak: number | null) => {

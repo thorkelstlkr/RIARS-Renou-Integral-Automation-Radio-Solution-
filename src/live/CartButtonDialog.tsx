@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import Dialog from "../menu/Dialog";
 import { live, type CartButton, type CartMode } from "./api";
 
@@ -64,12 +65,14 @@ export default function CartButtonDialog({ bankId, page, slot, button, onClose, 
     page, slot, track_id: null, file_path: "", label: "", color: "", gain_db: 0, mode: "Fire", duck: false,
   });
   const [search, setSearch] = useState("");
+  // The library list shows while the search box has the focus, empty or not.
+  const [browsing, setBrowsing] = useState(false);
   const [results, setResults] = useState<Track[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const text = search.trim();
-    if (!text) {
+    if (!text && !browsing) {
       setResults([]);
       return;
     }
@@ -78,9 +81,9 @@ export default function CartButtonDialog({ bankId, page, slot, button, onClose, 
       invoke<{ total: number; tracks: Track[] }>("library_query", { search: text, limit: 20, offset: 0 })
         .then((pageResult) => { if (alive) setResults(pageResult.tracks); })
         .catch((e) => { if (alive) setError(String(e)); });
-    }, 250);
+    }, text ? 250 : 0);
     return () => { alive = false; clearTimeout(id); };
-  }, [search]);
+  }, [search, browsing]);
 
   const patch = (values: Partial<CartButton>) => setDraft((prev) => ({ ...prev, ...values }));
 
@@ -88,6 +91,20 @@ export default function CartButtonDialog({ bankId, page, slot, button, onClose, 
     patch({ track_id: track.id, file_path: track.file_path, label: track.title.slice(0, 40) });
     setSearch("");
     setResults([]);
+    setBrowsing(false);
+  };
+
+  // Any audio file on disk, in the library or not; the label keeps what was typed.
+  const chooseFile = async () => {
+    try {
+      const file = await open({ multiple: false, filters: [{ name: "Audio", extensions: ["mp3", "flac", "wav", "ogg", "aac", "m4a"] }] });
+      if (typeof file !== "string") return;
+      const name = file.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, "") ?? file;
+      setDraft((prev) => ({ ...prev, track_id: null, file_path: file, label: prev.label.trim() ? prev.label : name.slice(0, 40) }));
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+    }
   };
 
   const save = async () => {
@@ -161,14 +178,20 @@ export default function CartButtonDialog({ bankId, page, slot, button, onClose, 
 
       <div style={S.field}>
         <span style={S.label}>{t("live.file")}</span>
-        <div style={S.file} title={draft.file_path}>{draft.file_path || "—"}</div>
+        <div style={S.row}>
+          <div style={{ ...S.file, flex: 1, minWidth: 0 }} title={draft.file_path}>{draft.file_path || "—"}</div>
+          <button type="button" style={S.btn} onClick={() => { void chooseFile(); }}>{t("live.chooseFile")}</button>
+        </div>
       </div>
 
       <div style={S.field}>
         <span style={S.label}>{t("live.chooseTrack")}</span>
         <input style={S.input} value={search} aria-label={t("live.chooseTrack")}
-          placeholder={t("live.chooseTrack")} onChange={(e) => setSearch(e.target.value)} />
-        {search.trim() !== "" && (
+          placeholder={t("live.searchLibrary")} onChange={(e) => setSearch(e.target.value)}
+          onFocus={() => setBrowsing(true)}
+          // Later than a click on a result, which then still lands.
+          onBlur={() => setTimeout(() => setBrowsing(false), 200)} />
+        {(browsing || search.trim() !== "") && (
           <div style={S.results}>
             {results.length === 0 && <div style={S.empty}>{t("library.empty")}</div>}
             {results.map((track) => (

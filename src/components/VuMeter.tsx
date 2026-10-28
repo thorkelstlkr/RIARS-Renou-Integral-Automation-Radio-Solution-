@@ -87,7 +87,7 @@ export default function VuMeter() {
 
   const clipping = now < clipUntil;
   return (
-    <div style={{ padding: 12, flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
+    <div style={{ padding: 12, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
         <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" as const, letterSpacing: 1 }}>
           {t("vuMeter.title")}

@@ -25,13 +25,23 @@ export default function Dialog({ title, width = 460, onClose, children }: {
 }) {
   const { t } = useTranslation();
   const box = useRef<HTMLDivElement>(null);
+  // Callers often pass a new onClose on every render (an inline arrow under a panel
+  // that refreshes several times a second). Read it through a ref, so the effects
+  // below run once: re-running them moved the focus back to the first field, which
+  // closed an open dropdown and took the cursor out of the field being typed in.
+  const close = useRef(onClose);
+  close.current = onClose;
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { e.stopPropagation(); close.current(); } };
     window.addEventListener("keydown", onKey, true);
-    box.current?.querySelector<HTMLElement>("input,select,button")?.focus();
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [onClose]);
+  }, []);
+
+  // Focus the first field once, when the dialog opens.
+  useEffect(() => {
+    box.current?.querySelector<HTMLElement>("input,select,button")?.focus();
+  }, []);
 
   return (
     <div style={S.backdrop} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>

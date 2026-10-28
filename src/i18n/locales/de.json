@@ -48,7 +48,35 @@
     "empty": "Keine Titel. Mit „Ordner hinzufügen“ Ihre Musik einlesen.",
     "unknownArtist": "Unbekannt",
     "count": "{{count}} Titel",
-    "count_one": "{{count}} Titel"
+    "count_one": "{{count}} Titel",
+    "folders": {
+      "tabLibrary": "Bibliothek",
+      "tabFolders": "Ordner",
+      "libraryFolders": "Bibliotheksordner",
+      "none": "Noch keine Bibliotheksordner. Hake einen Ordner im Baum an oder klicke auf Hinzufügen.",
+      "add": "Hinzufügen…",
+      "rescan": "Neu einlesen",
+      "thisComputer": "Dieser Computer",
+      "include": "In die Bibliothek aufnehmen",
+      "includedBy": "Enthalten über {{folder}}",
+      "tracks": "{{count}} Titel",
+      "tracks_one": "{{count}} Titel",
+      "scanning": "{{folder}} wird eingelesen…",
+      "scanned": "{{folder}}: {{count}} neue Titel",
+      "scanError": "{{folder}}: {{error}}",
+      "scanFinished": "Einlesen fertig: {{count}} neue Titel",
+      "removeTitle": "{{folder}} aus der Bibliothek entfernen",
+      "removeText": "Der Ordner wird nicht mehr eingelesen. Auch seine Titel aus der Bibliothek entfernen?",
+      "removeWithTracks": "Ordner und Titel entfernen",
+      "removeKeepTracks": "Nur den Ordner entfernen",
+      "removed": "Ordner entfernt; {{count}} Titel aus der Bibliothek genommen",
+      "cancel": "Abbrechen",
+      "empty": "Keine Audiodateien in diesem Ordner",
+      "pick": "Wähle einen Ordner, um seine Dateien zu sehen",
+      "notInLibrary": "Nicht in der Bibliothek",
+      "loading": "Wird geladen…",
+      "readError": "Ordner kann nicht gelesen werden: {{error}}"
+    }
   },
   "nowPlaying": {
     "onAir": "AUF SENDUNG",
@@ -799,6 +827,10 @@
     "duckWhileOpen": "Solange das Mikrofon offen ist",
     "duckWhileSpeaking": "Während gesprochen wird",
     "allowRemote": "API und KI-Agenten dürfen das Mikrofon öffnen",
-    "allowRemoteHint": "Standardmäßig aus: Ein Agent sollte nie ein Mikrofon öffnen, ohne dass der Moderator es weiß."
+    "allowRemoteHint": "Standardmäßig aus: Ein Agent sollte nie ein Mikrofon öffnen, ohne dass der Moderator es weiß.",
+    "directMonitor": "Die Soundkarte gibt das Mikrofon schon aus (Direct Monitoring)",
+    "directMonitorHint": "Aktivieren, wenn du dich zweimal hörst, das zweite Mal verzögert wie ein Echo. Die Karte gibt das Mikrofon schon an ihrem Ausgang aus, daher mischt RIARS es nur in den Internet-Stream; die Musik wird weiter abgesenkt.",
+    "chooseFile": "Datei wählen…",
+    "searchLibrary": "In der Bibliothek suchen…"
   }
 }

@@ -48,7 +48,35 @@
     "empty": "Sense pistes. Fes servir «Afegeix carpeta» per escanejar la teva música.",
     "unknownArtist": "Desconegut",
     "count": "{{count}} pistes",
-    "count_one": "{{count}} pista"
+    "count_one": "{{count}} pista",
+    "folders": {
+      "tabLibrary": "Biblioteca",
+      "tabFolders": "Carpetes",
+      "libraryFolders": "Carpetes de la biblioteca",
+      "none": "Encara no hi ha carpetes a la biblioteca. Marca una carpeta a l'arbre o prem Afegeix.",
+      "add": "Afegeix…",
+      "rescan": "Torna a escanejar",
+      "thisComputer": "Aquest equip",
+      "include": "Inclou a la biblioteca",
+      "includedBy": "Inclosa a través de {{folder}}",
+      "tracks": "{{count}} pistes",
+      "tracks_one": "{{count}} pista",
+      "scanning": "S'està escanejant {{folder}}…",
+      "scanned": "{{folder}}: {{count}} pistes noves",
+      "scanError": "{{folder}}: {{error}}",
+      "scanFinished": "Escaneig acabat: {{count}} pistes noves",
+      "removeTitle": "Treu {{folder}} de la biblioteca",
+      "removeText": "La carpeta ja no s'escanejarà. Vols treure també les seves pistes de la biblioteca?",
+      "removeWithTracks": "Treu la carpeta i les pistes",
+      "removeKeepTracks": "Treu només la carpeta",
+      "removed": "Carpeta treta; {{count}} pistes fora de la biblioteca",
+      "cancel": "Cancel·la",
+      "empty": "No hi ha fitxers d'àudio en aquesta carpeta",
+      "pick": "Tria una carpeta per veure'n els fitxers",
+      "notInLibrary": "No és a la biblioteca",
+      "loading": "S'està carregant…",
+      "readError": "No es pot llegir la carpeta: {{error}}"
+    }
   },
   "nowPlaying": {
     "onAir": "EN ANTENA",
@@ -799,6 +827,10 @@
     "duckWhileOpen": "Mentre el micròfon és obert",
     "duckWhileSpeaking": "Mentre es parla",
     "allowRemote": "Permet que l'API i els agents d'IA obrin el micròfon",
-    "allowRemoteHint": "Desactivat per defecte: un agent mai no hauria d'obrir un micròfon sense que ho sàpiga el locutor."
+    "allowRemoteHint": "Desactivat per defecte: un agent mai no hauria d'obrir un micròfon sense que ho sàpiga el locutor.",
+    "directMonitor": "La targeta ja treu el micròfon (monitor directe)",
+    "directMonitorHint": "Marca-ho si et sents dues vegades, la segona amb retard, com un eco. La targeta ja envia el micròfon a la seva sortida, així que RIARS només l'afegeix a l'emissió per Internet; la música continua baixant.",
+    "chooseFile": "Tria un fitxer…",
+    "searchLibrary": "Cerca a la biblioteca…"
   }
 }

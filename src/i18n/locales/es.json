@@ -48,7 +48,35 @@
     "empty": "Sin canciones. Usa «Añadir carpeta» para escanear tu música.",
     "unknownArtist": "Desconocido",
     "count": "{{count}} pistas",
-    "count_one": "{{count}} pista"
+    "count_one": "{{count}} pista",
+    "folders": {
+      "tabLibrary": "Biblioteca",
+      "tabFolders": "Carpetas",
+      "libraryFolders": "Carpetas de la biblioteca",
+      "none": "Aún no hay carpetas en la biblioteca. Marca una carpeta en el árbol o pulsa Añadir.",
+      "add": "Añadir…",
+      "rescan": "Reescanear",
+      "thisComputer": "Este equipo",
+      "include": "Incluir en la biblioteca",
+      "includedBy": "Incluida a través de {{folder}}",
+      "tracks": "{{count}} pistas",
+      "tracks_one": "{{count}} pista",
+      "scanning": "Escaneando {{folder}}…",
+      "scanned": "{{folder}}: {{count}} pistas nuevas",
+      "scanError": "{{folder}}: {{error}}",
+      "scanFinished": "Escaneo terminado: {{count}} pistas nuevas",
+      "removeTitle": "Quitar {{folder}} de la biblioteca",
+      "removeText": "La carpeta dejará de escanearse. ¿Quitas también sus pistas de la biblioteca?",
+      "removeWithTracks": "Quitar carpeta y pistas",
+      "removeKeepTracks": "Quitar solo la carpeta",
+      "removed": "Carpeta quitada; {{count}} pistas fuera de la biblioteca",
+      "cancel": "Cancelar",
+      "empty": "No hay archivos de audio en esta carpeta",
+      "pick": "Elige una carpeta para ver sus archivos",
+      "notInLibrary": "No está en la biblioteca",
+      "loading": "Cargando…",
+      "readError": "No se puede leer la carpeta: {{error}}"
+    }
   },
   "nowPlaying": {
     "onAir": "AL AIRE",
@@ -799,6 +827,10 @@
     "duckWhileOpen": "Mientras el micrófono está abierto",
     "duckWhileSpeaking": "Mientras se habla",
     "allowRemote": "Permitir que la API y los agentes de IA abran el micrófono",
-    "allowRemoteHint": "Desactivado por defecto: un agente nunca debería abrir un micrófono sin que lo sepa el locutor."
+    "allowRemoteHint": "Desactivado por defecto: un agente nunca debería abrir un micrófono sin que lo sepa el locutor.",
+    "directMonitor": "La tarjeta ya saca el micrófono (monitor directo)",
+    "directMonitorHint": "Márcalo si te oyes dos veces, la segunda con retraso, como un eco. La tarjeta ya envía el micrófono a su salida, así que RIARS lo añade solo a la emisión por Internet; la música sigue bajando.",
+    "chooseFile": "Elegir archivo…",
+    "searchLibrary": "Buscar en la biblioteca…"
   }
 }

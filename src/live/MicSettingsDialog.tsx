@@ -80,6 +80,13 @@ export default function MicSettingsDialog({ onClose }: { onClose: () => void }) 
               {inputs.default && <div style={S.hint}>{t("audio.defaultIs", { device: inputs.default })}</div>}
             </div>
 
+            <label style={S.check}>
+              <input type="checkbox" checked={config.direct_monitor}
+                onChange={(e) => patch({ direct_monitor: e.target.checked })} />
+              {t("live.directMonitor")}
+            </label>
+            <div style={S.hint}>{t("live.directMonitorHint")}</div>
+
             <div style={S.field}>
               <span style={S.label}>{t("live.gain")}</span>
               <div style={S.row}>

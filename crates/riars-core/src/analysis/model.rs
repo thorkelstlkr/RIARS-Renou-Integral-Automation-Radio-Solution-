@@ -34,7 +34,35 @@ pub struct TrackCues {
     pub confidence: f32,
     pub loudness_lufs: Option<f32>,
     pub peak_dbfs: Option<f32>,
+    /// Local time of the analysis. Read leniently (see [`lenient_datetime`]).
+    #[serde(default, deserialize_with = "lenient_datetime")]
     pub analyzed_at: Option<NaiveDateTime>,
+}
+
+/// Accept the local date-time RIARS writes ("2026-10-28T09:40:12", fractions allowed)
+/// and also an RFC 3339 one with an offset ("2026-10-28T08:40:12.345Z", what
+/// JavaScript's `toISOString` gives), turned into local time. A client sending the
+/// latter used to get "trailing input" and its marks were not saved.
+fn lenient_datetime<'de, D>(deserializer: D) -> Result<Option<NaiveDateTime>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let Some(text) = Option::<String>::deserialize(deserializer)? else {
+        return Ok(None);
+    };
+    let text = text.trim();
+    if text.is_empty() {
+        return Ok(None);
+    }
+    if let Ok(at) = text.parse::<NaiveDateTime>() {
+        return Ok(Some(at));
+    }
+    if let Ok(at) = NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S%.f") {
+        return Ok(Some(at));
+    }
+    chrono::DateTime::parse_from_rfc3339(text)
+        .map(|at| Some(at.with_timezone(&chrono::Local).naive_local()))
+        .map_err(|e| serde::de::Error::custom(format!("invalid analysis time {text:?}: {e}")))
 }
 
 impl TrackCues {
@@ -94,6 +122,36 @@ pub struct AnalysisStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn analysis_time_is_read_from_local_or_rfc3339_text() {
+        let read = |at: &str| -> Result<Option<NaiveDateTime>, serde_json::Error> {
+            let json = format!(
+                r#"{{"track_id":1,"duration_ms":1000,"cue_in_ms":0,"cue_out_ms":1000,"intro_end_ms":null,
+                    "outro_start_ms":null,"source":"Manual","confidence":1,"loudness_lufs":null,
+                    "peak_dbfs":null,"analyzed_at":{at}}}"#
+            );
+            serde_json::from_str::<TrackCues>(&json).map(|c| c.analyzed_at)
+        };
+        let local = "2026-10-28T09:40:12".parse::<NaiveDateTime>().unwrap();
+        assert_eq!(read(r#""2026-10-28T09:40:12""#).unwrap(), Some(local));
+        assert_eq!(read(r#""2026-10-28 09:40:12""#).unwrap(), Some(local));
+        assert!(read(r#""2026-10-28T09:40:12.250""#).unwrap().is_some());
+        // What JavaScript's toISOString gives: UTC with milliseconds and a Z.
+        let utc = read(r#""2026-10-28T08:40:12.345Z""#).unwrap().unwrap();
+        let expected = chrono::DateTime::parse_from_rfc3339("2026-10-28T08:40:12.345Z")
+            .unwrap()
+            .with_timezone(&chrono::Local)
+            .naive_local();
+        assert_eq!(utc, expected);
+        assert_eq!(read("null").unwrap(), None);
+        assert_eq!(read(r#""""#).unwrap(), None);
+        assert!(read(r#""yesterday""#).is_err());
+        // Missing altogether is fine too.
+        let without = r#"{"track_id":1,"duration_ms":1000,"cue_in_ms":0,"cue_out_ms":1000,"intro_end_ms":null,
+            "outro_start_ms":null,"source":"Manual","confidence":1,"loudness_lufs":null,"peak_dbfs":null}"#;
+        assert_eq!(serde_json::from_str::<TrackCues>(without).unwrap().analyzed_at, None);
+    }
 
     fn cues(cue_in: u64, intro: Option<u64>, outro: Option<u64>, cue_out: u64) -> TrackCues {
         TrackCues {
