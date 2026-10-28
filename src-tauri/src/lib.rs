@@ -746,6 +746,7 @@ pub fn run() {
             folder_cmds::library_add_folders,
             folder_cmds::library_remove_folder,
             folder_cmds::library_rescan,
+            folder_cmds::library_track_for_file,
             library_get_tracks,
             library_query,
             library_search,

@@ -6,8 +6,8 @@
 
 use std::sync::Mutex;
 
-use riars_core::library::folders::{list_dir, roots, scan_into};
-use riars_core::{DirEntry, DirListing, LibraryFolder};
+use riars_core::library::folders::{list_dir, roots, scan_into, track_for_file};
+use riars_core::{DirEntry, DirListing, LibraryFolder, Track};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -144,6 +144,15 @@ pub async fn library_remove_folder(path: String, remove_tracks: bool, app: AppHa
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// The library track of an audio file, adding the file when it is not in the
+/// library yet (marks and analysis belong to library tracks).
+#[tauri::command]
+pub async fn library_track_for_file(path: String, app: AppHandle) -> Result<Track, String> {
+    tauri::async_runtime::spawn_blocking(move || track_for_file(&app.state::<AppState>().library, &path))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

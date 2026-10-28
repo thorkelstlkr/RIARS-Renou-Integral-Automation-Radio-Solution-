@@ -159,24 +159,59 @@ pub fn collect_audio(folder: &str, skip: &HashSet<String>) -> Result<Vec<Scanned
             if skip.contains(&path_str) {
                 continue;
             }
-            let tags = read_tags(&path);
-            let title = tags.title.unwrap_or_else(|| {
-                path.file_stem()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("Unknown")
-                    .to_string()
-            });
-            files.push(ScannedFile {
-                path: path_str,
-                title,
-                artist: tags.artist.unwrap_or_default(),
-                album: tags.album.unwrap_or_default(),
-                genre: tags.genre.unwrap_or_default(),
-                duration_ms: tags.duration_ms,
-            });
+            files.push(scanned(&path, path_str));
         }
     }
     Ok(files)
+}
+
+/// One file with its tags; a file without a title tag is named after the file.
+fn scanned(path: &Path, path_str: String) -> ScannedFile {
+    let tags = read_tags(path);
+    let title = tags.title.unwrap_or_else(|| {
+        path.file_stem()
+            .and_then(|n| n.to_str())
+            .unwrap_or("Unknown")
+            .to_string()
+    });
+    ScannedFile {
+        path: path_str,
+        title,
+        artist: tags.artist.unwrap_or_default(),
+        album: tags.album.unwrap_or_default(),
+        genre: tags.genre.unwrap_or_default(),
+        duration_ms: tags.duration_ms,
+    }
+}
+
+/// One audio file read for the library, without looking at its folder: for a file
+/// used before its folder was scanned (dropped on the playlist, chosen in the tree).
+/// Touches no database.
+pub fn read_audio_file(path: &str) -> Result<ScannedFile, String> {
+    // Same separators as a folder scan, so the stored path matches a later rescan.
+    let built: PathBuf = Path::new(path.trim()).components().collect();
+    if !built.is_file() {
+        return Err(format!("Not a file: {path}"));
+    }
+    if !is_audio(&built) {
+        return Err(format!("Not a supported audio file: {path}"));
+    }
+    let path_str = built.to_string_lossy().into_owned();
+    Ok(scanned(&built, path_str))
+}
+
+/// The library track of the audio file at `path`, adding the file first when it is
+/// not in the library. Holds the lock only to look it up and to store it.
+pub fn track_for_file(library: &Mutex<MediaLibrary>, path: &str) -> Result<Track, String> {
+    if let Some(track) = library.lock().map_err(|e| e.to_string())?.track_by_path(path)? {
+        return Ok(track);
+    }
+    let file = read_audio_file(path)?;
+    let mut library = library.lock().map_err(|e| e.to_string())?;
+    library.insert_scanned(std::slice::from_ref(&file))?;
+    library
+        .track_by_path(&file.path)?
+        .ok_or_else(|| format!("Cannot add {path} to the library"))
 }
 
 /// Names the folder tree hides: system folders nobody keeps music in.
@@ -555,6 +590,21 @@ mod tests {
             let (lo, hi) = prefix_range("D:\\");
             assert_eq!((lo.as_str(), hi.as_str()), ("D:\\", "D:]"));
         }
+    }
+
+    #[test]
+    fn a_single_file_joins_the_library_once() {
+        let dir = temp_dir("single");
+        let file = dir.join("loose").join("jingle.mp3");
+        touch(&file);
+        touch(&dir.join("loose").join("notes.txt"));
+        let lib = Mutex::new(library(&dir));
+        let track = track_for_file(&lib, &file.to_string_lossy()).unwrap();
+        assert_eq!(track.title, "jingle");
+        assert_eq!(track_for_file(&lib, &file.to_string_lossy()).unwrap().id, track.id);
+        assert_eq!(lib.lock().unwrap().track_count().unwrap(), 1);
+        assert!(track_for_file(&lib, &dir.join("loose").join("notes.txt").to_string_lossy()).is_err());
+        assert!(track_for_file(&lib, &dir.join("missing.mp3").to_string_lossy()).is_err());
     }
 
     #[test]

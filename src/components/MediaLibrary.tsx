@@ -114,6 +114,13 @@ export default function MediaLibrary() {
 
   useEffect(() => { loadTracks(); }, [loadTracks]);
 
+  // Another panel added a track (opening the marks of a file not in the library).
+  useEffect(() => {
+    const reload = () => { void loadTracks(); };
+    window.addEventListener("library-changed", reload);
+    return () => window.removeEventListener("library-changed", reload);
+  }, [loadTracks]);
+
   // Search in the backend, once typing pauses.
   useEffect(() => {
     const id = setTimeout(() => {
