@@ -829,6 +829,8 @@
     "allowRemote": "Let the API and AI agents open the microphone",
     "allowRemoteHint": "Off by default: an agent should never open a microphone without the presenter knowing.",
     "directMonitor": "The sound card already plays the microphone (direct monitoring)",
-    "directMonitorHint": "Tick this if you hear yourself twice, the second time with a delay, like an echo. The card already sends the microphone to its output, so RIARS adds it only to the Internet stream; the music still ducks."
+    "directMonitorHint": "Tick this if you hear yourself twice, the second time with a delay, like an echo. The card already sends the microphone to its output, so RIARS adds it only to the Internet stream; the music still ducks.",
+    "chooseFile": "Choose file…",
+    "searchLibrary": "Search the library…"
   }
 }

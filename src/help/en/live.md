@@ -42,7 +42,7 @@ Tick **The sound card already plays the microphone (direct monitoring)**. RIARS 
 
 A grid of **6 × 4 buttons** with **8 pages**, for jingles, effects, sweepers and music beds. You can keep several banks, one per show for example, and pick the active one at the top.
 
-- **Assign a sound:** drag a track from the library onto a button, or click an empty button and search for it.
+- **Assign a sound:** drag a track from the library (or a file from the **Folders** tab) onto a button, or click an empty button. In the editor, clicking **Choose a track…** shows the library list, which filters as you type; **Choose file…** takes any audio file on disk, in the library or not.
 - **Fire:** click the button, or keys **1–0** and **Q–P** for the first twenty buttons of the visible page. **Page Up / Page Down** change page. **Esc** or **Stop all** stops every bank sound.
 - Each button shows the time it has left while it plays. Up to **8** can play at once, over the music, and with the playlist stopped too.
 - **Right-click** a button: **Edit…** (label, colour, gain, mode and whether it lowers the music), **Pre-listen** and **Clear**.

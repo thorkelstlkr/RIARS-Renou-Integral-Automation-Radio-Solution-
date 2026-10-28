@@ -829,6 +829,8 @@
     "allowRemote": "API und KI-Agenten dürfen das Mikrofon öffnen",
     "allowRemoteHint": "Standardmäßig aus: Ein Agent sollte nie ein Mikrofon öffnen, ohne dass der Moderator es weiß.",
     "directMonitor": "Die Soundkarte gibt das Mikrofon schon aus (Direct Monitoring)",
-    "directMonitorHint": "Aktivieren, wenn du dich zweimal hörst, das zweite Mal verzögert wie ein Echo. Die Karte gibt das Mikrofon schon an ihrem Ausgang aus, daher mischt RIARS es nur in den Internet-Stream; die Musik wird weiter abgesenkt."
+    "directMonitorHint": "Aktivieren, wenn du dich zweimal hörst, das zweite Mal verzögert wie ein Echo. Die Karte gibt das Mikrofon schon an ihrem Ausgang aus, daher mischt RIARS es nur in den Internet-Stream; die Musik wird weiter abgesenkt.",
+    "chooseFile": "Datei wählen…",
+    "searchLibrary": "In der Bibliothek suchen…"
   }
 }

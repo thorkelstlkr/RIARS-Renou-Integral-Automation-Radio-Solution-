@@ -829,6 +829,8 @@
     "allowRemote": "Permitir que a API e os agentes de IA abram o microfone",
     "allowRemoteHint": "Desativado por omissão: um agente nunca deve abrir um microfone sem o locutor saber.",
     "directMonitor": "A placa de som já reproduz o microfone (monitorização direta)",
-    "directMonitorHint": "Marque se se ouve duas vezes, a segunda com atraso, como um eco. A placa já envia o microfone para a sua saída, por isso o RIARS só o junta à emissão pela Internet; a música continua a baixar."
+    "directMonitorHint": "Marque se se ouve duas vezes, a segunda com atraso, como um eco. A placa já envia o microfone para a sua saída, por isso o RIARS só o junta à emissão pela Internet; a música continua a baixar.",
+    "chooseFile": "Escolher ficheiro…",
+    "searchLibrary": "Pesquisar na biblioteca…"
   }
 }

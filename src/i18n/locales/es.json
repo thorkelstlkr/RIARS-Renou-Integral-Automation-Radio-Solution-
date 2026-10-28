@@ -829,6 +829,8 @@
     "allowRemote": "Permitir que la API y los agentes de IA abran el micrófono",
     "allowRemoteHint": "Desactivado por defecto: un agente nunca debería abrir un micrófono sin que lo sepa el locutor.",
     "directMonitor": "La tarjeta ya saca el micrófono (monitor directo)",
-    "directMonitorHint": "Márcalo si te oyes dos veces, la segunda con retraso, como un eco. La tarjeta ya envía el micrófono a su salida, así que RIARS lo añade solo a la emisión por Internet; la música sigue bajando."
+    "directMonitorHint": "Márcalo si te oyes dos veces, la segunda con retraso, como un eco. La tarjeta ya envía el micrófono a su salida, así que RIARS lo añade solo a la emisión por Internet; la música sigue bajando.",
+    "chooseFile": "Elegir archivo…",
+    "searchLibrary": "Buscar en la biblioteca…"
   }
 }

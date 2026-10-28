@@ -829,6 +829,8 @@
     "allowRemote": "Autoriser l'API et les agents d'IA à ouvrir le micro",
     "allowRemoteHint": "Désactivé par défaut : un agent ne devrait jamais ouvrir un micro à l'insu de l'animateur.",
     "directMonitor": "La carte son diffuse déjà le micro (monitoring direct)",
-    "directMonitorHint": "Cochez si vous vous entendez deux fois, la seconde avec un retard, comme un écho. La carte envoie déjà le micro sur sa sortie, donc RIARS l'ajoute seulement au flux Internet ; la musique baisse toujours."
+    "directMonitorHint": "Cochez si vous vous entendez deux fois, la seconde avec un retard, comme un écho. La carte envoie déjà le micro sur sa sortie, donc RIARS l'ajoute seulement au flux Internet ; la musique baisse toujours.",
+    "chooseFile": "Choisir un fichier…",
+    "searchLibrary": "Rechercher dans la bibliothèque…"
   }
 }
