@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useCommand } from "../commands";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { KIND_COLORS, type PlaylistItem } from "../automation/api";
@@ -137,6 +138,11 @@ export default function PlaylistPanel() {
       setError(cmd === "playlist_play" ? t("library.loadError", { error: String(e) }) : String(e));
     }
   }, [refresh, t]);
+
+  // File menu and shortcuts.
+  useCommand("playlist.open", useCallback(() => { void openMenu("open"); }, [openMenu]));
+  useCommand("playlist.save", useCallback(() => { void openMenu("save"); }, [openMenu]));
+  useCommand("playlist.clear", useCallback(() => { void run("playlist_clear"); }, [run]));
 
   const { items, current_index } = playlist;
   const total = items.reduce((sum, i) => sum + i.duration_ms, 0);

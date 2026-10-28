@@ -51,6 +51,10 @@ Long-term automation (categories, format clocks, dayparts grid, playlist generat
 
 The schedule (`/api/v1/schedule`, MCP `add_scheduled_event` etc.) is saved as `riars_schedule.json` next to the library database and runs in riars-server, with second precision; one-shot `Time` events disable themselves after firing.
 
+## User manual
+
+The in-app manual (Help ▸ Manual, F1) lives in `src/help/<lang>/<topic>.md`, one Markdown file per topic with front matter (`id`, `title`, `section`, `order`, `keywords`). English and Spanish are complete; other languages fall back to English topic by topic. When a change alters what users see or do, update the matching topics in `en` and `es`. Topic links are written `[text](topic:<id>)`.
+
 ## Conventions
 
 - Audio processing code in riars-core must be real-time safe: no allocations, no locks, no I/O in the audio callback

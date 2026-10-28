@@ -196,6 +196,34 @@ fn dead_air_set(config: DeadAirConfig, state: State<AppState>) -> Result<DeadAir
     Ok(engine.dead_air_config().clone())
 }
 
+/// Crossfade as the UI edits it (milliseconds instead of a Duration).
+#[derive(serde::Serialize, serde::Deserialize)]
+struct CrossfadeSettings {
+    enabled: bool,
+    duration_ms: u64,
+    curve: riars_core::audio::crossfade::FadeCurve,
+}
+
+#[tauri::command]
+fn crossfade_get(state: State<AppState>) -> Result<CrossfadeSettings, String> {
+    let engine = state.engine.lock().map_err(|e| e.to_string())?;
+    let c = engine.crossfade_config();
+    Ok(CrossfadeSettings { enabled: c.enabled, duration_ms: c.duration.as_millis() as u64, curve: c.curve })
+}
+
+#[tauri::command]
+fn crossfade_set(config: CrossfadeSettings, state: State<AppState>) -> Result<CrossfadeSettings, String> {
+    if config.duration_ms > 30_000 {
+        return Err("duration_ms must be at most 30000".to_string());
+    }
+    state.engine.lock().map_err(|e| e.to_string())?.set_crossfade(riars_core::audio::crossfade::CrossfadeConfig {
+        enabled: config.enabled,
+        duration: std::time::Duration::from_millis(config.duration_ms),
+        curve: config.curve,
+    });
+    crossfade_get(state)
+}
+
 #[tauri::command]
 fn engine_seek(position_ms: u64, state: State<AppState>) -> Result<(), String> {
     state
@@ -543,6 +571,8 @@ pub fn run() {
             engine_seek,
             dead_air_get,
             dead_air_set,
+            crossfade_get,
+            crossfade_set,
             playlist_changes,
             schedule_get,
             playlists_list,
