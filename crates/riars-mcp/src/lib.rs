@@ -1,5 +1,6 @@
 pub mod analysis_tools;
 pub mod automation_tools;
+pub mod folder_tools;
 pub mod live_tools;
 pub mod tools;
 

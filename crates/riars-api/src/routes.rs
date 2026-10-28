@@ -89,6 +89,7 @@ pub fn api_routes() -> Router<Arc<AppState>> {
         .route("/playlist/play", post(playlist_play))
         .merge(crate::analysis_routes::analysis_routes())
         .merge(crate::automation_routes::automation_routes())
+        .merge(crate::folder_routes::router())
         .merge(crate::live_routes::router())
 }
 
@@ -508,10 +509,16 @@ async fn library_scan(
     State(state): State<Arc<AppState>>,
     Json(req): Json<ScanRequest>,
 ) -> Result<Json<CountResponse>, ApiError> {
-    let count = state
+    let stored = state
         .library
         .lock()
         .map_err(ApiError::internal)?
-        .scan_folder(&req.path)?;
+        .add_folder(&req.path)?;
+    let worker = Arc::clone(&state);
+    let count = tokio::task::spawn_blocking(move || {
+        riars_core::library::folders::scan_into(&worker.library, &stored)
+    })
+    .await
+    .map_err(ApiError::internal)??;
     Ok(Json(CountResponse { count }))
 }

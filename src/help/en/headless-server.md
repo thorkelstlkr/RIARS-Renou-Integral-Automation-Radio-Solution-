@@ -27,7 +27,7 @@ Then open `http://YOUR-SERVER:3100/` in a browser and enter the token. If you do
 | `--port` | 3100 | Port for the API, WebSocket and panel |
 | `--api-token` | from `RIARS_API_TOKEN`, else random | Token required by the API |
 | `--db-path` | `riars_library.db` | Path to the library database |
-| `--scan` | none | Folder to scan at startup |
+| `--scan` | none | Folder to add to the library; every library folder is rescanned in the background at startup |
 | `--no-sound-card` | off | Play on the internal clock, for servers that only stream |
 | `--device` | system default | On-air sound card by name; if it is missing, the system default is used |
 | `--list-devices` | — | List the sound cards and exit |

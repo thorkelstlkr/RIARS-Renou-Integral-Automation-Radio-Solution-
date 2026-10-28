@@ -1,4 +1,6 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
+
+use super::folders::{collect_audio, ScannedFile};
 
 use rusqlite::{params, Connection, OptionalExtension};
 
@@ -74,92 +76,65 @@ impl MediaLibrary {
         )
         .map_err(|e| format!("DB init error: {e}"))?;
         migrate(&db)?;
+        super::folders::init_schema(&db)?;
         crate::automation::store::init_schema(&db)?;
         Ok(Self { db, revision: 0 })
     }
 
     /// Add every playable audio file under `folder_path`, including subfolders.
+    ///
+    /// Reads every file's tags while `self` is borrowed; callers sharing the library
+    /// behind a lock should use [`collect_audio`] outside it and then [`Self::insert_scanned`].
     pub fn scan_folder(&mut self, folder_path: &str) -> Result<usize, String> {
-        let path = Path::new(folder_path);
-        if !path.is_dir() {
-            return Err(format!("Not a directory: {folder_path}"));
+        let folder = super::folders::normalize_folder(folder_path)?;
+        let files = collect_audio(&folder, &self.known_paths(&folder)?)?;
+        let count = self.insert_scanned(&files)?;
+        log::info!("Scanned {folder_path}: {count} new tracks added");
+        Ok(count)
+    }
+
+    /// Store files found by [`collect_audio`]; returns how many were new.
+    pub fn insert_scanned(&mut self, files: &[ScannedFile]) -> Result<usize, String> {
+        // Nothing read: leave the revision alone so caches are not rebuilt for nothing.
+        if files.is_empty() {
+            return Ok(0);
         }
-
-        // Formats the symphonia features enabled in Cargo.toml can decode.
-        let audio_extensions = ["mp3", "flac", "wav", "ogg", "aac", "m4a"];
         let mut count = 0;
-
         let tx = self
             .db
             .transaction()
             .map_err(|e| format!("DB error: {e}"))?;
-        // Rebuilding from components normalizes separators ("D:/Musica" and "D:\Musica"
-        // must give the same stored paths, or a rescan would duplicate every track).
-        let mut pending: Vec<PathBuf> = vec![path.components().collect()];
-
-        while let Some(dir) = pending.pop() {
-            let entries = match std::fs::read_dir(&dir) {
-                Ok(entries) => entries,
-                Err(e) => {
-                    log::warn!("Cannot read directory {}: {e}", dir.display());
-                    continue;
+        for file in files {
+            let key = search_key(&[&file.title, &file.artist, &file.album, &file.genre]);
+            let values = params![
+                file.title,
+                file.artist,
+                file.album,
+                file.genre,
+                file.duration_ms as i64,
+                file.path,
+                key
+            ];
+            match tx.execute(
+                "INSERT OR IGNORE INTO tracks (title, artist, album, genre, duration_ms, file_path, search_key)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                values,
+            ) {
+                Ok(0) => {
+                    // Already known: fill in tags for tracks scanned before tags were read.
+                    let _ = tx.execute(
+                        "UPDATE tracks SET title = ?1, artist = ?2, album = ?3, genre = ?4, duration_ms = ?5,
+                                           search_key = ?7
+                         WHERE file_path = ?6 AND duration_ms = 0",
+                        values,
+                    );
                 }
-            };
-
-            for entry in entries.filter_map(|e| e.ok()) {
-                let file_path = entry.path();
-                if file_path.is_dir() {
-                    pending.push(file_path);
-                    continue;
-                }
-
-                let ext = file_path
-                    .extension()
-                    .and_then(|e| e.to_str())
-                    .unwrap_or("")
-                    .to_lowercase();
-                if !audio_extensions.contains(&ext.as_str()) {
-                    continue;
-                }
-
-                let file_path_str = file_path.to_string_lossy().to_string();
-                let tags = read_tags(&file_path);
-                let title = tags.title.unwrap_or_else(|| {
-                    file_path
-                        .file_stem()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("Unknown")
-                        .to_string()
-                });
-                let artist = tags.artist.unwrap_or_default();
-                let album = tags.album.unwrap_or_default();
-                let genre = tags.genre.unwrap_or_default();
-                let key = search_key(&[&title, &artist, &album, &genre]);
-                let values = params![title, artist, album, genre, tags.duration_ms as i64, file_path_str, key];
-
-                match tx.execute(
-                    "INSERT OR IGNORE INTO tracks (title, artist, album, genre, duration_ms, file_path, search_key)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-                    values,
-                ) {
-                    Ok(0) => {
-                        // Already known: fill in tags for tracks scanned before tags were read.
-                        let _ = tx.execute(
-                            "UPDATE tracks SET title = ?1, artist = ?2, album = ?3, genre = ?4, duration_ms = ?5,
-                                               search_key = ?7
-                             WHERE file_path = ?6 AND duration_ms = 0",
-                            values,
-                        );
-                    }
-                    Ok(rows) => count += rows,
-                    Err(e) => log::warn!("Cannot add {file_path_str}: {e}"),
-                }
+                Ok(rows) => count += rows,
+                Err(e) => log::warn!("Cannot add {}: {e}", file.path),
             }
         }
-
         tx.commit().map_err(|e| format!("DB error: {e}"))?;
         self.revision += 1;
-        log::info!("Scanned {folder_path}: {count} new tracks added");
         Ok(count)
     }
 
@@ -535,16 +510,16 @@ pub struct SavedPlaylist {
 }
 
 #[derive(Default)]
-struct TrackTags {
-    title: Option<String>,
-    artist: Option<String>,
-    album: Option<String>,
-    genre: Option<String>,
-    duration_ms: u64,
+pub(super) struct TrackTags {
+    pub(super) title: Option<String>,
+    pub(super) artist: Option<String>,
+    pub(super) album: Option<String>,
+    pub(super) genre: Option<String>,
+    pub(super) duration_ms: u64,
 }
 
 /// Read tags and duration from the container without decoding audio.
-fn read_tags(path: &Path) -> TrackTags {
+pub(super) fn read_tags(path: &Path) -> TrackTags {
     use symphonia::core::formats::FormatOptions;
     use symphonia::core::io::MediaSourceStream;
     use symphonia::core::meta::{MetadataOptions, MetadataRevision, StandardTagKey};

@@ -6,6 +6,8 @@ import { open } from "@tauri-apps/plugin-dialog";
 import CueEditor from "../analysis/CueEditor";
 import { analysis, preview } from "../analysis/api";
 import ContextMenu, { type ContextEntry } from "../menu/ContextMenu";
+import FolderExplorer from "./FolderExplorer";
+import { useLibraryScan } from "./useLibraryScan";
 
 interface Track {
   id: number;
@@ -23,6 +25,13 @@ const S: Record<string, React.CSSProperties> = {
   },
   title: { fontSize: 14, fontWeight: 600 },
   btn: { padding: "4px 10px", borderRadius: "var(--radius)", fontSize: 12, background: "var(--bg-panel)" },
+  tabs: { display: "flex", gap: 2, padding: "0 12px", borderBottom: "1px solid var(--border)" },
+  tab: {
+    padding: "8px 14px", fontSize: 12, color: "var(--text-muted)", background: "transparent",
+    border: "none", borderBottom: "2px solid transparent", marginBottom: -1,
+  },
+  tabActive: { color: "var(--text-primary)", borderBottom: "2px solid var(--accent)" },
+  folderPane: { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" },
   search: { padding: "8px 12px", borderBottom: "1px solid var(--border)" },
   input: { width: "100%", fontSize: 13 },
   notice: { padding: "6px 12px", fontSize: 12, borderBottom: "1px solid var(--border)", wordBreak: "break-word" },
@@ -46,6 +55,16 @@ const S: Record<string, React.CSSProperties> = {
 /// Tracks per page: the list grows as it is scrolled, never the whole library at once.
 const PAGE = 100;
 
+type Tab = "library" | "folders";
+
+const readTab = (): Tab => {
+  try {
+    return localStorage.getItem("riars.library.tab") === "folders" ? "folders" : "library";
+  } catch {
+    return "library";
+  }
+};
+
 export default function MediaLibrary() {
   const { t } = useTranslation();
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -57,6 +76,7 @@ export default function MediaLibrary() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [anchor, setAnchor] = useState<number | null>(null);
   const [ctx, setCtx] = useState<{ x: number; y: number } | null>(null);
+  const [tab, setTab] = useState<Tab>(readTab);
   const listRef = useRef<HTMLDivElement>(null);
   // Which search the loaded pages belong to, so a late page of an old search is dropped.
   const query = useRef({ search: "", busy: false, generation: 0 });
@@ -83,6 +103,14 @@ export default function MediaLibrary() {
   const tracksRef = useRef<Track[]>([]);
   tracksRef.current = tracks;
   const loadTracks = useCallback(() => loadPage(true), [loadPage]);
+  useLibraryScan(setNotice, loadTracks);
+
+  const selectTab = useCallback((next: Tab) => {
+    setTab(next);
+    try {
+      localStorage.setItem("riars.library.tab", next);
+    } catch { /* storage not available */ }
+  }, []);
 
   useEffect(() => { loadTracks(); }, [loadTracks]);
 
@@ -104,21 +132,32 @@ export default function MediaLibrary() {
   }, [loadPage, total]);
 
   const addFolder = useCallback(async () => {
-    const folder = await open({ directory: true, multiple: false });
-    if (typeof folder !== "string") return;
-    setNotice({ text: t("library.scanning") });
     try {
-      const count = await invoke<number>("library_scan_folder", { path: folder });
-      setNotice({ text: t("library.added", { count }) });
-      setSearch("");
-      await loadTracks();
+      const chosen = await open({ directory: true, multiple: true });
+      if (!chosen) return;
+      const paths = Array.isArray(chosen) ? chosen : [chosen];
+      if (paths.length === 0) return;
+      await invoke<string[]>("library_add_folders", { paths });
+      setNotice(null);
     } catch (e) {
       setNotice({ text: String(e), error: true });
     }
-  }, [loadTracks, t]);
+  }, []);
   const searchInput = useRef<HTMLInputElement>(null);
   useCommand("library.addFolder", addFolder);
-  useCommand("library.search", useCallback(() => searchInput.current?.focus(), []));
+  // Ctrl+L from the Folders tab switches back to the list first.
+  const focusSearch = useRef(false);
+  useCommand("library.search", useCallback(() => {
+    focusSearch.current = true;
+    selectTab("library");
+    searchInput.current?.focus();
+  }, [selectTab]));
+  useEffect(() => {
+    if (tab === "library" && focusSearch.current) {
+      focusSearch.current = false;
+      searchInput.current?.focus();
+    }
+  }, [tab]);
 
   const insertTracks = useCallback(async (list: Track[], position: "End" | "Next") => {
     if (list.length === 0) return;
@@ -362,52 +401,72 @@ export default function MediaLibrary() {
         <h2 style={S.title}>{t("library.title")}</h2>
         <div style={{ display: "flex", gap: 6 }}>
           <button style={S.btn} onClick={addFolder}>{t("library.addFolder")}</button>
-          <button style={S.btn} onClick={loadTracks}>{t("library.load")}</button>
+          {tab === "library" && <button style={S.btn} onClick={loadTracks}>{t("library.load")}</button>}
         </div>
       </div>
-      <div style={S.search}>
-        <input ref={searchInput} style={S.input} placeholder={t("library.searchPlaceholder")} value={search} onChange={handleSearch}
-          aria-label={t("library.searchPlaceholder")} />
+      <div style={S.tabs} role="tablist">
+        <button role="tab" aria-selected={tab === "library"} data-testid="library-tab-library"
+          style={{ ...S.tab, ...(tab === "library" ? S.tabActive : {}) }}
+          onClick={() => selectTab("library")}>
+          {t("library.folders.tabLibrary")}
+        </button>
+        <button role="tab" aria-selected={tab === "folders"} data-testid="library-tab-folders"
+          style={{ ...S.tab, ...(tab === "folders" ? S.tabActive : {}) }}
+          onClick={() => selectTab("folders")}>
+          {t("library.folders.tabFolders")}
+        </button>
       </div>
-      {notice && (
-        <div style={{ ...S.notice, color: notice.error ? "var(--red)" : "var(--text-secondary)" }}>
-          {notice.text}
+      {tab === "library" ? (
+        <>
+          <div style={S.search}>
+            <input ref={searchInput} style={S.input} placeholder={t("library.searchPlaceholder")} value={search} onChange={handleSearch}
+              aria-label={t("library.searchPlaceholder")} />
+          </div>
+          {notice && (
+            <div style={{ ...S.notice, color: notice.error ? "var(--red)" : "var(--text-secondary)" }}>
+              {notice.text}
+            </div>
+          )}
+          <div style={S.count} data-testid="library-count">{t("library.count", { count: total })}</div>
+          <div ref={listRef} style={S.list} onScroll={onScroll} tabIndex={0} onKeyDown={onListKeyDown}
+            onClick={() => listRef.current?.focus()} data-testid="library-list">
+            {loading && <div style={S.empty}>{t("library.loading")}</div>}
+            {!loading && tracks.length === 0 && (
+              <div style={S.empty}>{t("library.empty")}</div>
+            )}
+            {tracks.map((tr, i) => (
+              <div key={tr.id} data-row-index={i} draggable
+                style={{ ...S.track, ...(selected.has(tr.id) ? S.selected : {}) }}
+                title={tr.file_path}
+                onClick={(e) => onRowClick(e, i)}
+                onContextMenu={(e) => onRowContext(e, i)}
+                onDoubleClick={() => addToPlaylist(tr)}
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = "copy";
+                  e.dataTransfer.setData("application/x-riars-track", JSON.stringify({
+                    id: tr.id, title: tr.title, file_path: tr.file_path, duration_ms: tr.duration_ms,
+                  }));
+                }}>
+                <div style={S.trackBody}>
+                  <div style={S.name}>{tr.title}</div>
+                  <div style={S.meta}>
+                    <span>{tr.artist || t("library.unknownArtist")}</span>
+                    {tr.duration_ms > 0 && <span style={{ fontFamily: "var(--font-mono)" }}>{fmt(tr.duration_ms)}</span>}
+                  </div>
+                </div>
+                <button style={S.marks} title={t("analysis.media.marks")}
+                  aria-label={t("analysis.media.marks")}
+                  onClick={(e) => { e.stopPropagation(); setCueTrack(tr); }}
+                  onDoubleClick={(e) => e.stopPropagation()}>✎</button>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div style={S.folderPane}>
+          <FolderExplorer onLibraryChanged={loadTracks} />
         </div>
       )}
-      <div style={S.count} data-testid="library-count">{t("library.count", { count: total })}</div>
-      <div ref={listRef} style={S.list} onScroll={onScroll} tabIndex={0} onKeyDown={onListKeyDown}
-        onClick={() => listRef.current?.focus()} data-testid="library-list">
-        {loading && <div style={S.empty}>{t("library.loading")}</div>}
-        {!loading && tracks.length === 0 && (
-          <div style={S.empty}>{t("library.empty")}</div>
-        )}
-        {tracks.map((tr, i) => (
-          <div key={tr.id} data-row-index={i} draggable
-            style={{ ...S.track, ...(selected.has(tr.id) ? S.selected : {}) }}
-            title={tr.file_path}
-            onClick={(e) => onRowClick(e, i)}
-            onContextMenu={(e) => onRowContext(e, i)}
-            onDoubleClick={() => addToPlaylist(tr)}
-            onDragStart={(e) => {
-              e.dataTransfer.effectAllowed = "copy";
-              e.dataTransfer.setData("application/x-riars-track", JSON.stringify({
-                id: tr.id, title: tr.title, file_path: tr.file_path, duration_ms: tr.duration_ms,
-              }));
-            }}>
-            <div style={S.trackBody}>
-              <div style={S.name}>{tr.title}</div>
-              <div style={S.meta}>
-                <span>{tr.artist || t("library.unknownArtist")}</span>
-                {tr.duration_ms > 0 && <span style={{ fontFamily: "var(--font-mono)" }}>{fmt(tr.duration_ms)}</span>}
-              </div>
-            </div>
-            <button style={S.marks} title={t("analysis.media.marks")}
-              aria-label={t("analysis.media.marks")}
-              onClick={(e) => { e.stopPropagation(); setCueTrack(tr); }}
-              onDoubleClick={(e) => e.stopPropagation()}>✎</button>
-          </div>
-        ))}
-      </div>
 
       {ctx && (
         <ContextMenu x={ctx.x} y={ctx.y} title={menuTitle} items={libraryMenu()} onClose={() => setCtx(null)} />

@@ -16,7 +16,7 @@ En diez minutos tendrás música sonando y la automatización funcionando.
 2. Elige la carpeta donde guardas la música. RIARS lee también las subcarpetas.
 3. Cuando termine verás cuántas canciones nuevas ha añadido.
 
-Puedes añadir tantas carpetas como quieras: música, jingles, cuñas… Más en [Biblioteca](topic:library).
+Puedes añadir tantas carpetas como quieras (música, jingles, cuñas…), varias a la vez en el selector o marcándolas en la pestaña **Carpetas**. RIARS las vuelve a escanear cada vez que arranca. Más en [Biblioteca](topic:library).
 
 ## 2. Pon algo en antena
 

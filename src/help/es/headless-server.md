@@ -23,7 +23,7 @@ riars-server --api-token MI_TOKEN --scan /home/pi/musica
 | `--port <n>` | Puerto de la API y del panel web. | 3100 |
 | `--api-token <t>` | Token de acceso. También vale la variable `RIARS_API_TOKEN`. Sin él, se genera uno y se muestra al arrancar. | — |
 | `--db-path <ruta>` | Base de datos de la biblioteca. | `riars_library.db` |
-| `--scan <carpeta>` | Escanear una carpeta al arrancar. | — |
+| `--scan <carpeta>` | Añadir una carpeta a la biblioteca. Todas las carpetas de la biblioteca se reescanean en segundo plano al arrancar. | — |
 | `--no-sound-card` | No usar tarjeta de sonido; reproduce con un reloj interno, para servidores que solo emiten por Internet. | — |
 | `--device <nombre>` | Tarjeta de sonido de antena, por su nombre. Si no está, se usa la del sistema. | la del sistema |
 | `--list-devices` | Mostrar las tarjetas de sonido y salir. | — |
