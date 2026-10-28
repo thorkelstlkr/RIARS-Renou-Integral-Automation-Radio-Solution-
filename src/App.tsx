@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useTranslation } from "react-i18next";
 import TransportControls from "./components/TransportControls";
 import PlaylistPanel from "./components/PlaylistPanel";
@@ -77,6 +79,14 @@ export default function App() {
   const [help, setHelp] = useState<{ open: boolean; topic?: string }>({ open: false });
   const [dialog, setDialog] = useState<DialogId | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // The volume control follows the engine: restored sessions, scheduled fades and
+  // the web panel change it too.
+  useEffect(() => {
+    invoke<{ volume: number }>("engine_get_state").then((s) => setVolume(s.volume)).catch(() => {});
+    const off = listen<{ volume: number }>("engine-state", (e) => setVolume(e.payload.volume));
+    return () => { off.then((f) => f()); };
+  }, []);
 
   const openHelp = useCallback((topic?: string) => setHelp({ open: true, topic }), []);
   const closeDialog = useCallback(() => setDialog(null), []);

@@ -97,8 +97,9 @@ const S: Record<string, React.CSSProperties> = {
     display: "flex", alignItems: "center", gap: 8, marginTop: 16, marginBottom: 6,
   },
   slotsTitle: { flex: 1, fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--text-muted)" },
-  slotsBody: { display: "flex", gap: 16, alignItems: "flex-start" },
-  tableWrap: { flex: 1, overflowX: "auto", minWidth: 0 },
+  // The pie goes under the table when both do not fit side by side.
+  slotsBody: { display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-start" },
+  tableWrap: { flex: "1 1 560px", overflowX: "auto", minWidth: 0 },
   table: { width: "100%", borderCollapse: "collapse", fontSize: 12 },
   th: {
     textAlign: "left", padding: "4px 6px", fontSize: 10, fontWeight: 600,
