@@ -17,9 +17,9 @@ La ventana sigue la disposición clásica de los programas de radio, como RadioB
 | **Barra de menús** | Archivo, Edición, Ver, Reproducción, Automatización, Emisión y Ayuda. Se abre con el ratón o con **F10** / **Alt** y las flechas. |
 | **Cabecera** | Botones de reproducción y volumen, el estado de la emisión por Internet y el idioma. |
 | **Barra en el aire** | Fecha y hora, lo que le queda a la pista, y tres cajas: **Pista anterior** (naranja), **En el aire** (verde, con barra de progreso) y **Pista siguiente** (amarillo). Si no es música, al lado aparece el tipo (indicativo, cuña…). |
-| **Izquierda** | La [biblioteca](topic:library) y, debajo, el **Registro**: lo que ha sonado y los avisos en rojo. |
+| **Izquierda** | La [biblioteca](topic:library), con sus pestañas **Biblioteca** y **Carpetas**. |
 | **Centro** | Las pestañas de trabajo (las verás abajo). |
-| **Derecha** | Lo que suena, el **medidor VU** y la tarjeta **Automatización**. |
+| **Derecha** | Lo que suena, el **medidor VU**, el **Registro** (lo que ha sonado y los avisos en rojo) y la tarjeta **Automatización**. |
 | **Barra de estado** | Detector de silencio, automatización y programador de eventos, con un punto verde cuando están activos. |
 
 ## Pestañas del centro

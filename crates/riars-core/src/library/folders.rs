@@ -187,6 +187,23 @@ fn hidden_name(name: &str) -> bool {
         || name.eq_ignore_ascii_case("lost+found")
 }
 
+/// Whether Windows marks the entry hidden or system, as Explorer hides it
+/// ($WINDOWS.~BT, "Documents and Settings"...). Never on other systems.
+fn hidden_entry(entry: &std::fs::DirEntry) -> bool {
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        const HIDDEN: u32 = 0x2;
+        const SYSTEM: u32 = 0x4;
+        // symlink_metadata: a junction's own attributes, not its target's.
+        if let Ok(meta) = std::fs::symlink_metadata(entry.path()) {
+            return meta.file_attributes() & (HIDDEN | SYSTEM) != 0;
+        }
+    }
+    let _ = entry;
+    false
+}
+
 /// Where the folder tree starts: the drives on Windows; the root, the home folder
 /// and mounted media elsewhere.
 pub fn roots() -> Vec<DirEntry> {
@@ -235,7 +252,7 @@ pub fn list_dir(path: &str) -> Result<DirListing, String> {
     let mut files = Vec::new();
     for entry in entries.filter_map(|e| e.ok()) {
         let name = entry.file_name().to_string_lossy().into_owned();
-        if hidden_name(&name) {
+        if hidden_name(&name) || hidden_entry(&entry) {
             continue;
         }
         let full = entry.path();
