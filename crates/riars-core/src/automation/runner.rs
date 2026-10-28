@@ -263,6 +263,9 @@ impl Catalog for LockedCatalog<'_> {
     fn campaign_plays(&self, from: NaiveDateTime, to: NaiveDateTime) -> Result<Vec<(i64, NaiveDateTime)>, String> {
         self.with(|l| l.campaign_plays(from, to))
     }
+    fn track_cues(&self, track_id: i64) -> Result<Option<crate::analysis::TrackCues>, String> {
+        self.with(|l| l.track_cues(track_id))
+    }
 }
 
 /// Longest preview, in hours.

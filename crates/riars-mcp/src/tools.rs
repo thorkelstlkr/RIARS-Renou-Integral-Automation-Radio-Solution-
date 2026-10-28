@@ -264,12 +264,16 @@ pub fn list_tools() -> ToolList {
             },
         ]
         .into_iter()
+        .chain(crate::analysis_tools::tool_defs())
         .chain(crate::automation_tools::tool_defs())
         .collect(),
     }
 }
 
 pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Value, String> {
+    if let Some(result) = crate::analysis_tools::handle(name, args, state) {
+        return result;
+    }
     if let Some(result) = crate::automation_tools::handle(name, args, state) {
         return result;
     }

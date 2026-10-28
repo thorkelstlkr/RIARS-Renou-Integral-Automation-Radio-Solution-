@@ -29,7 +29,12 @@
     "noSaved": "Aún no hay playlists guardadas.",
     "deleteSaved": "Borrar playlist guardada",
     "headerStart": "Inicio",
-    "generated": "añadida por la automatización"
+    "generated": "añadida por la automatización",
+    "headerIntro": "Intro",
+    "headerOutro": "Outro",
+    "headerLufs": "LUFS",
+    "overlayIntro": "sobre la intro",
+    "overlayOutro": "sobre la outro"
   },
   "library": {
     "title": "Biblioteca",
@@ -412,7 +417,15 @@
       "membersRange": "{{from}}–{{to}} de {{total}}",
       "previous": "Anterior",
       "next": "Siguiente",
-      "removeSelected": "Quitar las seleccionadas"
+      "removeSelected": "Quitar las seleccionadas",
+      "talkOver": "Locución sobre intros y outros",
+      "talkOverEnabled": "Locución sobre intros activada",
+      "talkOverIntro": "Sobre intros",
+      "talkOverOutro": "Sobre outros",
+      "talkOverMargin": "Margen (ms)",
+      "talkOverDuck": "Atenuar la música (dB)",
+      "talkOverMinConfidence": "Confianza mínima (0-1)",
+      "talkOverKinds": "Tipos"
     },
     "ads": {
       "title": "Publicidad",
@@ -575,7 +588,16 @@
     "previewEmpty": "No hay nada que mostrar: revisa el reloj por defecto, la parrilla y las categorías.",
     "aboutTitle": "Acerca de RIARS",
     "aboutText": "Automatización de radio de código abierto con soporte nativo para agentes de IA: playlists, relojes, parrilla, publicidad y emisión, desde una Raspberry Pi hasta el PC del estudio.",
-    "aboutLicense": "Licencia MIT"
+    "aboutLicense": "Licencia MIT",
+    "soundCards": "Tarjetas de sonido…",
+    "normalization": "Normalización…",
+    "normalizationTitle": "Normalización",
+    "normalizationOn": "Normalizar la sonoridad",
+    "normalizationTarget": "Sonoridad objetivo (LUFS)",
+    "normalizationMaxGain": "Subida máxima (dB)",
+    "normalizationMaxCut": "Bajada máxima (dB)",
+    "normalizationPeak": "Techo de picos (dBFS)",
+    "normalizationHint": "Una ganancia por pista según su sonoridad medida: las flojas suben y las fuertes bajan, dentro de estos límites."
   },
   "help": {
     "title": "Manual",
@@ -599,5 +621,117 @@
       "remote": "Control remoto y servidores",
       "reference": "Referencia"
     }
+  },
+  "audio": {
+    "title": "Tarjetas de sonido",
+    "loading": "Cargando…",
+    "onAir": "Antena",
+    "systemDefault": "La del sistema",
+    "defaultIs": "La del sistema: {{device}}",
+    "inUse": "En uso ahora: {{device}}",
+    "restartNote": "Se aplica al reiniciar RIARS.",
+    "preview": "Preescucha",
+    "off": "Desactivada",
+    "previewNote": "Se aplica al momento.",
+    "sameWarning": "La preescucha saldrá al aire."
+  },
+  "analysis": {
+    "source": {
+      "Auto": "Automática",
+      "Manual": "Manual",
+      "Agent": "Agente"
+    },
+    "waveform": {
+      "label": "Forma de onda"
+    },
+    "cueEditor": {
+      "title": "Marcas — {{title}}",
+      "analysing": "Analizando…",
+      "noWaveform": "Sin forma de onda: vuelve a detectar las marcas.",
+      "cueIn": "Inicio",
+      "introEnd": "Entra la voz",
+      "outroStart": "Acaba la voz",
+      "cueOut": "Final",
+      "noIntro": "Sin intro",
+      "noOutro": "Sin outro",
+      "vocalTimeline": "Voz por segundo",
+      "voiceCell": "{{second}} s: voz {{level}}/9",
+      "source": "Origen: {{source}}",
+      "confidence": "Confianza: {{value}} %",
+      "loudness": "Sonoridad: {{value}} LUFS",
+      "peak": "Pico: {{value}} dBFS",
+      "gain": "Normalización: {{value}} dB",
+      "gainOff": "Normalización desactivada",
+      "room": "Hueco para locución: intro {{intro}} s · outro {{outro}} s",
+      "prelisten": "Preescucha",
+      "fromStart": "▶ Desde el inicio",
+      "introTail": "▶ Últimos 5 s de intro",
+      "fromVoiceEnd": "▶ Desde que acaba la voz",
+      "stop": "■ Parar",
+      "noPreview": "Elige una tarjeta de preescucha en Reproducción ▸ Tarjetas de sonido.",
+      "detectAgain": "Volver a detectar",
+      "clearMarks": "Borrar marcas",
+      "confirmClear": "¿Borrar las marcas de esta pista?",
+      "discard": "¿Descartar los cambios sin guardar?",
+      "saved": "Marcas guardadas.",
+      "cleared": "Marcas borradas."
+    },
+    "media": {
+      "marks": "Marcas…",
+      "prelisten": "Preescucha",
+      "prelistenStarted": "Preescuchando {{title}}.",
+      "trackActions": "Acciones de la pista"
+    },
+    "panel": {
+      "title": "Análisis",
+      "statsAnalysed": "{{analyzed}} / {{total}} analizadas",
+      "statsManual": "Manuales: {{count}}",
+      "statsWithIntro": "Con intro: {{count}}",
+      "statsLowConfidence": "Poca confianza: {{count}}",
+      "analyseLibrary": "Analizar biblioteca",
+      "reanalyseAll": "Volver a analizar todo",
+      "analyseCategory": "Analizar esta categoría",
+      "confirmReanalyse": "¿Volver a analizar toda la biblioteca? Las marcas puestas a mano se conservan.",
+      "progress": "{{done}} / {{total}}",
+      "current": "Ahora: {{file}}",
+      "failed": "Fallidas: {{count}}",
+      "keptManual": "Manuales conservadas: {{count}}",
+      "running": "Analizando…",
+      "detector": "Detector",
+      "builtin": "Integrado",
+      "external": "Programa externo",
+      "program": "Programa",
+      "args": "Argumentos (uno por línea)",
+      "apply": "Aplicar",
+      "agentNote": "Un agente de IA también puede revisar las marcas por MCP (list_tracks_needing_review y set_track_cues).",
+      "detectorSaved": "Detector guardado."
+    }
+  },
+  "contextMenu": {
+    "selected": "{{count}} seleccionadas",
+    "playNow": "Reproducir ahora",
+    "playNext": "Reproducir a continuación",
+    "prelisten": "Preescucha",
+    "marks": "Marcas…",
+    "moveUp": "Subir",
+    "moveDown": "Bajar",
+    "moveTop": "Al principio",
+    "moveBottom": "Al final",
+    "removeFromPlaylist": "Quitar de la lista",
+    "removePlayed": "Quitar las ya emitidas",
+    "clearPlaylist": "Vaciar la lista",
+    "confirmClear": "¿Vaciar toda la lista de reproducción?",
+    "openFolder": "Abrir la carpeta del archivo",
+    "copyPath": "Copiar la ruta",
+    "notInLibrary": "Este archivo no está en la biblioteca.",
+    "addToPlaylist": "Añadir a la lista",
+    "detectMarks": "Detectar marcas",
+    "analysing": "Analizando {{count}} pistas…",
+    "removeFromLibrary": "Quitar de la biblioteca…",
+    "confirmRemoveTracks": "¿Quitar {{count}} pistas de la biblioteca? Los archivos no se borran del disco, y las pistas salen de sus categorías.",
+    "removedTracks": "{{count}} pistas quitadas de la biblioteca.",
+    "pathCopied": "Ruta copiada.",
+    "keyEnter": "Intro",
+    "keyDelete": "Supr"
   }
 }

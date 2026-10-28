@@ -29,7 +29,12 @@
     "noSaved": "Aucune playlist enregistrée.",
     "deleteSaved": "Supprimer la playlist enregistrée",
     "headerStart": "Début",
-    "generated": "ajouté par l'automatisation"
+    "generated": "ajouté par l'automatisation",
+    "headerIntro": "Intro",
+    "headerOutro": "Outro",
+    "headerLufs": "LUFS",
+    "overlayIntro": "sur l'intro",
+    "overlayOutro": "sur l'outro"
   },
   "library": {
     "title": "Bibliothèque",
@@ -412,7 +417,15 @@
       "membersRange": "{{from}}–{{to}} sur {{total}}",
       "previous": "Précédent",
       "next": "Suivant",
-      "removeSelected": "Retirer la sélection"
+      "removeSelected": "Retirer la sélection",
+      "talkOver": "Habillage sur intros et outros",
+      "talkOverEnabled": "Habillage sur intros activé",
+      "talkOverIntro": "Sur les intros",
+      "talkOverOutro": "Sur les outros",
+      "talkOverMargin": "Marge (ms)",
+      "talkOverDuck": "Atténuer la musique (dB)",
+      "talkOverMinConfidence": "Confiance minimale (0-1)",
+      "talkOverKinds": "Types"
     },
     "ads": {
       "title": "Publicité",
@@ -575,7 +588,16 @@
     "previewEmpty": "Rien à afficher : vérifiez l'horloge par défaut, la grille et les catégories.",
     "aboutTitle": "À propos de RIARS",
     "aboutText": "Automatisation radio open source avec prise en charge native des agents d'IA : playlists, horloges, grille, publicité et streaming, du Raspberry Pi au PC du studio.",
-    "aboutLicense": "Licence MIT"
+    "aboutLicense": "Licence MIT",
+    "soundCards": "Cartes son…",
+    "normalization": "Normalisation…",
+    "normalizationTitle": "Normalisation",
+    "normalizationOn": "Normaliser le volume perçu",
+    "normalizationTarget": "Volume cible (LUFS)",
+    "normalizationMaxGain": "Gain maximal (dB)",
+    "normalizationMaxCut": "Atténuation maximale (dB)",
+    "normalizationPeak": "Plafond de crête (dBFS)",
+    "normalizationHint": "Un gain par titre d'après son volume mesuré : les titres faibles montent, les forts baissent, dans ces limites."
   },
   "help": {
     "title": "Manuel",
@@ -599,5 +621,117 @@
       "remote": "Contrôle à distance et serveurs",
       "reference": "Référence"
     }
+  },
+  "audio": {
+    "title": "Cartes son",
+    "loading": "Chargement…",
+    "onAir": "Antenne",
+    "systemDefault": "Celle du système",
+    "defaultIs": "Celle du système : {{device}}",
+    "inUse": "Utilisée maintenant : {{device}}",
+    "restartNote": "S'applique après le redémarrage de RIARS.",
+    "preview": "Pré-écoute",
+    "off": "Désactivée",
+    "previewNote": "S'applique immédiatement.",
+    "sameWarning": "La pré-écoute passera à l'antenne."
+  },
+  "analysis": {
+    "source": {
+      "Auto": "Automatique",
+      "Manual": "Manuelle",
+      "Agent": "Agent"
+    },
+    "waveform": {
+      "label": "Forme d'onde"
+    },
+    "cueEditor": {
+      "title": "Repères — {{title}}",
+      "analysing": "Analyse…",
+      "noWaveform": "Pas de forme d'onde : détectez à nouveau les repères.",
+      "cueIn": "Début",
+      "introEnd": "Début de la voix",
+      "outroStart": "Fin de la voix",
+      "cueOut": "Fin",
+      "noIntro": "Pas d'intro",
+      "noOutro": "Pas d'outro",
+      "vocalTimeline": "Voix par seconde",
+      "voiceCell": "{{second}} s : voix {{level}}/9",
+      "source": "Origine : {{source}}",
+      "confidence": "Confiance : {{value}} %",
+      "loudness": "Volume perçu : {{value}} LUFS",
+      "peak": "Crête : {{value}} dBFS",
+      "gain": "Normalisation : {{value}} dB",
+      "gainOff": "Normalisation désactivée",
+      "room": "Place pour l'habillage : intro {{intro}} s · outro {{outro}} s",
+      "prelisten": "Pré-écoute",
+      "fromStart": "▶ Depuis le début",
+      "introTail": "▶ 5 dernières s de l'intro",
+      "fromVoiceEnd": "▶ Depuis la fin de la voix",
+      "stop": "■ Arrêter",
+      "noPreview": "Choisissez une carte de pré-écoute dans Lecture ▸ Cartes son.",
+      "detectAgain": "Détecter à nouveau",
+      "clearMarks": "Effacer les repères",
+      "confirmClear": "Effacer les repères de ce titre ?",
+      "discard": "Abandonner les modifications non enregistrées ?",
+      "saved": "Repères enregistrés.",
+      "cleared": "Repères effacés."
+    },
+    "media": {
+      "marks": "Repères…",
+      "prelisten": "Pré-écoute",
+      "prelistenStarted": "Pré-écoute de {{title}}.",
+      "trackActions": "Actions du titre"
+    },
+    "panel": {
+      "title": "Analyse des titres",
+      "statsAnalysed": "{{analyzed}} / {{total}} analysés",
+      "statsManual": "Manuels : {{count}}",
+      "statsWithIntro": "Avec intro : {{count}}",
+      "statsLowConfidence": "Faible confiance : {{count}}",
+      "analyseLibrary": "Analyser la bibliothèque",
+      "reanalyseAll": "Tout réanalyser",
+      "analyseCategory": "Analyser cette catégorie",
+      "confirmReanalyse": "Réanalyser toute la bibliothèque ? Les repères posés à la main sont conservés.",
+      "progress": "{{done}} / {{total}}",
+      "current": "En cours : {{file}}",
+      "failed": "Échecs : {{count}}",
+      "keptManual": "Manuels conservés : {{count}}",
+      "running": "Analyse…",
+      "detector": "Détecteur",
+      "builtin": "Intégré",
+      "external": "Programme externe",
+      "program": "Programme",
+      "args": "Arguments (un par ligne)",
+      "apply": "Appliquer",
+      "agentNote": "Un agent d'IA peut aussi vérifier les repères par MCP (list_tracks_needing_review et set_track_cues).",
+      "detectorSaved": "Détecteur enregistré."
+    }
+  },
+  "contextMenu": {
+    "selected": "{{count}} sélectionnés",
+    "playNow": "Lire maintenant",
+    "playNext": "Lire ensuite",
+    "prelisten": "Pré-écoute",
+    "marks": "Repères…",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "moveTop": "Tout en haut",
+    "moveBottom": "Tout en bas",
+    "removeFromPlaylist": "Retirer de la playlist",
+    "removePlayed": "Retirer les titres diffusés",
+    "clearPlaylist": "Vider la playlist",
+    "confirmClear": "Vider toute la playlist ?",
+    "openFolder": "Afficher dans le dossier",
+    "copyPath": "Copier le chemin",
+    "notInLibrary": "Ce fichier n'est pas dans la bibliothèque.",
+    "addToPlaylist": "Ajouter à la playlist",
+    "detectMarks": "Détecter les repères",
+    "analysing": "Analyse de {{count}} titres…",
+    "removeFromLibrary": "Retirer de la bibliothèque…",
+    "confirmRemoveTracks": "Retirer {{count}} titres de la bibliothèque ? Les fichiers restent sur le disque, et les titres quittent leurs catégories.",
+    "removedTracks": "{{count}} titres retirés de la bibliothèque.",
+    "pathCopied": "Chemin copié.",
+    "keyEnter": "Entrée",
+    "keyDelete": "Suppr"
   }
 }

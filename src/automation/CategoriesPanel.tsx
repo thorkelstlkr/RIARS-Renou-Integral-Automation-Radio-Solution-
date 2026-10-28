@@ -4,10 +4,11 @@ import { useCommand } from "../commands";
 import { automation, fmtDuration, ITEM_KINDS, KIND_COLORS, today } from "./api";
 import type {
   AutomationConfig, Category, CategoryRule, CategoryTrack, Clock, ImagingRules, ItemKind,
-  RuleField, Separation, TrackFilter,
+  RuleField, Separation, TalkOverConfig, TrackFilter,
 } from "./api";
 import TrackPicker from "./TrackPicker";
 import type { PickedTrack } from "./TrackPicker";
+import AnalysisPanel from "../analysis/AnalysisPanel";
 
 export function KindBadge({ kind }: { kind: ItemKind }) {
   const { t } = useTranslation();
@@ -377,6 +378,20 @@ export default function CategoriesPanel() {
     setConfig((c) => (c ? { ...c, separation: { ...c.separation, ...p } } : c));
   const patchImaging = (p: Partial<ImagingRules>) =>
     setConfig((c) => (c ? { ...c, imaging: { ...c.imaging, ...p } } : c));
+  const patchTalkOver = (p: Partial<TalkOverConfig>) =>
+    setConfig((c) => (c ? { ...c, talk_over: { ...c.talk_over, ...p } } : c));
+  const toggleTalkOverKind = (kind: ItemKind) =>
+    setConfig((c) => (c
+      ? {
+          ...c,
+          talk_over: {
+            ...c.talk_over,
+            kinds: c.talk_over.kinds.includes(kind)
+              ? c.talk_over.kinds.filter((k) => k !== kind)
+              : [...c.talk_over.kinds, kind],
+          },
+        }
+      : c));
   const toggleNoOverlap = (kind: ItemKind) =>
     setConfig((c) => (c
       ? {
@@ -872,6 +887,50 @@ export default function CategoriesPanel() {
                 ))}
               </div>
 
+              <div style={S.sectionTitle}>{t("automation.categories.talkOver")}</div>
+              <label style={S.check}>
+                <input type="checkbox" checked={config.talk_over.enabled}
+                  onChange={(e) => patchTalkOver({ enabled: e.target.checked })} />
+                {t("automation.categories.talkOverEnabled")}
+              </label>
+              <div style={S.chips}>
+                <label style={{ ...S.check, margin: 0 }}>
+                  <input type="checkbox" checked={config.talk_over.on_intro}
+                    onChange={(e) => patchTalkOver({ on_intro: e.target.checked })} />
+                  {t("automation.categories.talkOverIntro")}
+                </label>
+                <label style={{ ...S.check, margin: 0 }}>
+                  <input type="checkbox" checked={config.talk_over.on_outro}
+                    onChange={(e) => patchTalkOver({ on_outro: e.target.checked })} />
+                  {t("automation.categories.talkOverOutro")}
+                </label>
+              </div>
+              <div style={S.grid}>
+                <label style={S.field}>{t("automation.categories.talkOverMargin")}
+                  <input style={S.input} type="number" min={0} step={50} value={config.talk_over.margin_ms}
+                    onChange={(e) => patchTalkOver({ margin_ms: Math.max(0, num(e.target.value)) })} />
+                </label>
+                <label style={S.field}>{t("automation.categories.talkOverDuck")}
+                  <input style={S.input} type="number" min={0} max={20} step={0.5} value={config.talk_over.duck_db}
+                    onChange={(e) => patchTalkOver({ duck_db: Math.min(20, Math.max(0, num(e.target.value))) })} />
+                </label>
+                <label style={S.field}>{t("automation.categories.talkOverMinConfidence")}
+                  <input style={S.input} type="number" min={0} max={1} step={0.05}
+                    value={config.talk_over.min_confidence}
+                    onChange={(e) => patchTalkOver({ min_confidence: Math.min(1, Math.max(0, num(e.target.value))) })} />
+                </label>
+              </div>
+              <div style={S.sectionTitle}>{t("automation.categories.talkOverKinds")}</div>
+              <div style={S.chips}>
+                {ITEM_KINDS.map((kind) => (
+                  <label key={kind} style={{ ...S.check, margin: 0 }}>
+                    <input type="checkbox" checked={config.talk_over.kinds.includes(kind)}
+                      onChange={() => toggleTalkOverKind(kind)} />
+                    {t(`automation.kinds.${kind}`, kind)}
+                  </label>
+                ))}
+              </div>
+
               <div style={S.actions}>
                 <button style={S.btn} onClick={saveSettings}>
                   {t("automation.categories.saveSettings")}
@@ -881,6 +940,10 @@ export default function CategoriesPanel() {
           )}
         </div>
       </details>
+
+      <div style={{ flexShrink: 0, maxHeight: 280, overflowY: "auto", borderTop: "1px solid var(--border)" }}>
+        <AnalysisPanel categoryId={selectedId ?? undefined} />
+      </div>
     </div>
   );
 }

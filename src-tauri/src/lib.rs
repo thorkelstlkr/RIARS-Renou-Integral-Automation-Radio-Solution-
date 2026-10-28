@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use riars_core::{AudioEngine, EngineStateInfo, MediaLibrary, Playlist, Track};
 use std::path::PathBuf;
@@ -9,6 +9,7 @@ use riars_core::{DeadAirConfig, IcecastConfig, SavedPlaylist, Scheduler};
 use riars_stream::{StreamService, StreamState, StreamStatus};
 use tauri::{AppHandle, Emitter, Manager, State};
 
+mod analysis_cmds;
 mod automation_cmds;
 
 #[tauri::command]
@@ -36,6 +37,12 @@ pub struct AppState {
     pub session: Mutex<riars_core::session::SessionSaver>,
     /// Long-term automation: playlist generator and proof-of-play log.
     pub automation: Mutex<riars_core::automation::Automation>,
+    /// Background cue-point and loudness analysis.
+    pub analysis: riars_core::analysis::BatchAnalyzer,
+    /// Pre-listening on its own sound card.
+    pub preview: Mutex<riars_core::audio::preview::PreviewPlayer>,
+    /// Sound cards chosen in the settings (`riars_audio.json`).
+    pub audio_settings_path: PathBuf,
 }
 
 #[tauri::command]
@@ -439,6 +446,100 @@ fn playlist_move(from: usize, to: usize, state: State<AppState>) -> Result<Playl
     Ok(engine.playlist().clone())
 }
 
+/// A library track to put in the playlist.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct NewItem {
+    path: String,
+    title: String,
+    artist: String,
+    duration_ms: u64,
+}
+
+#[derive(serde::Deserialize)]
+enum InsertPosition {
+    End,
+    /// Right after the item on air.
+    Next,
+}
+
+#[tauri::command]
+fn playlist_insert(tracks: Vec<NewItem>, position: InsertPosition, state: State<AppState>) -> Result<Playlist, String> {
+    if tracks.len() > 10_000 {
+        return Err("At most 10000 tracks at once".to_string());
+    }
+    let items = tracks
+        .into_iter()
+        .map(|t| riars_core::playlist::playlist::PlaylistItem::new(t.path, t.title, t.artist, t.duration_ms))
+        .collect();
+    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+    let playlist = engine.playlist_mut();
+    let at = match position {
+        InsertPosition::End => playlist.len(),
+        InsertPosition::Next => playlist.next_position(),
+    };
+    playlist.insert_items(at, items);
+    Ok(engine.playlist().clone())
+}
+
+#[tauri::command]
+fn playlist_remove_many(ids: Vec<String>, state: State<AppState>) -> Result<Playlist, String> {
+    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+    engine.playlist_mut().remove_ids(&ids);
+    Ok(engine.playlist().clone())
+}
+
+#[tauri::command]
+fn playlist_remove_played(state: State<AppState>) -> Result<Playlist, String> {
+    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+    engine.playlist_mut().prune_played(0);
+    Ok(engine.playlist().clone())
+}
+
+#[tauri::command]
+fn playlist_play_next(id: String, state: State<AppState>) -> Result<Playlist, String> {
+    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+    let playlist = engine.playlist_mut();
+    if let Some(index) = playlist.index_of(&id) {
+        playlist.move_to_next(index);
+    }
+    Ok(engine.playlist().clone())
+}
+
+/// Remove tracks from the library (the files stay on disk). Returns how many went.
+#[tauri::command]
+fn library_remove_tracks(ids: Vec<i64>, state: State<AppState>) -> Result<usize, String> {
+    let mut library = state.library.lock().map_err(|e| e.to_string())?;
+    let mut removed = 0;
+    for id in ids {
+        if library.delete_track(id)? {
+            removed += 1;
+        }
+    }
+    Ok(removed)
+}
+
+#[tauri::command]
+fn library_track_by_path(path: String, state: State<AppState>) -> Result<Option<Track>, String> {
+    state.library.lock().map_err(|e| e.to_string())?.track_by_path(&path)
+}
+
+/// Show `path` selected in the system file manager.
+#[tauri::command]
+fn reveal_in_folder(path: String) -> Result<(), String> {
+    let file = std::path::Path::new(&path);
+    if !file.is_file() {
+        return Err(format!("The file is not there: {path}"));
+    }
+    #[cfg(target_os = "windows")]
+    let result = std::process::Command::new("explorer").arg(format!("/select,{}", file.display())).spawn();
+    #[cfg(target_os = "macos")]
+    let result = std::process::Command::new("open").arg("-R").arg(file).spawn();
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    let result = std::process::Command::new("xdg-open").arg(file.parent().unwrap_or(file)).spawn();
+    result.map(|_| ()).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn playlist_clear(state: State<AppState>) -> Result<Playlist, String> {
     let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
@@ -484,9 +585,6 @@ async fn playlists_load(id: String, play: bool, app: AppHandle) -> Result<Playli
 pub fn run() {
     env_logger::init();
 
-    let mut engine = AudioEngine::new().expect("Failed to initialize audio engine");
-    let stream = engine.take_stream_tap().map(StreamService::new);
-
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -503,11 +601,21 @@ pub fn run() {
             let library = MediaLibrary::open(&db_path.to_string_lossy())?;
             let schedule_path = data_dir.join("riars_schedule.json");
             let session_path = data_dir.join("riars_session.json");
+            let audio_settings_path = data_dir.join("riars_audio.json");
             let scheduler = Scheduler::load(&schedule_path).unwrap_or_else(|e| {
                 log::warn!("{e}; starting with an empty schedule");
                 Scheduler::new()
             });
             log::info!("Media library: {}", db_path.display());
+
+            // Sound cards chosen last time: the on-air one before the engine opens.
+            let audio_settings = analysis_cmds::AudioSettings::load(&audio_settings_path);
+            let mut engine = match &audio_settings.main_device {
+                Some(name) => AudioEngine::with_device(name),
+                None => AudioEngine::new(),
+            }
+            .expect("Failed to initialize audio engine");
+            let stream = engine.take_stream_tap().map(StreamService::new);
 
             app.manage(AppState {
                 stream,
@@ -518,7 +626,41 @@ pub fn run() {
                 engine: Mutex::new(engine),
                 library: Mutex::new(library),
                 automation: Mutex::new(riars_core::automation::Automation::new()),
+                analysis: riars_core::analysis::BatchAnalyzer::new(),
+                preview: Mutex::new(riars_core::audio::preview::PreviewPlayer::new()),
+                audio_settings_path,
             });
+
+            // Normalisation reads each file's loudness from the library; the closure
+            // never runs with the engine locked (see `play_index_unlocked`).
+            let lookup_app = app.handle().clone();
+            {
+                let state = app.state::<AppState>();
+                match state.engine.lock() {
+                    Ok(mut engine) => engine.set_loudness_lookup(Arc::new(move |path| {
+                        lookup_app
+                            .state::<AppState>()
+                            .library
+                            .lock()
+                            .ok()?
+                            .loudness_by_path(path)
+                            .ok()
+                            .flatten()
+                    })),
+                    Err(e) => log::warn!("Cannot set the loudness lookup: {e}"),
+                };
+            }
+            if let Some(name) = audio_settings.preview_device {
+                let opened = app
+                    .state::<AppState>()
+                    .preview
+                    .lock()
+                    .map_err(|e| e.to_string())
+                    .and_then(|mut preview| preview.set_device(Some(name)));
+                if let Err(e) = opened {
+                    log::warn!("Cannot open the pre-listen sound card: {e}");
+                }
+            }
             // Carry on where the last run stopped (decodes a track: off the main thread).
             let resume_app = app.handle().clone();
             std::thread::Builder::new().name("riars-resume".into()).spawn(move || {
@@ -633,6 +775,34 @@ pub fn run() {
             automation_cmds::automation_log,
             automation_cmds::automation_delivery,
             automation_cmds::automation_export_csv,
+            analysis_cmds::analysis_track_cues,
+            analysis_cmds::analysis_tracks_cues,
+            analysis_cmds::analysis_set_track_cues,
+            analysis_cmds::analysis_clear_track_cues,
+            analysis_cmds::analysis_analyze_track,
+            analysis_cmds::analysis_paths_cues,
+            analysis_cmds::preview_play_path,
+            playlist_insert,
+            playlist_remove_many,
+            playlist_remove_played,
+            playlist_play_next,
+            library_remove_tracks,
+            library_track_by_path,
+            reveal_in_folder,
+            analysis_cmds::analysis_batch_start,
+            analysis_cmds::analysis_batch_cancel,
+            analysis_cmds::analysis_batch_status,
+            analysis_cmds::analysis_stats,
+            analysis_cmds::analysis_get_detector,
+            analysis_cmds::analysis_set_detector,
+            analysis_cmds::audio_devices,
+            analysis_cmds::audio_set_main_device,
+            analysis_cmds::audio_set_preview_device,
+            analysis_cmds::normalization_get,
+            analysis_cmds::normalization_set,
+            analysis_cmds::preview_play,
+            analysis_cmds::preview_stop,
+            analysis_cmds::preview_state,
         ])
         .run(tauri::generate_context!())
         .expect("error while running RIARS");

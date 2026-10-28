@@ -87,6 +87,7 @@ pub fn api_routes() -> Router<Arc<AppState>> {
         .route("/playlist/move", post(playlist_move))
         .route("/playlist/clear", post(playlist_clear))
         .route("/playlist/play", post(playlist_play))
+        .merge(crate::analysis_routes::analysis_routes())
         .merge(crate::automation_routes::automation_routes())
 }
 

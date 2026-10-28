@@ -29,7 +29,12 @@
     "noSaved": "No saved playlists yet.",
     "deleteSaved": "Delete saved playlist",
     "headerStart": "Start",
-    "generated": "added by the automation"
+    "generated": "added by the automation",
+    "headerIntro": "Intro",
+    "headerOutro": "Outro",
+    "headerLufs": "LUFS",
+    "overlayIntro": "over intro",
+    "overlayOutro": "over outro"
   },
   "library": {
     "title": "Library",
@@ -412,7 +417,15 @@
       "membersRange": "{{from}}–{{to}} of {{total}}",
       "previous": "Previous",
       "next": "Next",
-      "removeSelected": "Remove selected"
+      "removeSelected": "Remove selected",
+      "talkOver": "Talk over intros and outros",
+      "talkOverEnabled": "Talk over enabled",
+      "talkOverIntro": "Over intros",
+      "talkOverOutro": "Over outros",
+      "talkOverMargin": "Margin (ms)",
+      "talkOverDuck": "Duck (dB)",
+      "talkOverMinConfidence": "Min confidence (0-1)",
+      "talkOverKinds": "Kinds"
     },
     "ads": {
       "title": "Advertising",
@@ -575,7 +588,16 @@
     "previewEmpty": "Nothing to show: check the default clock, the grid and the categories.",
     "aboutTitle": "About RIARS",
     "aboutText": "Open-source radio automation with native AI agent support: playlists, clocks, dayparts, advertising and streaming, from a Raspberry Pi to a studio PC.",
-    "aboutLicense": "MIT licence"
+    "aboutLicense": "MIT licence",
+    "soundCards": "Sound cards…",
+    "normalization": "Normalisation…",
+    "normalizationTitle": "Normalisation",
+    "normalizationOn": "Normalise loudness",
+    "normalizationTarget": "Target loudness (LUFS)",
+    "normalizationMaxGain": "Most gain (dB)",
+    "normalizationMaxCut": "Most cut (dB)",
+    "normalizationPeak": "Peak ceiling (dBFS)",
+    "normalizationHint": "One gain per track from its measured loudness: quiet tracks are raised, loud ones lowered, within these limits."
   },
   "help": {
     "title": "Manual",
@@ -599,5 +621,117 @@
       "remote": "Remote control and servers",
       "reference": "Reference"
     }
+  },
+  "audio": {
+    "title": "Sound cards",
+    "loading": "Loading…",
+    "onAir": "On air",
+    "systemDefault": "System default",
+    "defaultIs": "System default: {{device}}",
+    "inUse": "In use now: {{device}}",
+    "restartNote": "Applies after restarting RIARS.",
+    "preview": "Pre-listen",
+    "off": "Off",
+    "previewNote": "Applies at once.",
+    "sameWarning": "Pre-listening will be heard on air."
+  },
+  "analysis": {
+    "source": {
+      "Auto": "Auto",
+      "Manual": "Manual",
+      "Agent": "Agent"
+    },
+    "waveform": {
+      "label": "Waveform"
+    },
+    "cueEditor": {
+      "title": "Cue points — {{title}}",
+      "analysing": "Analysing…",
+      "noWaveform": "No waveform: detect the marks again.",
+      "cueIn": "Cue in",
+      "introEnd": "Voice starts",
+      "outroStart": "Voice ends",
+      "cueOut": "Cue out",
+      "noIntro": "No intro",
+      "noOutro": "No outro",
+      "vocalTimeline": "Voice per second",
+      "voiceCell": "{{second}} s: voice {{level}}/9",
+      "source": "Source: {{source}}",
+      "confidence": "Confidence: {{value}}%",
+      "loudness": "Loudness: {{value}} LUFS",
+      "peak": "Peak: {{value}} dBFS",
+      "gain": "Normalisation: {{value}} dB",
+      "gainOff": "Normalisation off",
+      "room": "Talk-over room: intro {{intro}} s · outro {{outro}} s",
+      "prelisten": "Pre-listen",
+      "fromStart": "▶ From start",
+      "introTail": "▶ Last 5 s of intro",
+      "fromVoiceEnd": "▶ From voice end",
+      "stop": "■ Stop",
+      "noPreview": "Choose a pre-listen sound card in Playback ▸ Sound cards.",
+      "detectAgain": "Detect again",
+      "clearMarks": "Clear marks",
+      "confirmClear": "Clear the marks of this track?",
+      "discard": "Discard the unsaved changes?",
+      "saved": "Cue points saved.",
+      "cleared": "Marks cleared."
+    },
+    "media": {
+      "marks": "Marks…",
+      "prelisten": "Pre-listen",
+      "prelistenStarted": "Pre-listening {{title}}.",
+      "trackActions": "Track actions"
+    },
+    "panel": {
+      "title": "Track analysis",
+      "statsAnalysed": "{{analyzed}} / {{total}} analysed",
+      "statsManual": "Manual: {{count}}",
+      "statsWithIntro": "With intro: {{count}}",
+      "statsLowConfidence": "Low confidence: {{count}}",
+      "analyseLibrary": "Analyse library",
+      "reanalyseAll": "Re-analyse all",
+      "analyseCategory": "Analyse this category",
+      "confirmReanalyse": "Re-analyse the whole library? Hand-set marks are kept.",
+      "progress": "{{done}} / {{total}}",
+      "current": "Current: {{file}}",
+      "failed": "Failed: {{count}}",
+      "keptManual": "Manual kept: {{count}}",
+      "running": "Analysing…",
+      "detector": "Detector",
+      "builtin": "Built-in",
+      "external": "External program",
+      "program": "Program",
+      "args": "Arguments (one per line)",
+      "apply": "Apply",
+      "agentNote": "An AI agent can also review marks over MCP (list_tracks_needing_review and set_track_cues).",
+      "detectorSaved": "Detector saved."
+    }
+  },
+  "contextMenu": {
+    "selected": "{{count}} selected",
+    "playNow": "Play now",
+    "playNext": "Play next",
+    "prelisten": "Pre-listen",
+    "marks": "Marks…",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "moveTop": "Move to top",
+    "moveBottom": "Move to bottom",
+    "removeFromPlaylist": "Remove from playlist",
+    "removePlayed": "Remove played items",
+    "clearPlaylist": "Clear the playlist",
+    "confirmClear": "Clear the whole playlist?",
+    "openFolder": "Show in folder",
+    "copyPath": "Copy path",
+    "notInLibrary": "This file is not in the library.",
+    "addToPlaylist": "Add to playlist",
+    "detectMarks": "Detect marks",
+    "analysing": "Analysing {{count}} tracks…",
+    "removeFromLibrary": "Remove from library…",
+    "confirmRemoveTracks": "Remove {{count}} tracks from the library? The files stay on disk, and the tracks leave their categories.",
+    "removedTracks": "{{count}} tracks removed from the library.",
+    "pathCopied": "Path copied.",
+    "keyEnter": "Enter",
+    "keyDelete": "Del"
   }
 }

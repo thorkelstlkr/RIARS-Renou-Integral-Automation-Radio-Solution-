@@ -32,7 +32,7 @@ The same actions are in the in-window menus:
 - **File:** Add folder to library… · Open playlist… · Save playlist… · Export log (CSV)… · Quit
 - **Edit:** Search the library · Clear the playlist
 - **View:** the seven tabs · Language ▸
-- **Playback:** Play · Pause · Stop · Next · Crossfade… · Silence detector…
+- **Playback:** Play · Pause · Stop · Next · Crossfade… · Silence detector… · Normalisation… · Sound cards…
 - **Automation:** Automation on/off · Preview… · Clocks · Grid · Categories · Advertising · Station settings
 - **Broadcast:** Streaming settings… · Start streaming · Stop streaming
 - **Help:** Manual (F1) · Keyboard shortcuts · Web panel and server · About RIARS

@@ -13,7 +13,7 @@ use super::model::{
 };
 use super::traffic::{SpotPick, Traffic};
 use crate::library::db::{fold, Track};
-use crate::playlist::playlist::{ItemKind, Playlist, PlaylistItem};
+use crate::playlist::playlist::{ItemKind, OverlaySpec, Playlist, PlaylistItem};
 
 /// What the generator reads from the library. `MediaLibrary` implements it; tests
 /// use an in-memory one.
@@ -34,6 +34,8 @@ pub trait Catalog {
     fn campaigns(&self) -> Result<Vec<Campaign>, String>;
     /// Complete spot plays as (campaign id, start) in `[from, to)`.
     fn campaign_plays(&self, from: NaiveDateTime, to: NaiveDateTime) -> Result<Vec<(i64, NaiveDateTime)>, String>;
+    /// Cue points of a track, if analysed or marked.
+    fn track_cues(&self, track_id: i64) -> Result<Option<crate::analysis::TrackCues>, String>;
 }
 
 /// An anchor may fire this early (the item before it ends a little before the time).
@@ -302,11 +304,38 @@ impl Generator {
             self.load_history(catalog, start)?;
         }
         let mut t = start;
-        let mut out = Vec::new();
+        let mut out: Vec<PlaylistItem> = Vec::new();
         let mut total = 0;
         while (out.len() < min_items || total < min_ms) && out.len() < MAX_ITEMS_PER_CALL {
             let Some(mut item) = self.next_item(catalog, t)? else { break };
             item.no_overlap = self.config.no_overlap_kinds.contains(&item.kind);
+            // Imaging may go over the next song's intro, or the previous song's outro.
+            if self.may_talk_over(&item) {
+                // Picked for when it would start in sequence, so separation stays on the
+                // safe side if it then moves earlier, under the imaging.
+                let after = t + ms(item_ms(&item).saturating_sub(if item.no_overlap { 0 } else { overlap_ms }).max(1000));
+                if let Some(mut song) = self.next_item(catalog, after)? {
+                    song.no_overlap = self.config.no_overlap_kinds.contains(&song.kind);
+                    if let Some(spec) = self.over_intro(catalog, &song, &item)? {
+                        song.overlay = Some(Box::new(spec));
+                        song.planned_at = Some(t);
+                        item = song;
+                    } else if let Some(spec) = out.last().map(|prev| self.over_outro(catalog, prev, &item)).transpose()?.flatten() {
+                        if let Some(prev) = out.last_mut() {
+                            prev.overlay = Some(Box::new(spec));
+                        }
+                        song.planned_at = Some(t);
+                        item = song;
+                    } else {
+                        // In sequence after all: the song follows the imaging.
+                        total += item_ms(&item);
+                        out.push(item);
+                        song.planned_at = Some(after);
+                        t = after;
+                        item = song;
+                    }
+                }
+            }
             let duration = item_ms(&item);
             let overlap = if item.no_overlap { 0 } else { overlap_ms };
             t = item.planned_at.unwrap_or(t) + ms(duration.saturating_sub(overlap).max(1000));
@@ -314,6 +343,51 @@ impl Generator {
             out.push(item);
         }
         Ok(out)
+    }
+
+    /// Imaging of a kind allowed over songs, not tied to a hard time.
+    fn may_talk_over(&self, item: &PlaylistItem) -> bool {
+        let talk = &self.config.talk_over;
+        talk.enabled
+            && talk.kinds.contains(&item.kind)
+            && item.duration_ms > 0
+            && !self.hard_anchors.iter().any(|(id, _)| *id == item.id)
+    }
+
+    /// The song's marks, when they can be trusted for talking over.
+    fn trusted_cues(&self, catalog: &dyn Catalog, song: &PlaylistItem) -> Result<Option<crate::analysis::TrackCues>, String> {
+        if !is_music(song.kind) || song.overlay.is_some() {
+            return Ok(None);
+        }
+        let Some(id) = song.track_id else { return Ok(None) };
+        Ok(catalog.track_cues(id)?.filter(|c| {
+            c.source != crate::analysis::CueSource::Auto || c.confidence >= self.config.talk_over.min_confidence
+        }))
+    }
+
+    /// `imaging` over `song`'s intro, ending `margin_ms` before the voice.
+    fn over_intro(&self, catalog: &dyn Catalog, song: &PlaylistItem, imaging: &PlaylistItem) -> Result<Option<OverlaySpec>, String> {
+        let talk = &self.config.talk_over;
+        let Some(cues) = self.trusted_cues(catalog, song)?.filter(|_| talk.on_intro) else { return Ok(None) };
+        let need = imaging.duration_ms + talk.margin_ms;
+        Ok((cues.intro_room_ms() >= need).then(|| OverlaySpec {
+            item: imaging.clone(),
+            start_ms: cues.intro_end_ms.unwrap_or(0).saturating_sub(need).max(cues.cue_in_ms),
+            duck_db: talk.duck_db,
+        }))
+    }
+
+    /// `imaging` over `song`'s outro, starting `margin_ms` after the voice ends and
+    /// finishing before the song does.
+    fn over_outro(&self, catalog: &dyn Catalog, song: &PlaylistItem, imaging: &PlaylistItem) -> Result<Option<OverlaySpec>, String> {
+        let talk = &self.config.talk_over;
+        let Some(cues) = self.trusted_cues(catalog, song)?.filter(|_| talk.on_outro) else { return Ok(None) };
+        let need = imaging.duration_ms + talk.margin_ms;
+        Ok((cues.outro_room_ms() >= need).then(|| OverlaySpec {
+            item: imaging.clone(),
+            start_ms: cues.outro_start_ms.unwrap_or(cues.cue_out_ms) + talk.margin_ms,
+            duck_db: talk.duck_db,
+        }))
     }
 
     fn load_history(&mut self, catalog: &dyn Catalog, start: NaiveDateTime) -> Result<(), String> {
@@ -931,6 +1005,7 @@ mod tests {
         playlists: HashMap<String, Playlist>,
         kv: HashMap<String, String>,
         campaigns: Vec<Campaign>,
+        cues: HashMap<i64, crate::analysis::TrackCues>,
     }
 
     impl Fake {
@@ -1018,6 +1093,9 @@ mod tests {
         }
         fn campaign_plays(&self, _: NaiveDateTime, _: NaiveDateTime) -> Result<Vec<(i64, NaiveDateTime)>, String> {
             Ok(Vec::new())
+        }
+        fn track_cues(&self, track_id: i64) -> Result<Option<crate::analysis::TrackCues>, String> {
+            Ok(self.cues.get(&track_id).cloned())
         }
     }
 
@@ -1360,6 +1438,45 @@ mod tests {
             // The opening comes right before the first rock song.
             let n = items.iter().position(|i| i.campaign_id == Some(7)).unwrap();
             assert_eq!(items[n + 1].category_id, Some(ROCK), "seed {seed}");
+        }
+    }
+
+    #[test]
+    fn imaging_goes_over_intros_that_fit_and_never_over_the_voice() {
+        for seed in SEEDS {
+            let mut f = station();
+            f.clocks[0].slots = vec![slot(None, SlotItem::Category { category_id: POP, count: 1000, require_codes: vec![], exclude_codes: vec![] })];
+            f.config.imaging = ImagingRules { jingle_category: Some(JINGLES), jingle_every: 2, sweeper_on_change: None };
+            // Jingles of 3 s; even pop tracks have a 12 s intro (manual marks), odd ones none.
+            for t in f.tracks.iter_mut().filter(|t| t.id / 1000 == JINGLES) {
+                t.duration_ms = 3_000;
+            }
+            for id in f.members[&POP].clone() {
+                let intro = if id % 2 == 0 { Some(12_000) } else { None };
+                f.cues.insert(id, crate::analysis::TrackCues {
+                    track_id: id, duration_ms: 200_000, cue_in_ms: 0, cue_out_ms: 200_000,
+                    intro_end_ms: intro, outro_start_ms: None, source: crate::analysis::CueSource::Manual,
+                    confidence: 1.0, loudness_lufs: None, peak_dbfs: None, analyzed_at: None,
+                });
+            }
+            let mut g = Generator::with_seed(seed);
+            let items = run(&mut f, &mut g, at(8, 0), 2);
+            let overlaid: Vec<_> = items.iter().filter(|i| i.overlay.is_some()).collect();
+            assert!(!overlaid.is_empty(), "seed {seed}: no talk-over");
+            for song in &overlaid {
+                assert_eq!(song.track_id.unwrap() % 2, 0, "only songs with an intro");
+                let spec = song.overlay.as_ref().unwrap();
+                // Ends 500 ms before the voice at 12 s.
+                assert_eq!(spec.start_ms + spec.item.duration_ms + 500, 12_000);
+                assert_eq!(spec.item.kind, ItemKind::Jingle);
+            }
+            // Jingles that could not go over a song still play, in sequence, before an odd song.
+            for (n, item) in items.iter().enumerate().filter(|(_, i)| i.kind == ItemKind::Jingle) {
+                if let Some(next) = items.get(n + 1) {
+                    assert!(next.track_id.unwrap() % 2 == 1 || next.kind != ItemKind::Music, "seed {seed}: a jingle in sequence before a song with room");
+                }
+                let _ = item;
+            }
         }
     }
 

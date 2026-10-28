@@ -119,6 +119,7 @@ pub(crate) fn init_schema(db: &rusqlite::Connection) -> Result<(), String> {
     )
     .map_err(|e| format!("DB error: {e}"))?;
     crate::automation::traffic_store::init_traffic_schema(db)?;
+    crate::analysis::store::init_cues_schema(db)?;
     Ok(())
 }
 
@@ -1014,6 +1015,9 @@ impl super::generator::Catalog for MediaLibrary {
     }
     fn campaign_plays(&self, from: NaiveDateTime, to: NaiveDateTime) -> Result<Vec<(i64, NaiveDateTime)>, String> {
         MediaLibrary::campaign_plays(self, from, to)
+    }
+    fn track_cues(&self, track_id: i64) -> Result<Option<crate::analysis::TrackCues>, String> {
+        MediaLibrary::track_cues(self, track_id)
     }
 }
 

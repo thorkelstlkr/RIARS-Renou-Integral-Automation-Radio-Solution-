@@ -45,6 +45,20 @@ pub struct TrackPlayer {
     source: Source,
     /// Never crossfade into or out of this track (e.g. spots).
     no_overlap: bool,
+    /// Linear gain applied when mixing (loudness normalisation); may exceed 1.
+    gain: f32,
+    /// A track to play over this one (imaging over the intro or outro), started when
+    /// this one reaches `Overlay::start_frame`.
+    overlay: Option<Overlay>,
+}
+
+/// Imaging attached to a track: plays over it from a given frame, ducking it.
+pub struct Overlay {
+    pub player: Box<TrackPlayer>,
+    /// In the host track's source frames.
+    pub start_frame: f64,
+    /// Linear gain of the host track while the overlay plays (1 = no ducking).
+    pub duck: f32,
 }
 
 enum Source {
@@ -186,6 +200,8 @@ impl TrackPlayer {
             sample_rate,
             frame_pos: 0.0,
             no_overlap: false,
+            gain: 1.0,
+            overlay: None,
             channels,
             source: Source::Stream(Box::new(source)),
         }
@@ -198,6 +214,33 @@ impl TrackPlayer {
 
     pub fn no_overlap(&self) -> bool {
         self.no_overlap
+    }
+
+    /// Mixing gain (linear, 0 to 8): loudness normalisation.
+    pub fn set_gain(&mut self, gain: f32) {
+        self.gain = gain.clamp(0.0, 8.0);
+    }
+
+    pub fn gain(&self) -> f32 {
+        self.gain
+    }
+
+    /// Attach imaging to play over this track from `start_frame` (source frames).
+    pub fn set_overlay(&mut self, overlay: Overlay) {
+        self.overlay = Some(overlay);
+    }
+
+    pub fn has_overlay(&self) -> bool {
+        self.overlay.is_some()
+    }
+
+    /// The attached overlay once this track has reached its start. Real-time safe.
+    pub fn take_due_overlay(&mut self) -> Option<Overlay> {
+        if self.overlay.as_ref().is_some_and(|o| self.frame_pos >= o.start_frame) {
+            self.overlay.take()
+        } else {
+            None
+        }
     }
 
     pub fn from_samples(file_path: PathBuf, samples: Vec<f32>, channels: usize, sample_rate: u32) -> Self {
@@ -215,6 +258,8 @@ impl TrackPlayer {
             sample_rate,
             frame_pos: 0.0,
             no_overlap: false,
+            gain: 1.0,
+            overlay: None,
             channels,
             source: Source::Memory(samples),
         }

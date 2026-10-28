@@ -29,7 +29,12 @@
     "noSaved": "Encara no hi ha llistes desades.",
     "deleteSaved": "Esborra la llista desada",
     "headerStart": "Inici",
-    "generated": "afegida per l'automatització"
+    "generated": "afegida per l'automatització",
+    "headerIntro": "Intro",
+    "headerOutro": "Outro",
+    "headerLufs": "LUFS",
+    "overlayIntro": "sobre la intro",
+    "overlayOutro": "sobre l'outro"
   },
   "library": {
     "title": "Biblioteca",
@@ -412,7 +417,15 @@
       "membersRange": "{{from}}–{{to}} de {{total}}",
       "previous": "Anterior",
       "next": "Següent",
-      "removeSelected": "Treu les seleccionades"
+      "removeSelected": "Treu les seleccionades",
+      "talkOver": "Locució sobre intros i outros",
+      "talkOverEnabled": "Locució sobre intros activada",
+      "talkOverIntro": "Sobre intros",
+      "talkOverOutro": "Sobre outros",
+      "talkOverMargin": "Marge (ms)",
+      "talkOverDuck": "Atenua la música (dB)",
+      "talkOverMinConfidence": "Confiança mínima (0-1)",
+      "talkOverKinds": "Tipus"
     },
     "ads": {
       "title": "Publicitat",
@@ -575,7 +588,16 @@
     "previewEmpty": "No hi ha res a mostrar: revisa el rellotge per defecte, la graella i les categories.",
     "aboutTitle": "Quant a RIARS",
     "aboutText": "Automatització de ràdio de codi obert amb suport natiu per a agents d'IA: llistes, rellotges, graella, publicitat i emissió, des d'una Raspberry Pi fins a l'ordinador de l'estudi.",
-    "aboutLicense": "Llicència MIT"
+    "aboutLicense": "Llicència MIT",
+    "soundCards": "Targetes de so…",
+    "normalization": "Normalització…",
+    "normalizationTitle": "Normalització",
+    "normalizationOn": "Normalitza la sonoritat",
+    "normalizationTarget": "Sonoritat objectiu (LUFS)",
+    "normalizationMaxGain": "Pujada màxima (dB)",
+    "normalizationMaxCut": "Baixada màxima (dB)",
+    "normalizationPeak": "Sostre de pics (dBFS)",
+    "normalizationHint": "Un guany per pista segons la sonoritat mesurada: les fluixes pugen i les fortes baixen, dins d'aquests límits."
   },
   "help": {
     "title": "Manual",
@@ -599,5 +621,117 @@
       "remote": "Control remot i servidors",
       "reference": "Referència"
     }
+  },
+  "audio": {
+    "title": "Targetes de so",
+    "loading": "S'està carregant…",
+    "onAir": "Antena",
+    "systemDefault": "La del sistema",
+    "defaultIs": "La del sistema: {{device}}",
+    "inUse": "En ús ara: {{device}}",
+    "restartNote": "S'aplica en reiniciar RIARS.",
+    "preview": "Preescolta",
+    "off": "Desactivada",
+    "previewNote": "S'aplica al moment.",
+    "sameWarning": "La preescolta sortirà a l'aire."
+  },
+  "analysis": {
+    "source": {
+      "Auto": "Automàtica",
+      "Manual": "Manual",
+      "Agent": "Agent"
+    },
+    "waveform": {
+      "label": "Forma d'ona"
+    },
+    "cueEditor": {
+      "title": "Marques — {{title}}",
+      "analysing": "S'està analitzant…",
+      "noWaveform": "Sense forma d'ona: torna a detectar les marques.",
+      "cueIn": "Inici",
+      "introEnd": "Entra la veu",
+      "outroStart": "Acaba la veu",
+      "cueOut": "Final",
+      "noIntro": "Sense intro",
+      "noOutro": "Sense outro",
+      "vocalTimeline": "Veu per segon",
+      "voiceCell": "{{second}} s: veu {{level}}/9",
+      "source": "Origen: {{source}}",
+      "confidence": "Confiança: {{value}} %",
+      "loudness": "Sonoritat: {{value}} LUFS",
+      "peak": "Pic: {{value}} dBFS",
+      "gain": "Normalització: {{value}} dB",
+      "gainOff": "Normalització desactivada",
+      "room": "Espai per a locució: intro {{intro}} s · outro {{outro}} s",
+      "prelisten": "Preescolta",
+      "fromStart": "▶ Des de l'inici",
+      "introTail": "▶ Últims 5 s d'intro",
+      "fromVoiceEnd": "▶ Des que acaba la veu",
+      "stop": "■ Atura",
+      "noPreview": "Tria una targeta de preescolta a Reproducció ▸ Targetes de so.",
+      "detectAgain": "Torna a detectar",
+      "clearMarks": "Esborra les marques",
+      "confirmClear": "Vols esborrar les marques d'aquesta pista?",
+      "discard": "Vols descartar els canvis sense desar?",
+      "saved": "Marques desades.",
+      "cleared": "Marques esborrades."
+    },
+    "media": {
+      "marks": "Marques…",
+      "prelisten": "Preescolta",
+      "prelistenStarted": "S'està preescoltant {{title}}.",
+      "trackActions": "Accions de la pista"
+    },
+    "panel": {
+      "title": "Anàlisi",
+      "statsAnalysed": "{{analyzed}} / {{total}} analitzades",
+      "statsManual": "Manuals: {{count}}",
+      "statsWithIntro": "Amb intro: {{count}}",
+      "statsLowConfidence": "Poca confiança: {{count}}",
+      "analyseLibrary": "Analitza la biblioteca",
+      "reanalyseAll": "Torna a analitzar-ho tot",
+      "analyseCategory": "Analitza aquesta categoria",
+      "confirmReanalyse": "Vols tornar a analitzar tota la biblioteca? Les marques posades a mà es conserven.",
+      "progress": "{{done}} / {{total}}",
+      "current": "Ara: {{file}}",
+      "failed": "Fallides: {{count}}",
+      "keptManual": "Manuals conservades: {{count}}",
+      "running": "S'està analitzant…",
+      "detector": "Detector",
+      "builtin": "Integrat",
+      "external": "Programa extern",
+      "program": "Programa",
+      "args": "Arguments (un per línia)",
+      "apply": "Aplica",
+      "agentNote": "Un agent d'IA també pot revisar les marques per MCP (list_tracks_needing_review i set_track_cues).",
+      "detectorSaved": "Detector desat."
+    }
+  },
+  "contextMenu": {
+    "selected": "{{count}} seleccionades",
+    "playNow": "Reprodueix ara",
+    "playNext": "Reprodueix a continuació",
+    "prelisten": "Preescolta",
+    "marks": "Marques…",
+    "moveUp": "Puja",
+    "moveDown": "Baixa",
+    "moveTop": "Al principi",
+    "moveBottom": "Al final",
+    "removeFromPlaylist": "Treu de la llista",
+    "removePlayed": "Treu les ja emeses",
+    "clearPlaylist": "Buida la llista",
+    "confirmClear": "Vols buidar tota la llista de reproducció?",
+    "openFolder": "Obre la carpeta del fitxer",
+    "copyPath": "Copia el camí",
+    "notInLibrary": "Aquest fitxer no és a la biblioteca.",
+    "addToPlaylist": "Afegeix a la llista",
+    "detectMarks": "Detecta les marques",
+    "analysing": "S'estan analitzant {{count}} pistes…",
+    "removeFromLibrary": "Treu de la biblioteca…",
+    "confirmRemoveTracks": "Vols treure {{count}} pistes de la biblioteca? Els fitxers no s'esborren del disc, i les pistes surten de les seves categories.",
+    "removedTracks": "{{count}} pistes tretes de la biblioteca.",
+    "pathCopied": "Camí copiat.",
+    "keyEnter": "Retorn",
+    "keyDelete": "Supr"
   }
 }

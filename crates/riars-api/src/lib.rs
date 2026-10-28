@@ -1,3 +1,4 @@
+mod analysis_routes;
 mod automation_routes;
 pub mod routes;
 pub mod ws;
@@ -29,6 +30,28 @@ pub struct AppState {
     pub automation: Mutex<riars_core::automation::Automation>,
     /// Automation events (JSON with `"type": "automation"`) for WebSocket clients.
     pub automation_events: tokio::sync::broadcast::Sender<String>,
+    #[cfg(not(test))]
+    pub analysis: riars_core::analysis::BatchAnalyzer,
+}
+
+impl AppState {
+    pub fn analysis(&self) -> &riars_core::analysis::BatchAnalyzer {
+        #[cfg(not(test))]
+        {
+            &self.analysis
+        }
+        #[cfg(test)]
+        {
+            test_analyzer()
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn test_analyzer() -> &'static riars_core::analysis::BatchAnalyzer {
+    static ANALYZER: std::sync::OnceLock<riars_core::analysis::BatchAnalyzer> =
+        std::sync::OnceLock::new();
+    ANALYZER.get_or_init(riars_core::analysis::BatchAnalyzer::new)
 }
 
 pub fn create_router(state: Arc<AppState>) -> Router {

@@ -21,8 +21,10 @@ La lista de reproducción contiene lo que suena y lo que viene después. La pist
 
 ## Manejarla
 
-- **Doble clic** en un elemento: suena ese elemento ahora.
-- **▲ / ▼**: subir o bajar. **✕**: quitar.
+- **Doble clic** en un elemento, o **Intro**: suena ese elemento ahora.
+- **▲ / ▼**: subir o bajar (también **Alt+↑ / Alt+↓**). **✕**: quitar (también **Supr**, con varios elementos seleccionados).
+- **Ctrl+clic**, **Mayús+clic** y **Ctrl+A** seleccionan varios elementos.
+- **Clic derecho**: Reproducir ahora, Reproducir a continuación, Preescucha, Marcas…, Subir, Bajar, Al principio, Al final, Quitar de la lista, Quitar las ya emitidas, Vaciar la lista, Abrir la carpeta del archivo y Copiar la ruta.
 - **Guardar** (**Ctrl+S**): guarda la lista con un nombre.
 - **Abrir** (**Ctrl+O**): carga una lista guardada. Las listas guardadas sirven también en la [parrilla](topic:grid) y en los [relojes](topic:clocks).
 - **Limpiar**: vacía la lista.

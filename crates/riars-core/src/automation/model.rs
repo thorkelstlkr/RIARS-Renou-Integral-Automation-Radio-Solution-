@@ -263,6 +263,39 @@ pub struct AutomationConfig {
     pub ad_break_seconds: u32,
     /// Items of these kinds never crossfade with their neighbours.
     pub no_overlap_kinds: Vec<ItemKind>,
+    /// Imaging over the instrumental intro or outro of songs.
+    pub talk_over: TalkOverConfig,
+}
+
+/// Playing imaging over a song's instrumental intro or outro, never over the voice.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct TalkOverConfig {
+    pub enabled: bool,
+    pub on_intro: bool,
+    pub on_outro: bool,
+    /// Room kept between the imaging and the voice (ms).
+    pub margin_ms: u64,
+    /// How far the song is lowered under the imaging (dB).
+    pub duck_db: f32,
+    /// Automatic marks are trusted from this confidence (hand-set ones always).
+    pub min_confidence: f32,
+    /// Kinds that may go over a song.
+    pub kinds: Vec<ItemKind>,
+}
+
+impl Default for TalkOverConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            on_intro: true,
+            on_outro: true,
+            margin_ms: 500,
+            duck_db: 6.0,
+            min_confidence: 0.35,
+            kinds: vec![ItemKind::Jingle, ItemKind::StationId, ItemKind::Sweeper, ItemKind::Bumper],
+        }
+    }
 }
 
 impl Default for AutomationConfig {
@@ -278,6 +311,7 @@ impl Default for AutomationConfig {
             keep_played: 20,
             ad_break_seconds: 180,
             no_overlap_kinds: vec![ItemKind::Spot],
+            talk_over: TalkOverConfig::default(),
         }
     }
 }

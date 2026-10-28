@@ -25,8 +25,25 @@ Escribe en **Buscar…** (o pulsa **Ctrl+L**). Busca a la vez en título, artist
 
 ## Usar una pista
 
-- **Doble clic**: la añade al final de la [lista de reproducción](topic:playlist).
+- **Doble clic** o **Intro**: la añade al final de la [lista de reproducción](topic:playlist).
 - **Cargar**: la carga directamente en el reproductor.
+
+Puedes seleccionar varias pistas: **Ctrl+clic** añade o quita una, **Mayús+clic** selecciona un tramo y **Ctrl+A** todas.
+
+## Menú del botón derecho
+
+Clic derecho sobre una pista, o sobre la selección:
+
+| Opción | Qué hace |
+|---|---|
+| **Añadir a la lista** | Al final de la lista de reproducción. |
+| **Reproducir a continuación** | Justo después de lo que suena ahora. |
+| **Preescucha** | Por la [tarjeta de preescucha](topic:sound-cards), sin salir al aire. |
+| **Marcas…** | Abre el editor de [intros y outros](topic:intro-outro). |
+| **Detectar marcas** | Analiza las pistas elegidas; las marcas puestas a mano se conservan. |
+| **Abrir la carpeta del archivo** | Muestra el archivo en el explorador. |
+| **Copiar la ruta** | Copia la ruta del archivo. |
+| **Quitar de la biblioteca…** | Pide confirmación. El archivo **no se borra** del disco, pero la pista sale de sus categorías. También con **Supr**. |
 
 ## La biblioteca y la automatización
 

@@ -29,7 +29,12 @@
     "noSaved": "Noch keine gespeicherten Playlists.",
     "deleteSaved": "Gespeicherte Playlist löschen",
     "headerStart": "Start",
-    "generated": "von der Automation hinzugefügt"
+    "generated": "von der Automation hinzugefügt",
+    "headerIntro": "Intro",
+    "headerOutro": "Outro",
+    "headerLufs": "LUFS",
+    "overlayIntro": "über Intro",
+    "overlayOutro": "über Outro"
   },
   "library": {
     "title": "Bibliothek",
@@ -412,7 +417,15 @@
       "membersRange": "{{from}}–{{to}} von {{total}}",
       "previous": "Zurück",
       "next": "Weiter",
-      "removeSelected": "Auswahl entfernen"
+      "removeSelected": "Auswahl entfernen",
+      "talkOver": "Jingles über Intros und Outros",
+      "talkOverEnabled": "Jingles über Intros aktiv",
+      "talkOverIntro": "Über Intros",
+      "talkOverOutro": "Über Outros",
+      "talkOverMargin": "Abstand (ms)",
+      "talkOverDuck": "Musik absenken (dB)",
+      "talkOverMinConfidence": "Mindestzuverlässigkeit (0-1)",
+      "talkOverKinds": "Arten"
     },
     "ads": {
       "title": "Werbung",
@@ -575,7 +588,16 @@
     "previewEmpty": "Nichts anzuzeigen: Standarduhr, Sendeplan und Kategorien prüfen.",
     "aboutTitle": "Über RIARS",
     "aboutText": "Open-Source-Radioautomation mit nativer Unterstützung für KI-Agenten: Playlists, Uhren, Sendeplan, Werbung und Streaming, vom Raspberry Pi bis zum Studio-PC.",
-    "aboutLicense": "MIT-Lizenz"
+    "aboutLicense": "MIT-Lizenz",
+    "soundCards": "Soundkarten…",
+    "normalization": "Normalisierung…",
+    "normalizationTitle": "Normalisierung",
+    "normalizationOn": "Lautheit normalisieren",
+    "normalizationTarget": "Ziellautheit (LUFS)",
+    "normalizationMaxGain": "Höchste Anhebung (dB)",
+    "normalizationMaxCut": "Höchste Absenkung (dB)",
+    "normalizationPeak": "Spitzenobergrenze (dBFS)",
+    "normalizationHint": "Eine Verstärkung pro Titel nach seiner gemessenen Lautheit: leise Titel werden angehoben, laute abgesenkt, innerhalb dieser Grenzen."
   },
   "help": {
     "title": "Handbuch",
@@ -599,5 +621,117 @@
       "remote": "Fernsteuerung und Server",
       "reference": "Referenz"
     }
+  },
+  "audio": {
+    "title": "Soundkarten",
+    "loading": "Wird geladen…",
+    "onAir": "Sendung",
+    "systemDefault": "Systemstandard",
+    "defaultIs": "Systemstandard: {{device}}",
+    "inUse": "Jetzt in Verwendung: {{device}}",
+    "restartNote": "Gilt nach einem Neustart von RIARS.",
+    "preview": "Vorhören",
+    "off": "Aus",
+    "previewNote": "Gilt sofort.",
+    "sameWarning": "Das Vorhören ist auf Sendung zu hören."
+  },
+  "analysis": {
+    "source": {
+      "Auto": "Automatisch",
+      "Manual": "Manuell",
+      "Agent": "Agent"
+    },
+    "waveform": {
+      "label": "Wellenform"
+    },
+    "cueEditor": {
+      "title": "Marken — {{title}}",
+      "analysing": "Wird analysiert…",
+      "noWaveform": "Keine Wellenform: Marken erneut erkennen.",
+      "cueIn": "Anfang",
+      "introEnd": "Gesang beginnt",
+      "outroStart": "Gesang endet",
+      "cueOut": "Ende",
+      "noIntro": "Kein Intro",
+      "noOutro": "Kein Outro",
+      "vocalTimeline": "Gesang pro Sekunde",
+      "voiceCell": "{{second}} s: Gesang {{level}}/9",
+      "source": "Herkunft: {{source}}",
+      "confidence": "Zuverlässigkeit: {{value}} %",
+      "loudness": "Lautheit: {{value}} LUFS",
+      "peak": "Spitze: {{value}} dBFS",
+      "gain": "Normalisierung: {{value}} dB",
+      "gainOff": "Normalisierung aus",
+      "room": "Platz für Jingles: Intro {{intro}} s · Outro {{outro}} s",
+      "prelisten": "Vorhören",
+      "fromStart": "▶ Vom Anfang",
+      "introTail": "▶ Letzte 5 s des Intros",
+      "fromVoiceEnd": "▶ Ab Gesangsende",
+      "stop": "■ Stopp",
+      "noPreview": "Wählen Sie eine Vorhör-Soundkarte unter Wiedergabe ▸ Soundkarten.",
+      "detectAgain": "Erneut erkennen",
+      "clearMarks": "Marken löschen",
+      "confirmClear": "Die Marken dieses Titels löschen?",
+      "discard": "Ungespeicherte Änderungen verwerfen?",
+      "saved": "Marken gespeichert.",
+      "cleared": "Marken gelöscht."
+    },
+    "media": {
+      "marks": "Marken…",
+      "prelisten": "Vorhören",
+      "prelistenStarted": "Vorhören: {{title}}.",
+      "trackActions": "Titelaktionen"
+    },
+    "panel": {
+      "title": "Titelanalyse",
+      "statsAnalysed": "{{analyzed}} / {{total}} analysiert",
+      "statsManual": "Manuell: {{count}}",
+      "statsWithIntro": "Mit Intro: {{count}}",
+      "statsLowConfidence": "Geringe Zuverlässigkeit: {{count}}",
+      "analyseLibrary": "Bibliothek analysieren",
+      "reanalyseAll": "Alles neu analysieren",
+      "analyseCategory": "Diese Kategorie analysieren",
+      "confirmReanalyse": "Die ganze Bibliothek neu analysieren? Von Hand gesetzte Marken bleiben erhalten.",
+      "progress": "{{done}} / {{total}}",
+      "current": "Aktuell: {{file}}",
+      "failed": "Fehlgeschlagen: {{count}}",
+      "keptManual": "Manuelle behalten: {{count}}",
+      "running": "Wird analysiert…",
+      "detector": "Erkennung",
+      "builtin": "Eingebaut",
+      "external": "Externes Programm",
+      "program": "Programm",
+      "args": "Argumente (eins pro Zeile)",
+      "apply": "Übernehmen",
+      "agentNote": "Ein KI-Agent kann die Marken auch über MCP prüfen (list_tracks_needing_review und set_track_cues).",
+      "detectorSaved": "Erkennung gespeichert."
+    }
+  },
+  "contextMenu": {
+    "selected": "{{count}} ausgewählt",
+    "playNow": "Jetzt abspielen",
+    "playNext": "Als Nächstes abspielen",
+    "prelisten": "Vorhören",
+    "marks": "Marken…",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "moveTop": "Ganz nach oben",
+    "moveBottom": "Ganz nach unten",
+    "removeFromPlaylist": "Aus der Playlist entfernen",
+    "removePlayed": "Gespielte entfernen",
+    "clearPlaylist": "Playlist leeren",
+    "confirmClear": "Die ganze Playlist leeren?",
+    "openFolder": "Im Ordner anzeigen",
+    "copyPath": "Pfad kopieren",
+    "notInLibrary": "Diese Datei ist nicht in der Bibliothek.",
+    "addToPlaylist": "Zur Playlist hinzufügen",
+    "detectMarks": "Marken erkennen",
+    "analysing": "{{count}} Titel werden analysiert…",
+    "removeFromLibrary": "Aus der Bibliothek entfernen…",
+    "confirmRemoveTracks": "{{count}} Titel aus der Bibliothek entfernen? Die Dateien bleiben auf der Festplatte, und die Titel verlassen ihre Kategorien.",
+    "removedTracks": "{{count}} Titel aus der Bibliothek entfernt.",
+    "pathCopied": "Pfad kopiert.",
+    "keyEnter": "Eingabe",
+    "keyDelete": "Entf"
   }
 }
