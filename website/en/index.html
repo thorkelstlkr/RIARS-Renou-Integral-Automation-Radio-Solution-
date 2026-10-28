@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RIARS — AI-ready radio automation, free and open source</title>
+  <meta name="description" content="RIARS is free, open-source radio automation software with a built-in MCP server, so AI assistants can run your station. Windows, macOS, Linux, Raspberry Pi and Android.">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="RIARS — AI-ready radio automation, free and open source">
+  <meta property="og:description" content="RIARS is free, open-source radio automation software with a built-in MCP server, so AI assistants can run your station. Windows, macOS, Linux, Raspberry Pi and Android.">
+  <link rel="alternate" hreflang="es" href="../index.html">
+  <link rel="alternate" hreflang="en" href="index.html">
+  <link rel="icon" type="image/png" href="../img/favicon.png">
+  <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../script.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="#top"><img src="../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Main">
+        <a class="nav-link" href="#mcp">MCP</a>
+        <a class="nav-link" href="#features">Features</a>
+        <a class="nav-link" href="#platforms">Platforms</a>
+        <a class="nav-link" href="#download">Get it</a>
+        <a class="lang" href="../index.html" hreflang="es" lang="es" aria-label="Español">ES</a>
+        <a class="btn btn-ghost" href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section id="top" class="hero">
+      <div class="wrap">
+        <div class="hero-text">
+          <div class="badges">
+            <span class="badge">Built-in MCP server</span>
+            <span class="badge">Free and open source (MIT)</span>
+            <span class="badge">Desktop, Raspberry Pi and Android</span>
+          </div>
+          <h1>Radio automation your AI assistant can run</h1>
+          <p class="lead">RIARS (Renou Integral Automation Radio Solution) runs a whole station: library, programming grid, live shows and streaming. It exposes all of it as MCP tools, so Claude or another assistant drives it with structured calls instead of clicks.</p>
+          <div class="buttons">
+            <a class="btn btn-primary" href="#download">Download and build</a>
+            <a class="btn btn-ghost" href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">View on GitHub</a>
+          </div>
+          <p class="note">Written in Rust. No licences, no fees.</p>
+        </div>
+        <div class="hero-art">
+          <img src="../img/logo-512.png" alt="RIARS logo" width="512" height="512" loading="eager">
+        </div>
+      </div>
+    </section>
+
+    <section id="mcp">
+      <div class="wrap">
+        <p class="kicker">MCP architecture</p>
+        <h2>A station you run by talking to it</h2>
+        <div class="two-col">
+          <div>
+            <p>The Model Context Protocol (MCP) is the open standard AI assistants use to work with outside tools. RIARS ships an MCP server: start <code>riars-server --mcp-stdio</code>, add it to Claude Desktop, Claude Code or another compatible client, and the assistant sees 80 tools with described, validated parameters.</p>
+            <ul class="checks">
+              <li><strong>Structured calls.</strong> Every tool has a JSON schema; if a value is wrong, RIARS rejects it with a clear error instead of guessing.</li>
+              <li><strong>Everything an operator does.</strong> Play, schedule, open the mic, fire jingles and check what aired.</li>
+              <li><strong>Safe by design.</strong> Opening the microphone remotely only works if its settings allow it; closing it always does.</li>
+            </ul>
+          </div>
+          <figure class="chat">
+            <div class="chat-bar" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span>Claude + RIARS</div>
+            <div class="chat-body">
+              <div class="msg user"><span class="who">You</span><p>No presenter tonight. Leave the station on automatic until tomorrow and show me what will play at 10 pm.</p></div>
+              <div class="calls">
+                <div class="call"><span class="fn">set_play_mode</span> <span class="arg">Automatic</span></div>
+                <div class="call"><span class="fn">set_automation_enabled</span> <span class="arg">on</span></div>
+                <div class="call"><span class="fn">preview_schedule</span> <span class="arg">{"from": "2026-10-28T22:00:00", "hours": 1}</span></div>
+              </div>
+              <div class="msg ai"><span class="who">Claude</span><p>Done. The station runs on its own with the night grid. At 22:00 the “Night” clock plays: a station ID, four 2000s pop songs, an ad and a jingle. Tomorrow I can send you the proof-of-play log with <code>get_play_log</code>.</p></div>
+            </div>
+            <figcaption>Illustrative example of a conversation.</figcaption>
+          </figure>
+        </div>
+
+        <div class="sub">
+          <h3>80 tools in five groups</h3>
+          <div class="grid tools">
+            <article class="card">
+              <h3>Playback, playlists and schedule</h3>
+              <p>The everyday: what's on, the playlist, timed events, crossfade, Icecast and the silence detector.</p>
+              <div class="chips">
+                <span class="chip">get_status</span><span class="chip">play</span><span class="chip">next_track</span><span class="chip">playlist_add</span><span class="chip">load_playlist</span><span class="chip">add_scheduled_event</span><span class="chip">set_crossfade</span><span class="chip">stream_start</span><span class="chip">set_dead_air</span><span class="chip more">and 19 more</span>
+              </div>
+            </article>
+            <article class="card">
+              <h3>Automation</h3>
+              <p>Categories, clocks, grid, advertisers and campaigns, the preview and the proof-of-play log.</p>
+              <div class="chips">
+                <span class="chip">save_category</span><span class="chip">apply_category_rules</span><span class="chip">save_clock</span><span class="chip">save_grid_rule</span><span class="chip">save_campaign</span><span class="chip">preview_schedule</span><span class="chip">get_play_log</span><span class="chip">delivery_report</span><span class="chip more">and 21 more</span>
+              </div>
+            </article>
+            <article class="card">
+              <h3>Live</h3>
+              <p>Play mode, microphone and sound bank.</p>
+              <div class="chips">
+                <span class="chip">get_live_status</span><span class="chip">set_play_mode</span><span class="chip">set_microphone</span><span class="chip">list_cart_banks</span><span class="chip">get_cart_bank</span><span class="chip">fire_cart</span><span class="chip">stop_carts</span><span class="chip">set_stop_after</span>
+              </div>
+            </article>
+            <article class="card">
+              <h3>Analysis and loudness</h3>
+              <p>Intro and outro marks, track review and normalisation.</p>
+              <div class="chips">
+                <span class="chip">analyze_track</span><span class="chip">get_track_cues</span><span class="chip">set_track_cues</span><span class="chip">list_tracks_needing_review</span><span class="chip">start_analysis</span><span class="chip">set_normalization</span><span class="chip more">and 3 more</span>
+              </div>
+            </article>
+            <article class="card">
+              <h3>Library</h3>
+              <p>Library folders, search and rescans.</p>
+              <div class="chips">
+                <span class="chip">list_library_folders</span><span class="chip">add_library_folder</span><span class="chip">remove_library_folder</span><span class="chip">rescan_library</span><span class="chip">search_library</span><span class="chip">list_tracks</span>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="sub rest">
+          <div>
+            <h3>Prefer HTTP? There's a REST API</h3>
+            <p>The same features are at <code>http://server:3100/api/v1/…</code>, with a Bearer token, and a WebSocket at <code>/ws/events</code> reports every change. Use it for scripts, your own dashboards or agents that don't speak MCP.</p>
+          </div>
+          <div class="code">
+            <button class="copy" type="button" data-label="Copy" data-done="Copied">Copy</button>
+<pre><code>curl -H "Authorization: Bearer MY_TOKEN" \
+  http://localhost:3100/api/v1/status
+curl -X POST -H "Authorization: Bearer MY_TOKEN" \
+  http://localhost:3100/api/v1/player/play</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="open" class="alt">
+      <div class="wrap">
+        <p class="kicker">Free and open source</p>
+        <h2>Yours, no small print</h2>
+        <div class="grid grid-3">
+          <article class="card">
+            <h3>MIT licence</h3>
+            <p>Use it at your station, change it and redistribute it, commercially too.</p>
+          </article>
+          <article class="card">
+            <h3>No fees, no limits</h3>
+            <p>No subscription and no cap on tracks, hours or stations.</p>
+          </article>
+          <article class="card">
+            <h3>Code in the open</h3>
+            <p>Rust, Tauri and React on GitHub. Open an issue, send a change or adapt it to your station.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="wrap">
+        <p class="kicker">Features</p>
+        <h2>Everything a station needs</h2>
+        <div class="grid features">
+          <article class="card feature">
+            <h3>Long-term automation</h3>
+            <p>Format clocks for each hour, a weekly grid with date exceptions and rule-based categories. The generator fills the playlist for days or weeks with nobody at the desk.</p>
+          </article>
+          <article class="card feature">
+            <h3>Live microphone</h3>
+            <p>Open the mic and the music dips by itself; close it and it comes back. Automatic, assisted and manual modes for every kind of show.</p>
+          </article>
+          <article class="card feature">
+            <h3>Sound bank</h3>
+            <p>Eight pages of 24 buttons for jingles, effects and beds. Fire them with a click, the keyboard or your AI assistant.</p>
+          </article>
+          <article class="card feature">
+            <h3>Intros and outros</h3>
+            <p>RIARS analyses each track and plays the station ID over the instrumental intro, ending before the vocals. It never talks over the singer.</p>
+          </article>
+          <article class="card feature">
+            <h3>Loudness normalisation</h3>
+            <p>Loudness measured to EBU R128: every track plays at the same perceived level, −16 LUFS by default, usual for Internet radio.</p>
+          </article>
+          <article class="card feature">
+            <h3>Icecast streaming</h3>
+            <p>Streams MP3 to your Icecast server. The headless server can stream even without a sound card.</p>
+          </article>
+          <article class="card feature">
+            <h3>Proof-of-play log</h3>
+            <p>Records what really aired and when, with delivery reports per campaign for your advertisers.</p>
+          </article>
+          <article class="card feature">
+            <h3>Library folders</h3>
+            <p>Add your music folders: RIARS scans them, checks them again at startup and shows them as a tree.</p>
+          </article>
+          <article class="card feature">
+            <h3>Crossfade and dead air</h3>
+            <p>Smooth transitions between tracks, and a detector that skips the item if the output stays silent for too long.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="platforms" class="alt">
+      <div class="wrap">
+        <p class="kicker">Platforms</p>
+        <h2>Wherever your station is</h2>
+        <p class="lead">One Rust engine, as a desktop app or as a headless server.</p>
+        <div class="grid platforms">
+          <article class="card platform">
+            <h3>Windows</h3>
+            <p>Desktop app.</p>
+            <span class="tag">x86_64</span>
+          </article>
+          <article class="card platform">
+            <h3>macOS</h3>
+            <p>Desktop app.</p>
+            <span class="tag">Intel and Apple Silicon</span>
+          </article>
+          <article class="card platform">
+            <h3>Linux</h3>
+            <p>Desktop app or headless <code>riars-server</code>.</p>
+            <span class="tag">x86_64</span>
+          </article>
+          <article class="card platform">
+            <h3>Raspberry Pi</h3>
+            <p>Headless <code>riars-server</code> with a web panel for your phone.</p>
+            <span class="tag">aarch64</span>
+          </article>
+          <article class="card platform">
+            <h3>Android</h3>
+            <p>Mobile app built with Tauri.</p>
+            <span class="tag">In development</span>
+          </article>
+        </div>
+        <p class="note" style="margin-top:24px">The headless server includes a web panel: open <code>http://SERVER-IP:3100/</code> on your phone or another computer.</p>
+      </div>
+    </section>
+
+    <section id="download">
+      <div class="wrap">
+        <p class="kicker">Get it</p>
+        <h2>Download and build</h2>
+        <p class="lead">For now RIARS installs from source. You need Rust 1.77 or later and, for the desktop app, Node.js 20 or later and the <a href="https://v2.tauri.app/start/prerequisites/" target="_blank" rel="noopener">Tauri prerequisites</a>.</p>
+        <ol class="steps">
+          <li>
+            <div>
+              <h3>Clone the repository</h3>
+              <div class="code">
+                <button class="copy" type="button" data-label="Copy" data-done="Copied">Copy</button>
+<pre><code>git clone https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-.git riars
+cd riars</code></pre>
+              </div>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3>Desktop app (Windows, macOS, Linux)</h3>
+              <p>Try it with <code>npm run tauri dev</code> or build the installer:</p>
+              <div class="code">
+                <button class="copy" type="button" data-label="Copy" data-done="Copied">Copy</button>
+<pre><code>npm install
+npm run tauri build</code></pre>
+              </div>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3>Headless server (Linux, Raspberry Pi)</h3>
+              <div class="code">
+                <button class="copy" type="button" data-label="Copy" data-done="Copied">Copy</button>
+<pre><code>cargo build -p riars-server --release
+./target/release/riars-server --port 3100 --api-token MY_TOKEN</code></pre>
+              </div>
+              <p>For a Raspberry Pi, from an x86_64 PC:</p>
+              <div class="code">
+                <button class="copy" type="button" data-label="Copy" data-done="Copied">Copy</button>
+<pre><code>rustup target add aarch64-unknown-linux-gnu
+cargo build -p riars-server --release --target aarch64-unknown-linux-gnu</code></pre>
+              </div>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3>Connect your AI assistant</h3>
+              <p>In Claude Code:</p>
+              <div class="code">
+                <button class="copy" type="button" data-label="Copy" data-done="Copied">Copy</button>
+<pre><code>claude mcp add riars -- /path/to/riars-server --mcp-stdio</code></pre>
+              </div>
+              <p>In Claude Desktop or another MCP client, add this to its configuration (in Claude Desktop, <code>claude_desktop_config.json</code>):</p>
+              <div class="code">
+                <button class="copy" type="button" data-label="Copy" data-done="Copied">Copy</button>
+<pre><code>{
+  "mcpServers": {
+    "riars": {
+      "command": "/path/to/riars-server",
+      "args": ["--mcp-stdio"]
+    }
+  }
+}</code></pre>
+              </div>
+            </div>
+          </li>
+        </ol>
+        <div class="buttons">
+          <a class="btn btn-primary" href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">View the code on GitHub</a>
+          <a class="btn btn-ghost" href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Read the licence</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Free software under the MIT licence.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licence</a>
+        <a href="../index.html" hreflang="es" lang="es">Español</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>
