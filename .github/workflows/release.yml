@@ -1,0 +1,135 @@
+name: Release
+
+# Builds the installers and the headless server when a version tag (v0.1.0, ...) is pushed,
+# and attaches them to a draft GitHub release. Publish the draft by hand once checked.
+# Asset names carry no version, so releases/latest/download/<name> (used by the website)
+# always points to the newest published release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build, e.g. v0.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  GH_TOKEN: ${{ github.token }}
+  CARGO_TERM_COLOR: always
+
+jobs:
+  create:
+    name: Draft release
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --draft --verify-tag \
+              --title "RIARS $TAG" --generate-notes
+
+  desktop:
+    name: Desktop app (${{ matrix.os }})
+    needs: create
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: --bundles nsis
+            rust_targets: ""
+          - os: macos-latest
+            args: --target universal-apple-darwin --bundles dmg
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+          - os: ubuntu-22.04
+            args: --bundles appimage,deb
+            rust_targets: ""
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - name: System libraries (WebKitGTK, ALSA)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libasound2-dev pkg-config
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+      - uses: Swatinem/rust-cache@v2
+      - run: npm ci
+      - run: npx tauri build ${{ matrix.args }}
+      - name: Upload with fixed names
+        run: |
+          mkdir out
+          case "$RUNNER_OS" in
+            Windows)
+              cp target/release/bundle/nsis/*-setup.exe out/RIARS-windows-x64-setup.exe ;;
+            macOS)
+              cp target/universal-apple-darwin/release/bundle/dmg/*.dmg out/RIARS-macos-universal.dmg ;;
+            Linux)
+              cp target/release/bundle/appimage/*.AppImage out/RIARS-linux-x86_64.AppImage
+              cp target/release/bundle/deb/*.deb out/RIARS-linux-amd64.deb ;;
+          esac
+          gh release upload "$TAG" out/* --clobber -R "$GITHUB_REPOSITORY"
+
+  server:
+    name: Headless server (${{ matrix.name }})
+    needs: create
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            name: linux-x86_64
+          - target: aarch64-unknown-linux-gnu    # Raspberry Pi 3/4/5, 64-bit OS
+            name: linux-arm64
+          - target: armv7-unknown-linux-gnueabihf # Raspberry Pi 2/3/4, 32-bit OS
+            name: linux-armv7
+    # cross names its Docker image after the checkout folder, and the repository name
+    # ends with '-', which Docker rejects: check out into ./riars instead.
+    defaults:
+      run:
+        working-directory: riars
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+          path: riars
+      - name: System libraries (ALSA)
+        if: matrix.name == 'linux-x86_64'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+          workspaces: riars
+      - uses: taiki-e/install-action@v2
+        if: matrix.name != 'linux-x86_64'
+        with:
+          tool: cross
+      - name: Build
+        run: |
+          if [ "${{ matrix.name }}" = linux-x86_64 ]; then
+            cargo build --release -p riars-server --target ${{ matrix.target }}
+          else
+            cross build --release -p riars-server --target ${{ matrix.target }}
+          fi
+      - name: Upload with a fixed name
+        run: |
+          tar -czf riars-server-${{ matrix.name }}.tar.gz -C target/${{ matrix.target }}/release riars-server
+          gh release upload "$TAG" riars-server-${{ matrix.name }}.tar.gz --clobber -R "$GITHUB_REPOSITORY"
