@@ -532,8 +532,12 @@ mod tests {
         assert!(!(sibling >= lo && sibling < hi));
         let (lo, hi) = prefix_range("/");
         assert_eq!((lo.as_str(), hi.as_str()), ("/", "0"));
-        let (lo, hi) = prefix_range("D:\\");
-        assert_eq!((lo.as_str(), hi.as_str()), ("D:\\", "D:]"));
+        // A backslash separates folders only on Windows.
+        #[cfg(windows)]
+        {
+            let (lo, hi) = prefix_range("D:\\");
+            assert_eq!((lo.as_str(), hi.as_str()), ("D:\\", "D:]"));
+        }
     }
 
     #[test]
