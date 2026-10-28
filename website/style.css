@@ -341,3 +341,23 @@ section { padding-block: 96px; }
   html { scroll-behavior: auto; }
   * { transition: none !important; }
 }
+
+/* Downloads */
+.downloads { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dl { display: flex; flex-direction: column; scroll-margin-top: 80px; }
+.dl p { flex: 1; }
+.dl-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.dl-links .btn { min-height: 40px; padding: 8px 16px; }
+.dl-note { margin-top: 20px; max-width: 80ch; }
+.build-title { margin-top: 56px; font-size: 1.4rem; }
+.platform { display: flex; flex-direction: column; }
+.platform .tag { align-self: flex-start; }
+.platform-dl { margin-top: auto; padding-top: 14px; font-size: 0.9rem; font-weight: 600; text-decoration: none; }
+.platform-dl::after { content: " ↓"; }
+
+@media (max-width: 1023px) {
+  .downloads { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 759px) {
+  .downloads { grid-template-columns: minmax(0, 1fr); }
+}

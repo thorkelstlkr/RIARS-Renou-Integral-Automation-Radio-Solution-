@@ -45,7 +45,7 @@
           <h1>La radio que tu asistente de IA sabe programar</h1>
           <p class="lead">RIARS (Renou Integral Automation Radio Solution) automatiza una emisora entera: biblioteca, parrilla, directo y streaming. Y lo expone todo como herramientas MCP, para que Claude u otro asistente lo maneje con llamadas estructuradas, no con clics.</p>
           <div class="buttons">
-            <a class="btn btn-primary" href="#download">Descargar y compilar</a>
+            <a class="btn btn-primary" href="#download">Descargar</a>
             <a class="btn btn-ghost" href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">Ver en GitHub</a>
           </div>
           <p class="note">Escrito en Rust. Sin licencias ni cuotas.</p>
@@ -217,26 +217,31 @@ curl -X POST -H "Authorization: Bearer MI_TOKEN" \
             <h3>Windows</h3>
             <p>App de escritorio.</p>
             <span class="tag">x86_64</span>
+            <a class="platform-dl" href="#dl-windows">Descargar</a>
           </article>
           <article class="card platform">
             <h3>macOS</h3>
             <p>App de escritorio.</p>
             <span class="tag">Intel y Apple Silicon</span>
+            <a class="platform-dl" href="#dl-macos">Descargar</a>
           </article>
           <article class="card platform">
             <h3>Linux</h3>
             <p>App de escritorio o <code>riars-server</code> sin pantalla.</p>
             <span class="tag">x86_64</span>
+            <a class="platform-dl" href="#dl-linux">Descargar</a>
           </article>
           <article class="card platform">
             <h3>Raspberry Pi</h3>
             <p><code>riars-server</code> sin pantalla, con panel web para el móvil.</p>
             <span class="tag">aarch64</span>
+            <a class="platform-dl" href="#dl-raspberry-pi">Descargar</a>
           </article>
           <article class="card platform">
             <h3>Android</h3>
             <p>App móvil con Tauri.</p>
             <span class="tag">En desarrollo</span>
+            <a class="platform-dl" href="#dl-android">Ver estado</a>
           </article>
         </div>
         <p class="note" style="margin-top:24px">El servidor sin pantalla incluye un panel web: abre <code>http://IP-DEL-SERVIDOR:3100/</code> en el móvil o en otro ordenador.</p>
@@ -246,8 +251,52 @@ curl -X POST -H "Authorization: Bearer MI_TOKEN" \
     <section id="download">
       <div class="wrap">
         <p class="kicker">Descargar</p>
-        <h2>Descárgalo y compílalo</h2>
-        <p class="lead">Por ahora RIARS se instala desde el código fuente. Necesitas Rust 1.77 o superior y, para la app de escritorio, Node.js 20 o superior y las <a href="https://v2.tauri.app/start/prerequisites/" target="_blank" rel="noopener">dependencias de Tauri</a>.</p>
+        <h2>Descarga RIARS</h2>
+        <p class="lead">Instaladores de la última versión publicada en GitHub. Gratis y sin registro.</p>
+        <div class="grid downloads">
+          <article class="card dl" id="dl-windows">
+            <h3>Windows</h3>
+            <p>Instalador para Windows 10 y 11 (64 bits).</p>
+            <div class="dl-links">
+              <a class="btn btn-primary" href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/releases/latest/download/RIARS-windows-x64-setup.exe">Descargar .exe</a>
+            </div>
+          </article>
+          <article class="card dl" id="dl-macos">
+            <h3>macOS</h3>
+            <p>Imagen de disco universal, para Intel y Apple Silicon.</p>
+            <div class="dl-links">
+              <a class="btn btn-primary" href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/releases/latest/download/RIARS-macos-universal.dmg">Descargar .dmg</a>
+            </div>
+          </article>
+          <article class="card dl" id="dl-linux">
+            <h3>Linux</h3>
+            <p>App de escritorio para x86_64, o el servidor sin pantalla.</p>
+            <div class="dl-links">
+              <a class="btn btn-primary" href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/releases/latest/download/RIARS-linux-x86_64.AppImage">AppImage</a>
+              <a class="btn btn-ghost" href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/releases/latest/download/RIARS-linux-amd64.deb">.deb</a>
+              <a class="btn btn-ghost" href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/releases/latest/download/riars-server-linux-x86_64.tar.gz">Servidor</a>
+            </div>
+          </article>
+          <article class="card dl" id="dl-raspberry-pi">
+            <h3>Raspberry Pi</h3>
+            <p>Servidor sin pantalla. Elige según el sistema de tu Pi.</p>
+            <div class="dl-links">
+              <a class="btn btn-primary" href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/releases/latest/download/riars-server-linux-arm64.tar.gz">64 bits</a>
+              <a class="btn btn-ghost" href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/releases/latest/download/riars-server-linux-armv7.tar.gz">32 bits</a>
+            </div>
+          </article>
+          <article class="card dl" id="dl-android">
+            <h3>Android</h3>
+            <p>Todavía no hay versión para Android. Puedes seguir su desarrollo en GitHub.</p>
+            <div class="dl-links">
+              <a class="btn btn-ghost" href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">Ver en GitHub</a>
+            </div>
+          </article>
+        </div>
+        <p class="note dl-note">Los instaladores aún no están firmados. En Windows, si aparece SmartScreen, pulsa «Más información» y luego «Ejecutar de todas formas». En macOS, la primera vez abre la app con clic derecho y «Abrir». <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/releases" target="_blank" rel="noopener">Todas las versiones en GitHub</a></p>
+
+        <h3 class="build-title">O compílalo desde el código</h3>
+        <p>Necesitas Rust 1.77 o superior y, para la app de escritorio, Node.js 20 o superior y las <a href="https://v2.tauri.app/start/prerequisites/" target="_blank" rel="noopener">dependencias de Tauri</a>.</p>
         <ol class="steps">
           <li>
             <div>
