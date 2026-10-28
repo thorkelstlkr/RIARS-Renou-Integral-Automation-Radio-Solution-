@@ -333,6 +333,27 @@ fn start_stream(parts: Parts, name: Option<&str>, strict: bool) -> Result<(cpal:
     Ok((stream, device_name, tap))
 }
 
+/// Copy `len` samples, `sample(i)` for each, into the stream tap; what does not fit
+/// is dropped. Real-time safe.
+fn push_tap(tap: &mut rtrb::Producer<f32>, len: usize, mut sample: impl FnMut(usize) -> f32) {
+    let free = tap.slots().min(len);
+    if free == 0 {
+        return;
+    }
+    if let Ok(mut chunk) = tap.write_chunk_uninit(free) {
+        let (first, second) = chunk.as_mut_slices();
+        let split = first.len();
+        for (i, slot) in first.iter_mut().enumerate() {
+            slot.write(sample(i));
+        }
+        for (i, slot) in second.iter_mut().enumerate() {
+            slot.write(sample(split + i));
+        }
+        // SAFETY: all `free` slots were written just above.
+        unsafe { chunk.commit_all() };
+    }
+}
+
 /// What the audio callback needs: the commands from the engine, where to send retired
 /// players, the shared state, the decks and the stream tap. Used by the cpal callback
 /// and by the internal clock when there is no sound card.
@@ -478,8 +499,13 @@ impl Renderer {
         }
 
         // The live layer goes over the music, playing or not: the microphone and the bank.
+        // With direct monitoring the card plays the microphone itself, so it goes only
+        // into the stream tap, pass by pass, and the tap copy below is skipped.
+        let mut tapped = false;
         if self.mic.is_some() || self.carts.is_active() {
             let mic_on = self.mic.as_ref().is_some_and(|m| m.audible(&shared.mic));
+            let stream_only = mic_on && shared.mic.stream_only.load(Ordering::Relaxed);
+            tapped = stream_only;
             let channels = self.out_channels;
             for chunk in data.chunks_mut(LIVE_BLOCK * channels) {
                 let frames = chunk.len() / channels;
@@ -494,17 +520,24 @@ impl Renderer {
                     // Always run, so the meter and the speaking flag work with it closed.
                     let voice = &mut self.mic_buf[..frames];
                     mic.render(voice, self.out_rate, &shared.mic);
-                    if mic_on {
+                    if mic_on && !stream_only {
                         for (frame, value) in live.chunks_mut(channels).zip(voice.iter()) {
                             frame.iter_mut().for_each(|s| *s += value);
                         }
                     }
                 }
-                if mic_on || carts_on {
+                if (mic_on && !stream_only) || carts_on {
                     for (out, value) in chunk.iter_mut().zip(live.iter()) {
                         let mixed = f32::from_sample_(*out) + value * self.volume_now;
                         *out = T::from_sample(limit(mixed));
                     }
+                }
+                if stream_only {
+                    let voice = &self.mic_buf[..frames];
+                    let volume = self.volume_now;
+                    push_tap(&mut self.tap, chunk.len(), |i| {
+                        limit(f32::from_sample_(chunk[i]) + voice[i / channels] * volume)
+                    });
                 }
             }
         }
@@ -549,20 +582,8 @@ impl Renderer {
 
         // Silence included, so a stream stays alive while paused. When nobody reads
         // the tap it is full and this copies nothing.
-        let free = self.tap.slots().min(data.len());
-        if free > 0 {
-            if let Ok(mut chunk) = self.tap.write_chunk_uninit(free) {
-                let (first, second) = chunk.as_mut_slices();
-                let split = first.len();
-                for (slot, sample) in first.iter_mut().zip(&data[..split]) {
-                    slot.write(f32::from_sample_(*sample));
-                }
-                for (slot, sample) in second.iter_mut().zip(&data[split..free]) {
-                    slot.write(f32::from_sample_(*sample));
-                }
-                // SAFETY: all `free` slots were written just above.
-                unsafe { chunk.commit_all() };
-            }
+        if !tapped {
+            push_tap(&mut self.tap, data.len(), |i| f32::from_sample_(data[i]));
         }
 
         if let Some(p) = decks.current.as_ref() {
@@ -1072,5 +1093,40 @@ mod tests {
         shared.mic.on.store(false, Ordering::Relaxed);
         let out = block(&mut renderer, 1000);
         assert!((out[999] - 0.5).abs() < 1e-3, "{}", out[999]);
+    }
+
+    #[test]
+    fn direct_monitoring_keeps_the_microphone_out_of_the_card_but_in_the_stream() {
+        let (cmd_tx, commands) = crossbeam_channel::bounded(8);
+        let (garbage, _garbage_rx) = crossbeam_channel::bounded(8);
+        let shared = Arc::new(Shared::new(1.0));
+        let parts = Parts { commands, garbage, mic_garbage: crossbeam_channel::bounded(4).0, shared: Arc::clone(&shared) };
+        let (mut renderer, mut tap) = Renderer::new(parts, 1000, 1);
+        shared.mic.apply(&crate::audio::live::MicConfig {
+            high_pass: false,
+            compressor: false,
+            direct_monitor: true,
+            ..Default::default()
+        });
+        let (mut mic_in, mic_out) = rtrb::RingBuffer::new(4096);
+        cmd_tx.send(Command::Mic(Some(Box::new(MicFeed::new(mic_out, 1000))))).unwrap();
+        renderer.decks.current = Some(track(0.5, 100_000));
+        shared.playing.store(true, Ordering::Relaxed);
+        shared.mic.on.store(true, Ordering::Relaxed);
+        let mut card = Vec::new();
+        for _ in 0..60 {
+            while mic_in.slots() > 4096 - 30 {
+                mic_in.push(0.25).unwrap();
+            }
+            let mut chunk = [0.0f32; 10];
+            renderer.process(&mut chunk);
+            card.extend_from_slice(&chunk);
+        }
+        let stream: Vec<f32> = std::iter::from_fn(|| tap.consumer.pop().ok()).collect();
+        assert_eq!(stream.len(), card.len(), "the stream gets every frame once");
+        // Ducked music only on the card; the stream has the voice on top.
+        let ducked = 0.5 * 10f32.powf(-12.0 / 20.0);
+        assert!((card[599] - ducked).abs() < 0.01, "card {}", card[599]);
+        assert!((stream[599] - (ducked + 0.25)).abs() < 0.01, "stream {}", stream[599]);
     }
 }

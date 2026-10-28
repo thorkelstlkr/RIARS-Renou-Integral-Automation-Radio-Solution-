@@ -494,7 +494,7 @@ export default function FolderExplorer({ onLibraryChanged }: { onLibraryChanged:
             onChange={() => { void onCheck(path); }}
             onClick={(e) => e.stopPropagation()} />
           <span style={{ ...S.nodeName, ...(selected === path ? S.nodeSelected : {}) }}
-            title={path} onClick={() => selectFolder(path)}>
+            title={path} onClick={() => selectFolder(path)} onDoubleClick={() => toggleExpand(path)}>
             {entry.name}
           </span>
         </div>

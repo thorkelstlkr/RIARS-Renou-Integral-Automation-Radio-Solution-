@@ -69,6 +69,11 @@ pub struct MicConfig {
     pub duck: MicDuck,
     /// Let the API and AI agents open the microphone. Off: only the operator can.
     pub allow_remote: bool,
+    /// The input card already sends the microphone to its own output (direct
+    /// monitoring). RIARS then leaves it out of the sound card and adds it only to
+    /// the Internet stream: adding it to the card as well would play it twice, the
+    /// second time late, as an echo.
+    pub direct_monitor: bool,
 }
 
 impl Default for MicConfig {
@@ -83,6 +88,7 @@ impl Default for MicConfig {
             duck_db: 12.0,
             duck: MicDuck::WhileOpen,
             allow_remote: false,
+            direct_monitor: false,
         }
     }
 }
@@ -114,6 +120,8 @@ pub(crate) struct MicControls {
     /// Gain of the music while ducked (1 = no ducking).
     duck_gain_bits: AtomicU32,
     duck_while_speaking: AtomicBool,
+    /// Leave the microphone out of the sound card; only the stream gets it.
+    pub stream_only: AtomicBool,
     /// Loudest sample since the last read, as f32 bits (see `Shared::peak_bits`).
     pub peak_bits: AtomicU32,
     pub speaking: AtomicBool,
@@ -132,6 +140,7 @@ impl MicControls {
             compressor: AtomicBool::new(true),
             duck_gain_bits: AtomicU32::new(1.0f32.to_bits()),
             duck_while_speaking: AtomicBool::new(false),
+            stream_only: AtomicBool::new(false),
             peak_bits: AtomicU32::new(0),
             speaking: AtomicBool::new(false),
             underruns: AtomicU64::new(0),
@@ -148,6 +157,7 @@ impl MicControls {
         self.compressor.store(config.compressor, Ordering::Relaxed);
         self.duck_gain_bits.store(db_to_gain(-config.duck_db).to_bits(), Ordering::Relaxed);
         self.duck_while_speaking.store(config.duck == MicDuck::WhileSpeaking, Ordering::Relaxed);
+        self.stream_only.store(config.direct_monitor, Ordering::Relaxed);
     }
 
     /// Read and reset the microphone peak.

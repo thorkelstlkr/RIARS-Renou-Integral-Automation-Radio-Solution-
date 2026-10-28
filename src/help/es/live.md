@@ -3,7 +3,7 @@ id: live
 title: Emisión en directo
 section: onair
 order: 9
-keywords: directo, micrófono, mic, banco de sonidos, cartwall, botonera, jingles, efectos, modo manual, asistido, en el aire, locutor
+keywords: directo, micrófono, mic, banco de sonidos, cartwall, botonera, jingles, efectos, modo manual, asistido, en el aire, locutor, eco, monitor directo
 ---
 
 # Emisión en directo
@@ -22,6 +22,7 @@ La pestaña **En directo** (**Ctrl+8**) reúne lo que necesita un locutor: el **
 | Ajuste | Por defecto |
 |---|---|
 | Tarjeta de entrada | La del sistema |
+| La tarjeta ya saca el micrófono (monitor directo) | No |
 | Ganancia | 0 dB |
 | Filtro de graves (corta golpes y zumbidos por debajo de 80 Hz) | Sí |
 | Puerta de ruido (silencia el ruido de la sala entre frases) | No |
@@ -30,6 +31,12 @@ La pestaña **En directo** (**Ctrl+8**) reúne lo que necesita un locutor: el **
 | Permitir abrirlo a la API y a agentes de IA | **No** |
 
 RIARS no devuelve el micrófono por los auriculares de [preescucha](topic:sound-cards): para escucharte, usa la mesa o la escucha directa de tu interfaz de audio.
+
+### Si te oyes con eco
+
+Muchas interfaces de audio (por ejemplo, una Roland UA-4FX) envían la entrada del micrófono directamente a su salida, sin retraso. Si RIARS también lo saca por esa tarjeta, te oyes dos veces: la segunda llega unas décimas tarde y suena a eco. Si la salida de la tarjeta es tu señal al aire, los oyentes también lo oyen.
+
+Marca **La tarjeta ya saca el micrófono (monitor directo)**. RIARS deja entonces de sacar el micrófono por la tarjeta, que ya lo hace sin retraso, y lo añade solo a la [emisión por Internet](topic:streaming). La música sigue bajando al abrir el micrófono y el medidor sigue funcionando. Si tu interfaz no tiene monitor directo, deja la casilla sin marcar: si no, el micrófono no saldría por la tarjeta.
 
 ## Banco de sonidos
 

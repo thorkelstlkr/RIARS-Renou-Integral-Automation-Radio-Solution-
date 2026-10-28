@@ -827,6 +827,8 @@
     "duckWhileOpen": "Mentre el micròfon és obert",
     "duckWhileSpeaking": "Mentre es parla",
     "allowRemote": "Permet que l'API i els agents d'IA obrin el micròfon",
-    "allowRemoteHint": "Desactivat per defecte: un agent mai no hauria d'obrir un micròfon sense que ho sàpiga el locutor."
+    "allowRemoteHint": "Desactivat per defecte: un agent mai no hauria d'obrir un micròfon sense que ho sàpiga el locutor.",
+    "directMonitor": "La targeta ja treu el micròfon (monitor directe)",
+    "directMonitorHint": "Marca-ho si et sents dues vegades, la segona amb retard, com un eco. La targeta ja envia el micròfon a la seva sortida, així que RIARS només l'afegeix a l'emissió per Internet; la música continua baixant."
   }
 }
