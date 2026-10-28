@@ -382,12 +382,18 @@ export default function MediaLibrary() {
           <div style={S.empty}>{t("library.empty")}</div>
         )}
         {tracks.map((tr, i) => (
-          <div key={tr.id} data-row-index={i}
+          <div key={tr.id} data-row-index={i} draggable
             style={{ ...S.track, ...(selected.has(tr.id) ? S.selected : {}) }}
             title={tr.file_path}
             onClick={(e) => onRowClick(e, i)}
             onContextMenu={(e) => onRowContext(e, i)}
-            onDoubleClick={() => addToPlaylist(tr)}>
+            onDoubleClick={() => addToPlaylist(tr)}
+            onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = "copy";
+              e.dataTransfer.setData("application/x-riars-track", JSON.stringify({
+                id: tr.id, title: tr.title, file_path: tr.file_path, duration_ms: tr.duration_ms,
+              }));
+            }}>
             <div style={S.trackBody}>
               <div style={S.name}>{tr.title}</div>
               <div style={S.meta}>

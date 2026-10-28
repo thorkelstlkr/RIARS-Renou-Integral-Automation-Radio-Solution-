@@ -597,7 +597,8 @@
     "normalizationMaxGain": "Pujada màxima (dB)",
     "normalizationMaxCut": "Baixada màxima (dB)",
     "normalizationPeak": "Sostre de pics (dBFS)",
-    "normalizationHint": "Un guany per pista segons la sonoritat mesurada: les fluixes pugen i les fortes baixen, dins d'aquests límits."
+    "normalizationHint": "Un guany per pista segons la sonoritat mesurada: les fluixes pugen i les fortes baixen, dins d'aquests límits.",
+    "microphone": "Micròfon…"
   },
   "help": {
     "title": "Manual",
@@ -633,7 +634,9 @@
     "preview": "Preescolta",
     "off": "Desactivada",
     "previewNote": "S'aplica al moment.",
-    "sameWarning": "La preescolta sortirà a l'aire."
+    "sameWarning": "La preescolta sortirà a l'aire.",
+    "micSection": "Micròfon",
+    "micNote": "El micròfon té la seva pròpia configuració a Reproducció ▸ Micròfon…."
   },
   "analysis": {
     "source": {
@@ -732,6 +735,70 @@
     "removedTracks": "{{count}} pistes tretes de la biblioteca.",
     "pathCopied": "Camí copiat.",
     "keyEnter": "Retorn",
-    "keyDelete": "Supr"
+    "keyDelete": "Supr",
+    "stopAfter": "Atura després d'aquesta pista"
+  },
+  "live": {
+    "title": "En directe",
+    "mic": "MIC",
+    "onAir": "EN L'AIRE",
+    "speaking": "Parlant",
+    "micSettings": "Micròfon…",
+    "inputDevice": "Targeta d'entrada",
+    "systemDefault": "La del sistema",
+    "playMode": "Mode de la llista",
+    "mode": {
+      "Automatic": "Automàtic",
+      "Assisted": "Assistit",
+      "Manual": "Manual"
+    },
+    "modeHint": {
+      "Automatic": "La llista avança sola i l'automatització l'omple.",
+      "Assisted": "La llista avança sola, però l'automatització no hi afegeix res.",
+      "Manual": "Cada element s'atura en acabar i espera Reprodueix o Següent (F8)."
+    },
+    "introLeft": "Intro: {{s}} s",
+    "next": "Següent: {{title}}",
+    "stopAll": "Atura-ho tot",
+    "secondsLeft": "{{s}} s",
+    "bank": "Banc de sons",
+    "noBank": "Encara no hi ha cap banc.",
+    "newBank": "Banc nou",
+    "renameBank": "Canvia el nom del banc",
+    "deleteBank": "Esborra el banc",
+    "confirmDeleteBank": "Vols esborrar aquest banc i tots els seus botons?",
+    "defaultBankName": "El meu banc",
+    "page": "Pàgina {{n}}",
+    "emptyButton": "Buit: arrossega-hi una pista",
+    "cartMode": {
+      "Fire": "Dispara",
+      "Toggle": "Dispara/atura",
+      "Loop": "Bucle"
+    },
+    "buttonMode": "Mode",
+    "editButton": "Edita…",
+    "buttonEditor": "Edita el botó",
+    "prelisten": "Preescolta",
+    "clearButton": "Treu",
+    "chooseTrack": "Tria una pista…",
+    "duck": "Abaixa la música mentre sona",
+    "gain": "Guany",
+    "color": "Color",
+    "label": "Text",
+    "file": "Fitxer",
+    "noColor": "Sense color",
+    "labelRequired": "El botó necessita un text.",
+    "fileRequired": "Tria una pista per al botó.",
+    "highPass": "Filtre de greus (80 Hz)",
+    "gate": "Porta de soroll",
+    "gateThreshold": "Llindar de la porta",
+    "compressor": "Compressor",
+    "ducking": "Abaixar la música",
+    "duckMusic": "Abaixa la música",
+    "duckMode": "Quan abaixar-la",
+    "duckWhileOpen": "Mentre el micròfon és obert",
+    "duckWhileSpeaking": "Mentre es parla",
+    "allowRemote": "Permet que l'API i els agents d'IA obrin el micròfon",
+    "allowRemoteHint": "Desactivat per defecte: un agent mai no hauria d'obrir un micròfon sense que ho sàpiga el locutor."
   }
 }

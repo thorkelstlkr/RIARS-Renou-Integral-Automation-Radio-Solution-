@@ -1,4 +1,5 @@
 pub mod crossfade;
+pub mod live;
 pub mod engine;
 pub mod mixer;
 pub mod normalize;

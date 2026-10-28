@@ -6,6 +6,7 @@ import { listen } from "@tauri-apps/api/event";
 import { KIND_COLORS, type PlaylistItem } from "../automation/api";
 import { startTimes, type EngineState } from "../automation/useOnAir";
 import { analysis, preview, type TrackCues } from "../analysis/api";
+import { live } from "../live/api";
 import CueEditor from "../analysis/CueEditor";
 import ContextMenu, { type ContextEntry } from "../menu/ContextMenu";
 
@@ -360,6 +361,17 @@ export default function PlaylistPanel() {
     }
   };
 
+  const toggleStopAfter = async () => {
+    if (!menuItem) return;
+    try {
+      await live.setStopAfter(menuItem.id, !menuItem.stop_after);
+      await refresh();
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
   const openMarks = async () => {
     if (!menuItem) return;
     try {
@@ -394,6 +406,11 @@ export default function PlaylistPanel() {
     {
       label: t("contextMenu.prelisten"), disabled: menuIndex === null,
       action: () => { void prelisten(); },
+    },
+    {
+      label: t("contextMenu.stopAfter"), checked: menuItem?.stop_after ?? false,
+      disabled: menuIndex === null,
+      action: () => { void toggleStopAfter(); },
     },
     {
       label: t("contextMenu.marks"), disabled: menuIndex === null,
@@ -522,6 +539,9 @@ export default function PlaylistPanel() {
                   <span style={S.badge} title={item.overlay.item.title}>
                     🎙︎ {side === "intro" ? t("playlist.overlayIntro") : t("playlist.overlayOutro")}
                   </span>
+                )}
+                {item.stop_after && (
+                  <span style={S.badge} title={t("contextMenu.stopAfter")}>⏹</span>
                 )}
               </span>
               <span style={S.art}>{item.artist || t("library.unknownArtist")}</span>

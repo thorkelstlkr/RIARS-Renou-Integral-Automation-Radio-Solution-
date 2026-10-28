@@ -18,6 +18,7 @@ const S: Record<string, React.CSSProperties> = {
   },
   active: { background: "var(--accent)", color: "#fff" },
   danger: { color: "var(--red)" },
+  check: { width: 16, textAlign: "center" as const, fontSize: 12, flexShrink: 0 },
   label: { flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
   shortcut: { fontSize: 11, opacity: 0.7, fontFamily: "var(--font-mono)", whiteSpace: "nowrap" },
   sep: { height: 1, background: "var(--border)", margin: "4px 0" },
@@ -105,12 +106,14 @@ export default function ContextMenu({ x, y, title, items, onClose }: {
         {items.map((entry, i) => entry === "separator" ? (
           <div key={i} role="separator" style={S.sep} />
         ) : (
-          <button key={i} role="menuitem" disabled={entry.disabled} tabIndex={-1}
+          <button key={i} role={entry.checked !== undefined ? "menuitemcheckbox" : "menuitem"}
+            aria-checked={entry.checked} disabled={entry.disabled} tabIndex={-1}
             style={{
               ...S.item, ...(entry.danger ? S.danger : {}), ...(i === active ? S.active : {}),
               opacity: entry.disabled ? 0.45 : 1,
             }}
             onMouseEnter={() => setActive(entry.disabled ? -1 : i)} onClick={() => run(entry)}>
+            <span style={S.check}>{entry.checked ? "✓" : ""}</span>
             <span style={S.label}>{entry.label}</span>
             {entry.shortcut && <span style={S.shortcut}>{entry.shortcut}</span>}
           </button>

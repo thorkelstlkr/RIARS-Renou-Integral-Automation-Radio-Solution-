@@ -597,7 +597,8 @@
     "normalizationMaxGain": "Höchste Anhebung (dB)",
     "normalizationMaxCut": "Höchste Absenkung (dB)",
     "normalizationPeak": "Spitzenobergrenze (dBFS)",
-    "normalizationHint": "Eine Verstärkung pro Titel nach seiner gemessenen Lautheit: leise Titel werden angehoben, laute abgesenkt, innerhalb dieser Grenzen."
+    "normalizationHint": "Eine Verstärkung pro Titel nach seiner gemessenen Lautheit: leise Titel werden angehoben, laute abgesenkt, innerhalb dieser Grenzen.",
+    "microphone": "Mikrofon…"
   },
   "help": {
     "title": "Handbuch",
@@ -633,7 +634,9 @@
     "preview": "Vorhören",
     "off": "Aus",
     "previewNote": "Gilt sofort.",
-    "sameWarning": "Das Vorhören ist auf Sendung zu hören."
+    "sameWarning": "Das Vorhören ist auf Sendung zu hören.",
+    "micSection": "Mikrofon",
+    "micNote": "Das Mikrofon hat eigene Einstellungen unter Wiedergabe ▸ Mikrofon…."
   },
   "analysis": {
     "source": {
@@ -732,6 +735,70 @@
     "removedTracks": "{{count}} Titel aus der Bibliothek entfernt.",
     "pathCopied": "Pfad kopiert.",
     "keyEnter": "Eingabe",
-    "keyDelete": "Entf"
+    "keyDelete": "Entf",
+    "stopAfter": "Nach diesem Titel stoppen"
+  },
+  "live": {
+    "title": "Live",
+    "mic": "MIKRO",
+    "onAir": "ON AIR",
+    "speaking": "Spricht",
+    "micSettings": "Mikrofon…",
+    "inputDevice": "Eingangskarte",
+    "systemDefault": "Systemstandard",
+    "playMode": "Wiedergabemodus",
+    "mode": {
+      "Automatic": "Automatisch",
+      "Assisted": "Assistiert",
+      "Manual": "Manuell"
+    },
+    "modeHint": {
+      "Automatic": "Die Playlist läuft von selbst weiter und die Automation füllt sie.",
+      "Assisted": "Die Playlist läuft von selbst weiter, aber die Automation fügt nichts hinzu.",
+      "Manual": "Jedes Element stoppt am Ende und wartet auf Abspielen oder Weiter (F8)."
+    },
+    "introLeft": "Intro: {{s}} s",
+    "next": "Als Nächstes: {{title}}",
+    "stopAll": "Alles stoppen",
+    "secondsLeft": "{{s}} s",
+    "bank": "Soundboard",
+    "noBank": "Noch kein Soundboard.",
+    "newBank": "Neues Soundboard",
+    "renameBank": "Soundboard umbenennen",
+    "deleteBank": "Soundboard löschen",
+    "confirmDeleteBank": "Dieses Soundboard mit allen Tasten löschen?",
+    "defaultBankName": "Mein Soundboard",
+    "page": "Seite {{n}}",
+    "emptyButton": "Leer – Titel hierher ziehen",
+    "cartMode": {
+      "Fire": "Auslösen",
+      "Toggle": "Auslösen/Stopp",
+      "Loop": "Schleife"
+    },
+    "buttonMode": "Modus",
+    "editButton": "Bearbeiten…",
+    "buttonEditor": "Taste bearbeiten",
+    "prelisten": "Vorhören",
+    "clearButton": "Leeren",
+    "chooseTrack": "Titel wählen…",
+    "duck": "Musik währenddessen absenken",
+    "gain": "Verstärkung",
+    "color": "Farbe",
+    "label": "Beschriftung",
+    "file": "Datei",
+    "noColor": "Keine Farbe",
+    "labelRequired": "Die Taste braucht eine Beschriftung.",
+    "fileRequired": "Wählen Sie einen Titel für die Taste.",
+    "highPass": "Trittschallfilter (80 Hz)",
+    "gate": "Noise-Gate",
+    "gateThreshold": "Gate-Schwelle",
+    "compressor": "Kompressor",
+    "ducking": "Musikabsenkung",
+    "duckMusic": "Musik absenken um",
+    "duckMode": "Wann absenken",
+    "duckWhileOpen": "Solange das Mikrofon offen ist",
+    "duckWhileSpeaking": "Während gesprochen wird",
+    "allowRemote": "API und KI-Agenten dürfen das Mikrofon öffnen",
+    "allowRemoteHint": "Standardmäßig aus: Ein Agent sollte nie ein Mikrofon öffnen, ohne dass der Moderator es weiß."
   }
 }

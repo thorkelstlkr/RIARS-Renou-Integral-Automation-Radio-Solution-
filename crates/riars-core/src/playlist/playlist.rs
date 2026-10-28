@@ -38,6 +38,9 @@ pub struct PlaylistItem {
     /// Imaging to play over this item's intro or outro.
     #[serde(default)]
     pub overlay: Option<Box<OverlaySpec>>,
+    /// Stop when this item ends instead of going on to the next one.
+    #[serde(default)]
+    pub stop_after: bool,
 }
 
 /// Imaging over another item: when it starts and how much it ducks the host.
@@ -84,6 +87,7 @@ impl PlaylistItem {
             generated: false,
             no_overlap: false,
             overlay: None,
+            stop_after: false,
         }
     }
 }

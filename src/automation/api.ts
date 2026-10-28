@@ -251,6 +251,8 @@ export interface PlaylistItem {
   planned_at?: string | null;
   generated?: boolean;
   no_overlap?: boolean;
+  /** The playlist stops when this item ends, waiting for Play or Next. */
+  stop_after?: boolean;
   /** Imaging played over this item's intro or outro. */
   overlay?: { item: PlaylistItem; start_ms: number; duck_db: number } | null;
 }

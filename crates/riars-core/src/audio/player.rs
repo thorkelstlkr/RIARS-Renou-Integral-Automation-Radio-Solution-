@@ -62,7 +62,8 @@ pub struct Overlay {
 }
 
 enum Source {
-    Memory(Vec<f32>),
+    /// Decoded audio, shareable: sound-bank buttons play the same samples many times.
+    Memory(Arc<[f32]>),
     Stream(Box<StreamSource>),
 }
 
@@ -244,6 +245,12 @@ impl TrackPlayer {
     }
 
     pub fn from_samples(file_path: PathBuf, samples: Vec<f32>, channels: usize, sample_rate: u32) -> Self {
+        Self::from_shared(file_path, samples.into(), channels, sample_rate)
+    }
+
+    /// A player over decoded audio another player may be using too; no copy. Dropping
+    /// it can free the audio, so retire it off the audio thread like any player.
+    pub fn from_shared(file_path: PathBuf, samples: Arc<[f32]>, channels: usize, sample_rate: u32) -> Self {
         let channels = channels.max(1);
         let frames = samples.len() / channels;
         let duration = if sample_rate > 0 {
@@ -262,6 +269,15 @@ impl TrackPlayer {
             overlay: None,
             channels,
             source: Source::Memory(samples),
+        }
+    }
+
+    /// The decoded audio, channels and rate of an in-memory player, to share with
+    /// `from_shared`; `None` for a streamed one.
+    pub fn shared_samples(&self) -> Option<(Arc<[f32]>, usize, u32)> {
+        match &self.source {
+            Source::Memory(samples) => Some((Arc::clone(samples), self.channels, self.sample_rate)),
+            Source::Stream(_) => None,
         }
     }
 

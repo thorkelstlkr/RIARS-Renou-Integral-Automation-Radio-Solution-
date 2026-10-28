@@ -597,7 +597,8 @@
     "normalizationMaxGain": "Gain maximal (dB)",
     "normalizationMaxCut": "Atténuation maximale (dB)",
     "normalizationPeak": "Plafond de crête (dBFS)",
-    "normalizationHint": "Un gain par titre d'après son volume mesuré : les titres faibles montent, les forts baissent, dans ces limites."
+    "normalizationHint": "Un gain par titre d'après son volume mesuré : les titres faibles montent, les forts baissent, dans ces limites.",
+    "microphone": "Microphone…"
   },
   "help": {
     "title": "Manuel",
@@ -633,7 +634,9 @@
     "preview": "Pré-écoute",
     "off": "Désactivée",
     "previewNote": "S'applique immédiatement.",
-    "sameWarning": "La pré-écoute passera à l'antenne."
+    "sameWarning": "La pré-écoute passera à l'antenne.",
+    "micSection": "Microphone",
+    "micNote": "Le micro a ses propres réglages dans Lecture ▸ Microphone…."
   },
   "analysis": {
     "source": {
@@ -732,6 +735,70 @@
     "removedTracks": "{{count}} titres retirés de la bibliothèque.",
     "pathCopied": "Chemin copié.",
     "keyEnter": "Entrée",
-    "keyDelete": "Suppr"
+    "keyDelete": "Suppr",
+    "stopAfter": "Arrêter après ce titre"
+  },
+  "live": {
+    "title": "Direct",
+    "mic": "MICRO",
+    "onAir": "À L'ANTENNE",
+    "speaking": "Parole",
+    "micSettings": "Microphone…",
+    "inputDevice": "Carte d'entrée",
+    "systemDefault": "Celle du système",
+    "playMode": "Mode de lecture",
+    "mode": {
+      "Automatic": "Automatique",
+      "Assisted": "Assisté",
+      "Manual": "Manuel"
+    },
+    "modeHint": {
+      "Automatic": "La playlist avance seule et l'automatisation la remplit.",
+      "Assisted": "La playlist avance seule, mais l'automatisation n'ajoute rien.",
+      "Manual": "Chaque élément s'arrête à la fin et attend Lecture ou Suivant (F8)."
+    },
+    "introLeft": "Intro : {{s}} s",
+    "next": "Suivant : {{title}}",
+    "stopAll": "Tout arrêter",
+    "secondsLeft": "{{s}} s",
+    "bank": "Banque de sons",
+    "noBank": "Pas encore de banque.",
+    "newBank": "Nouvelle banque",
+    "renameBank": "Renommer la banque",
+    "deleteBank": "Supprimer la banque",
+    "confirmDeleteBank": "Supprimer cette banque et tous ses boutons ?",
+    "defaultBankName": "Ma banque",
+    "page": "Page {{n}}",
+    "emptyButton": "Vide : déposez un titre ici",
+    "cartMode": {
+      "Fire": "Déclencher",
+      "Toggle": "Déclencher/arrêter",
+      "Loop": "Boucle"
+    },
+    "buttonMode": "Mode",
+    "editButton": "Modifier…",
+    "buttonEditor": "Modifier le bouton",
+    "prelisten": "Pré-écoute",
+    "clearButton": "Vider",
+    "chooseTrack": "Choisir un titre…",
+    "duck": "Baisser la musique pendant la lecture",
+    "gain": "Gain",
+    "color": "Couleur",
+    "label": "Texte",
+    "file": "Fichier",
+    "noColor": "Sans couleur",
+    "labelRequired": "Le bouton a besoin d'un texte.",
+    "fileRequired": "Choisissez un titre pour le bouton.",
+    "highPass": "Coupe-bas (80 Hz)",
+    "gate": "Noise gate",
+    "gateThreshold": "Seuil du gate",
+    "compressor": "Compresseur",
+    "ducking": "Baisse de la musique",
+    "duckMusic": "Baisser la musique de",
+    "duckMode": "Quand la baisser",
+    "duckWhileOpen": "Tant que le micro est ouvert",
+    "duckWhileSpeaking": "Pendant la parole",
+    "allowRemote": "Autoriser l'API et les agents d'IA à ouvrir le micro",
+    "allowRemoteHint": "Désactivé par défaut : un agent ne devrait jamais ouvrir un micro à l'insu de l'animateur."
   }
 }

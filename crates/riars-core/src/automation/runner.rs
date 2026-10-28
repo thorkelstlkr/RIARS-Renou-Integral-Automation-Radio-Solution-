@@ -171,7 +171,9 @@ fn tick_locked(
 
     auto.generator.load(&*library.lock().map_err(|e| err(&e))?)?;
     let config = auto.generator.config().clone();
-    if config.enabled {
+    // Assisted and manual modes are the presenter at the controls: no fill, no cuts.
+    let automatic = engine.lock().map_err(|e| err(&e))?.play_mode() == crate::audio::engine::PlayMode::Automatic;
+    if config.enabled && automatic {
         if let Some(id) = auto.generator.due_hard_anchor(now) {
             let index = {
                 let engine = engine.lock().map_err(|e| err(&e))?;
@@ -353,6 +355,10 @@ mod tests {
         let library = Mutex::new(library);
         let automation = Mutex::new(Automation::new());
         let now = chrono::Local::now().naive_local();
+        // Assisted mode: the presenter is in charge and nothing is added.
+        engine.lock().unwrap().set_play_mode(crate::audio::engine::PlayMode::Assisted);
+        assert_eq!(tick(&engine, &library, &automation, now).unwrap().generated, 0);
+        engine.lock().unwrap().set_play_mode(crate::audio::engine::PlayMode::Automatic);
         let report = tick(&engine, &library, &automation, now).unwrap();
         // 15 minutes of 200 s songs (stopped: the current item counts as ahead).
         assert_eq!(report.generated, 5);

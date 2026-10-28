@@ -9,7 +9,9 @@ use super::crossfade::CrossfadeConfig;
 use super::mixer::Mixer;
 use super::output::{AudioOutput, Command, Levels, StreamTap};
 use super::normalize::{db_to_gain, NormalizationConfig};
+use super::live::{CartVoice, MicConfig, MicInput, MAX_CART_VOICES};
 use super::player::{Overlay, TrackPlayer};
+use crate::live::{CartButton, CartMode};
 use crate::playlist::playlist::{Playlist, PlaylistItem};
 use crate::session::SessionState;
 
@@ -97,6 +99,60 @@ pub struct PlayRecord {
 /// owns the library; called on control threads only, never with the engine locked.
 pub type LoudnessLookup = std::sync::Arc<dyn Fn(&str) -> Option<(f32, Option<f32>)> + Send + Sync>;
 
+/// How the playlist moves on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum PlayMode {
+    /// The list moves on by itself and the automation fills it.
+    #[default]
+    Automatic,
+    /// The list moves on by itself, but the automation adds nothing: what the
+    /// presenter prepared plays.
+    Assisted,
+    /// Every item stops at its end and waits for Next.
+    Manual,
+}
+
+/// The microphone as the screens show it.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct MicStatus {
+    /// The input card is open (the microphone can go on air).
+    pub available: bool,
+    /// On air.
+    pub on: bool,
+    pub device: Option<String>,
+    /// Loudest level since the previous read (linear, 1 = full scale).
+    pub level: f32,
+    pub speaking: bool,
+    pub error: Option<String>,
+}
+
+/// A sound-bank button playing now.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CartPlaying {
+    pub button: u32,
+    /// Milliseconds left; `None` while it loops.
+    pub left_ms: Option<u32>,
+}
+
+/// A bank sound sent to the audio thread, until it comes off air.
+struct CartAir {
+    serial: u64,
+    item: PlaylistItem,
+    started: chrono::NaiveDateTime,
+    fired: std::time::Instant,
+    seen: bool,
+}
+
+/// Decoded bank sounds, shared by every press of their buttons.
+struct CartSound {
+    samples: std::sync::Arc<[f32]>,
+    channels: usize,
+    rate: u32,
+}
+
+/// Decoded bank audio kept in memory, in samples (about 96 MB of f32).
+const CART_CACHE_SAMPLES: usize = 24_000_000;
+
 /// Records kept for the caller to collect; older ones are dropped beyond this.
 const MAX_PLAY_RECORDS: usize = 256;
 
@@ -167,6 +223,21 @@ pub struct AudioEngine {
     output: Option<AudioOutput>,
     crossfade: CrossfadeConfig,
     sample_rate: u32,
+    play_mode: PlayMode,
+    /// Stopped at the end of an item (manual mode or "stop after"); Play starts this
+    /// item (by id) next.
+    held: Option<String>,
+    mic: Option<MicInput>,
+    mic_config: MicConfig,
+    mic_error: Option<String>,
+    /// Bumped when the play mode or microphone settings change, for the session save.
+    live_settings_rev: u64,
+    cart_serial: u64,
+    carts_air: Vec<CartAir>,
+    cart_cache: std::collections::HashMap<String, CartSound>,
+    /// Insertion order of `cart_cache`, oldest first, and its size in samples.
+    cart_cache_order: std::collections::VecDeque<String>,
+    cart_cache_samples: usize,
 }
 
 impl AudioEngine {
@@ -238,6 +309,17 @@ impl AudioEngine {
             output,
             crossfade,
             sample_rate,
+            play_mode: PlayMode::Automatic,
+            held: None,
+            mic: None,
+            mic_config: MicConfig::default(),
+            mic_error: None,
+            live_settings_rev: 0,
+            cart_serial: 0,
+            carts_air: Vec::new(),
+            cart_cache: std::collections::HashMap::new(),
+            cart_cache_order: std::collections::VecDeque::new(),
+            cart_cache_samples: 0,
         })
     }
 
@@ -414,6 +496,7 @@ impl AudioEngine {
         self.dead_air_active = false;
         self.advance_blocked = false;
         self.queued = None;
+        self.held = None;
         if index < self.playlist.len() {
             self.playlist.current_index = index;
         }
@@ -487,6 +570,8 @@ impl AudioEngine {
         }
 
         self.follow_overlays(overlays_started, overlays_ended);
+        self.follow_carts();
+        self.check_mic();
         if self.state != PlaybackState::Playing || self.advancing {
             return None;
         }
@@ -504,6 +589,12 @@ impl AudioEngine {
             .saturating_sub(position_ms);
         let fade_ms = if self.crossfade.enabled { self.crossfade.duration.as_millis() as u64 } else { 0 };
         if !finished && remaining_ms > PRELOAD_MS + fade_ms {
+            return None;
+        }
+        if self.holds_after_current() {
+            if finished {
+                self.hold();
+            }
             return None;
         }
         if self.advance_blocked {
@@ -623,6 +714,8 @@ impl AudioEngine {
             stream: None,
             dead_air: Some(self.dead_air.clone()),
             normalization: Some(self.normalization),
+            play_mode: Some(self.play_mode),
+            mic: Some(self.mic_config.clone()),
         }
     }
 
@@ -634,7 +727,10 @@ impl AudioEngine {
             ^ (self.dead_air.threshold_db.to_bits() as u64) << 8
             ^ self.dead_air.action as u64;
         (
-            self.playlist_revision.wrapping_sub(self.generated_bumps).wrapping_add(self.seek_count << 32)
+            self.playlist_revision
+                .wrapping_sub(self.generated_bumps)
+                .wrapping_add(self.seek_count << 32)
+                .wrapping_add(self.live_settings_rev << 48)
                 ^ dead_air
                 ^ normalization,
             self.volume.to_bits(),
@@ -649,6 +745,17 @@ impl AudioEngine {
     pub fn restore(&mut self, state: &SessionState) {
         if let Some(normalization) = state.normalization {
             self.normalization = normalization;
+        }
+        if let Some(mode) = state.play_mode {
+            self.play_mode = mode;
+        }
+        if let Some(mic) = &state.mic {
+            if mic.validate().is_ok() {
+                self.mic_config = mic.clone();
+                if let Some(output) = &self.output {
+                    output.shared.mic.apply(mic);
+                }
+            }
         }
         if let Some(volume) = state.volume {
             self.set_volume(volume);
@@ -830,6 +937,253 @@ impl AudioEngine {
         self.overlays_pending.retain(|(host, _)| keep.iter().any(|k| k.as_deref() == Some(host.as_str())));
     }
 
+    // --- Play modes ---------------------------------------------------------------
+
+    pub fn play_mode(&self) -> PlayMode {
+        self.play_mode
+    }
+
+    pub fn set_play_mode(&mut self, mode: PlayMode) {
+        if mode != self.play_mode {
+            log::info!("Play mode: {mode:?}");
+            self.play_mode = mode;
+            self.live_settings_rev += 1;
+        }
+    }
+
+    /// The item on air must not run into the next one.
+    fn holds_after_current(&self) -> bool {
+        self.play_mode == PlayMode::Manual || self.playlist.current_item().is_some_and(|i| i.stop_after)
+    }
+
+    /// The item on air ended and the list waits: stop, with the next item ready for Play.
+    fn hold(&mut self) {
+        self.end_on_air(EndReason::Finished);
+        if let Some(output) = &self.output {
+            output.shared.playing.store(false, Ordering::Relaxed);
+        }
+        self.state = PlaybackState::Stopped;
+        self.held = self.playlist.next_index().and_then(|i| self.playlist.items.get(i)).map(|i| i.id.clone());
+        log::info!("Holding after the item on air; Play or Next starts the next one");
+    }
+
+    /// Index Play should start after a hold, if the list is holding.
+    pub fn held_index(&self) -> Option<usize> {
+        self.held.as_ref().and_then(|id| self.playlist.index_of(id))
+    }
+
+    // --- Microphone -----------------------------------------------------------------
+
+    pub fn mic_config(&self) -> &MicConfig {
+        &self.mic_config
+    }
+
+    /// Change the microphone settings; a new input card is opened at once if the
+    /// microphone was open.
+    pub fn set_mic_config(&mut self, config: MicConfig) -> Result<(), String> {
+        config.validate()?;
+        let reopen = self.mic.is_some() && config.device != self.mic_config.device;
+        self.mic_config = config;
+        self.live_settings_rev += 1;
+        if let Some(output) = &self.output {
+            output.shared.mic.apply(&self.mic_config);
+        }
+        if reopen {
+            let on = self.output.as_ref().is_some_and(|o| o.shared.mic.on.load(Ordering::Relaxed));
+            self.close_mic();
+            self.open_mic()?;
+            if on {
+                self.set_mic_on(true, false)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Open the input card (closed: off air). Returns its name.
+    pub fn open_mic(&mut self) -> Result<String, String> {
+        let Some(output) = &self.output else {
+            return Err("No audio output: the microphone has nowhere to go".to_string());
+        };
+        if let Some(mic) = &self.mic {
+            return Ok(mic.device_name.clone());
+        }
+        match MicInput::open(self.mic_config.device.as_deref()) {
+            Ok((input, feed)) => {
+                output.send(Command::Mic(Some(Box::new(feed))));
+                let name = input.device_name.clone();
+                self.mic = Some(input);
+                self.mic_error = None;
+                Ok(name)
+            }
+            Err(e) => {
+                self.mic_error = Some(e.clone());
+                Err(e)
+            }
+        }
+    }
+
+    /// Take the microphone off air and close the input card.
+    pub fn close_mic(&mut self) {
+        if let Some(output) = &self.output {
+            output.shared.mic.on.store(false, Ordering::Relaxed);
+            output.send(Command::Mic(None));
+        }
+        self.mic = None;
+    }
+
+    /// Put the microphone on or off air. `remote` requests (API, agents) are refused
+    /// unless the settings allow them.
+    pub fn set_mic_on(&mut self, on: bool, remote: bool) -> Result<(), String> {
+        if on && remote && !self.mic_config.allow_remote {
+            return Err("Opening the microphone remotely is disabled in the microphone settings".to_string());
+        }
+        if on && self.mic.is_none() {
+            self.open_mic()?;
+        }
+        if let Some(output) = &self.output {
+            output.shared.mic.on.store(on, Ordering::Relaxed);
+        }
+        log::info!("Microphone {}", if on { "on air" } else { "off" });
+        Ok(())
+    }
+
+    pub fn mic_status(&self) -> MicStatus {
+        let Some(output) = &self.output else {
+            return MicStatus { error: self.mic_error.clone(), ..MicStatus::default() };
+        };
+        let controls = &output.shared.mic;
+        MicStatus {
+            available: self.mic.is_some(),
+            on: controls.on.load(Ordering::Relaxed),
+            device: self.mic.as_ref().map(|m| m.device_name.clone()),
+            level: controls.take_peak(),
+            speaking: controls.speaking.load(Ordering::Relaxed),
+            error: self.mic_error.clone(),
+        }
+    }
+
+    /// A microphone whose card failed or went away falls silent and is closed.
+    fn check_mic(&mut self) {
+        if self.mic.as_ref().is_some_and(|m| !m.alive.load(Ordering::Relaxed)) {
+            log::warn!("The microphone input stopped; closing it");
+            self.mic_error = Some("The microphone input stopped (card unplugged or in use)".to_string());
+            self.close_mic();
+        }
+    }
+
+    // --- Sound bank -----------------------------------------------------------------
+
+    /// A player over the cached audio of `path`, if it is decoded already. Instant.
+    fn cached_cart(&self, path: &str) -> Option<TrackPlayer> {
+        self.cart_cache
+            .get(path)
+            .map(|s| TrackPlayer::from_shared(path.into(), std::sync::Arc::clone(&s.samples), s.channels, s.rate))
+    }
+
+    /// Keep decoded bank audio for the next presses, forgetting the oldest beyond the
+    /// cache size.
+    fn cache_cart(&mut self, path: &str, player: &TrackPlayer) {
+        let Some((samples, channels, rate)) = player.shared_samples() else { return };
+        if self.cart_cache.contains_key(path) || samples.len() > CART_CACHE_SAMPLES {
+            return;
+        }
+        while self.cart_cache_samples + samples.len() > CART_CACHE_SAMPLES {
+            let Some(old) = self.cart_cache_order.pop_front() else { break };
+            if let Some(sound) = self.cart_cache.remove(&old) {
+                self.cart_cache_samples -= sound.samples.len();
+            }
+        }
+        self.cart_cache_samples += samples.len();
+        self.cart_cache_order.push_back(path.to_string());
+        self.cart_cache.insert(path.to_string(), CartSound { samples, channels, rate });
+    }
+
+    /// Whether a voice of this button is playing.
+    pub fn is_cart_playing(&self, button: u32) -> bool {
+        self.carts_playing().iter().any(|c| c.button == button)
+    }
+
+    pub fn carts_playing(&self) -> Vec<CartPlaying> {
+        let Some(output) = &self.output else { return Vec::new() };
+        let status = &output.shared.carts;
+        (0..MAX_CART_VOICES)
+            .filter(|&i| status.serial[i].load(Ordering::Relaxed) != 0)
+            .map(|i| {
+                let left = status.left_ms[i].load(Ordering::Relaxed);
+                CartPlaying { button: status.button[i].load(Ordering::Relaxed), left_ms: (left != u32::MAX).then_some(left) }
+            })
+            .collect()
+    }
+
+    /// Hand a decoded bank sound to the audio thread. A Fire button playing already
+    /// starts again from the top.
+    fn start_cart(&mut self, button: &CartButton, player: TrackPlayer, gain: f32) {
+        let Some(output) = &self.output else { return };
+        let id = button.id();
+        if self.is_cart_playing(id) {
+            output.send(Command::CartStop(Some(id)));
+        }
+        self.cart_serial += 1;
+        let mut item = PlaylistItem::new(button.file_path.clone(), button.label.clone(), String::new(), player.duration().as_millis() as u64);
+        item.kind = crate::playlist::playlist::ItemKind::Jingle;
+        item.track_id = button.track_id;
+        self.carts_air.push(CartAir {
+            serial: self.cart_serial,
+            item,
+            started: wall_clock(),
+            fired: std::time::Instant::now(),
+            seen: false,
+        });
+        output.send(Command::CartPlay(CartVoice {
+            player: Box::new(player),
+            button: id,
+            serial: self.cart_serial,
+            looping: button.mode == CartMode::Loop,
+            duck: button.duck,
+            gain,
+        }));
+    }
+
+    /// Fade out the bank sounds of `button`, or all of them.
+    pub fn stop_carts(&mut self, button: Option<u32>) {
+        if let Some(output) = &self.output {
+            output.send(Command::CartStop(button));
+        }
+    }
+
+    /// Bank sounds that came off air go to the proof-of-play records.
+    fn follow_carts(&mut self) {
+        if self.carts_air.is_empty() {
+            return;
+        }
+        let Some(output) = &self.output else { return };
+        let playing: Vec<u64> = output.shared.carts.serial.iter().map(|s| s.load(Ordering::Relaxed)).collect();
+        let mut ended = Vec::new();
+        self.carts_air.retain_mut(|air| {
+            if playing.contains(&air.serial) {
+                air.seen = true;
+                return true;
+            }
+            // Not playing: over, or never seen because it was shorter than a poll.
+            if air.seen || air.fired.elapsed() > Duration::from_secs(1) {
+                ended.push(PlayRecord {
+                    item: air.item.clone(),
+                    started_at: air.started,
+                    ended_at: wall_clock(),
+                    reason: EndReason::Finished,
+                });
+                return false;
+            }
+            true
+        });
+        for record in ended {
+            if self.play_records.len() >= MAX_PLAY_RECORDS {
+                self.play_records.remove(0);
+            }
+            self.play_records.push(record);
+        }
+    }
+
     pub fn set_crossfade(&mut self, config: CrossfadeConfig) {
         if let Some(output) = &self.output {
             output.shared.set_crossfade(&config);
@@ -914,4 +1268,129 @@ pub fn play_index_unlocked(
     }
     lock()?.end_advance();
     Ok(())
+}
+
+/// Play: after a hold (manual mode or "stop after"), the next item; otherwise resume
+/// what is loaded. Decodes with no lock held.
+pub fn play_unlocked(engine: &Mutex<AudioEngine>) -> Result<(), String> {
+    let held = engine.lock().map_err(|e| e.to_string())?.held_index();
+    match held {
+        Some(index) => play_index_unlocked(engine, index, false),
+        None => {
+            engine.lock().map_err(|e| e.to_string())?.play();
+            Ok(())
+        }
+    }
+}
+
+/// Press a sound-bank button: start its sound, or stop it when it is a Toggle or Loop
+/// button that is playing. Returns whether it started. Decodes with no lock held; the
+/// decoded audio is kept, so the next press is instant.
+pub fn fire_cart_unlocked(engine: &Mutex<AudioEngine>, button: &CartButton) -> Result<bool, String> {
+    let lock = || engine.lock().map_err(|e| e.to_string());
+    let (cached, normalization, loudness) = {
+        let mut engine = lock()?;
+        if button.mode != CartMode::Fire && engine.is_cart_playing(button.id()) {
+            engine.stop_carts(Some(button.id()));
+            return Ok(false);
+        }
+        (engine.cached_cart(&button.file_path), engine.normalization, engine.loudness.clone())
+    };
+    let player = match cached {
+        Some(player) => player,
+        None => {
+            let player = TrackPlayer::from_file(Path::new(&button.file_path), 44100)?;
+            lock()?.cache_cart(&button.file_path, &player);
+            player
+        }
+    };
+    let (lufs, peak) = loudness
+        .as_ref()
+        .and_then(|l| l(&button.file_path))
+        .map_or((None, None), |(l, p)| (Some(l), p));
+    let gain = db_to_gain(button.gain_db) * db_to_gain(normalization.gain_db(lufs, peak));
+    lock()?.start_cart(button, player, gain);
+    Ok(true)
+}
+
+/// Decode the short sounds of a bank page ahead, so their first press is instant.
+/// Long ones (streamed from disk) and missing files are skipped.
+pub fn preload_carts_unlocked(engine: &Mutex<AudioEngine>, paths: &[String]) {
+    for path in paths {
+        let cached = engine.lock().map(|e| e.cart_cache.contains_key(path)).unwrap_or(true);
+        if cached {
+            continue;
+        }
+        if let Ok(player) = TrackPlayer::from_file(Path::new(path), 44100) {
+            if let Ok(mut engine) = engine.lock() {
+                engine.cache_cart(path, &player);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    /// A 0.2 s silent in-memory track.
+    fn short() -> TrackPlayer {
+        TrackPlayer::from_samples(PathBuf::from("s.wav"), vec![0.0; 8820], 1, 44_100)
+    }
+
+    fn playlist(engine: &mut AudioEngine, n: usize) {
+        for i in 0..n {
+            engine.playlist_mut().add_item(format!("{i}.wav"), format!("t{i}"), String::new(), 200);
+        }
+    }
+
+    /// Poll until the item on air ends (the internal clock plays in real time).
+    fn run_out(engine: &mut AudioEngine) -> Option<usize> {
+        for _ in 0..100 {
+            std::thread::sleep(Duration::from_millis(20));
+            let finished = engine.output.as_ref().is_some_and(|o| o.shared.finished.load(Ordering::Relaxed));
+            let next = engine.poll();
+            if finished || next.is_some() {
+                return next;
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn manual_mode_and_stop_after_hold_the_next_item() {
+        let mut engine = AudioEngine::new_headless().unwrap();
+        playlist(&mut engine, 3);
+        engine.set_play_mode(PlayMode::Manual);
+        engine.start_index(0, short());
+        assert_eq!(run_out(&mut engine), None, "manual: nothing is prepared");
+        assert_eq!(engine.playback_state(), PlaybackState::Stopped);
+        assert_eq!(engine.held_index(), Some(1));
+        assert_eq!(engine.take_play_records().len(), 1);
+
+        // Automatic, but item 1 says stop after it.
+        engine.set_play_mode(PlayMode::Automatic);
+        engine.playlist_mut().items[1].stop_after = true;
+        engine.start_index(1, short());
+        assert_eq!(engine.held_index(), None, "starting clears the hold");
+        assert_eq!(run_out(&mut engine), None);
+        assert_eq!(engine.held_index(), Some(2));
+
+        // Without a hold, the next item is prepared as usual.
+        engine.start_index(0, short());
+        assert_eq!(run_out(&mut engine), Some(1));
+    }
+
+    #[test]
+    fn remote_microphone_needs_permission_and_settings_are_checked() {
+        let mut engine = AudioEngine::new_headless().unwrap();
+        assert!(engine.set_mic_on(true, true).unwrap_err().contains("disabled"));
+        let bad = MicConfig { gain_db: 99.0, ..MicConfig::default() };
+        assert!(engine.set_mic_config(bad).is_err());
+        let before = engine.session_key();
+        engine.set_play_mode(PlayMode::Assisted);
+        assert_ne!(engine.session_key(), before, "the play mode is saved");
+        assert_eq!(engine.snapshot().play_mode, Some(PlayMode::Assisted));
+    }
 }
