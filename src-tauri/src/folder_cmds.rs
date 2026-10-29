@@ -6,7 +6,8 @@
 
 use std::sync::Mutex;
 
-use riars_core::library::folders::{list_dir, roots, scan_into, track_for_file};
+use riars_core::library::folders::{expand_dropped, list_dir, roots, scan_into, track_for_file, tracks_for_files};
+use riars_core::playlist::playlist::PlaylistItem;
 use riars_core::{DirEntry, DirListing, LibraryFolder, Track};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -153,6 +154,75 @@ pub async fn library_track_for_file(path: String, app: AppHandle) -> Result<Trac
     tauri::async_runtime::spawn_blocking(move || track_for_file(&app.state::<AppState>().library, &path))
         .await
         .map_err(|e| e.to_string())?
+}
+
+/// Most files one drop adds, as `playlist_insert` allows.
+const DROP_LIMIT: usize = 10_000;
+
+/// Payload of the `playlist-drop` event, for the drop `job` the UI numbered.
+#[derive(Clone, Serialize)]
+struct DropProgress {
+    job: u32,
+    /// "listing" while folders are walked, then "reading" with `done` of `total`
+    /// files not yet in the library read.
+    state: &'static str,
+    done: usize,
+    total: usize,
+}
+
+/// What a drop added to the playlist.
+#[derive(Serialize)]
+pub struct DropResult {
+    added: usize,
+    /// Dropped paths that were not audio or a folder.
+    skipped: usize,
+    /// Audio files that could not be read.
+    failed: usize,
+    /// More than `DROP_LIMIT` files: the rest were left out.
+    truncated: bool,
+}
+
+/// Add files and folders dropped from the system's file manager (or a track dragged
+/// from the library) to the playlist, before the item `before_id`, or at the end
+/// when it is missing or gone. Files not in the library join it first, so they get
+/// analysis, normalisation and intro/outro marks like the rest; the new ones are
+/// analysed in the background. Progress arrives as `playlist-drop` events.
+#[tauri::command]
+pub async fn playlist_drop_files(
+    paths: Vec<String>,
+    before_id: Option<String>,
+    job: u32,
+    app: AppHandle,
+) -> Result<DropResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let _ = app.emit("playlist-drop", DropProgress { job, state: "listing", done: 0, total: 0 });
+        let dropped = expand_dropped(&paths, DROP_LIMIT);
+        let state = app.state::<AppState>();
+        let mut last = std::time::Instant::now();
+        let (tracks, failed) = tracks_for_files(&state.library, &dropped.files, &mut |done, total| {
+            // A few events a second are enough for a progress line.
+            if done == 0 || done == total || last.elapsed().as_millis() >= 100 {
+                last = std::time::Instant::now();
+                let _ = app.emit("playlist-drop", DropProgress { job, state: "reading", done, total });
+            }
+        })?;
+        let ids: Vec<i64> = tracks.iter().map(|t| t.id).collect();
+        let added = tracks.len();
+        let items = tracks
+            .into_iter()
+            .map(|t| PlaylistItem::new(t.file_path, t.title, t.artist, t.duration_ms))
+            .collect();
+        {
+            let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
+            let playlist = engine.playlist_mut();
+            let at = before_id.and_then(|id| playlist.index_of(&id)).unwrap_or(playlist.len());
+            playlist.insert_items(at, items);
+        }
+        crate::analysis_cmds::analyze_new_tracks(&app, ids);
+        Ok(DropResult { added, skipped: dropped.skipped, failed, truncated: dropped.truncated })
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

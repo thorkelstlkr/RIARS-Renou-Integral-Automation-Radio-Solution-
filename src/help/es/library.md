@@ -36,7 +36,7 @@ Debajo está el árbol del equipo:
 - Al **desmarcar** una carpeta, o al pulsar ✕ en la lista, RIARS pregunta si quitas solo la carpeta (sus pistas se quedan) o también sus pistas. Los archivos **nunca se borran** del disco.
 - Al pulsar el **nombre** de una carpeta, abajo aparecen sus archivos de audio; con **doble clic** además se abre o se cierra, como con ▸. Los que aún no están en la biblioteca salen atenuados, pero también se pueden usar. Si abres las **Marcas…** de uno de ellos desde la lista de reproducción, entra en la biblioteca en ese momento, porque las marcas se guardan con la pista.
 
-Los archivos de esa lista funcionan como las pistas de la biblioteca: **doble clic** o **Intro** los añade a la lista de reproducción, se pueden **arrastrar** a un botón del [banco de sonidos](topic:live) y tienen menú del botón derecho.
+Los archivos de esa lista funcionan como las pistas de la biblioteca: **doble clic** o **Intro** los añade a la lista de reproducción, se pueden **arrastrar** a la [lista de reproducción](topic:playlist) o a un botón del [banco de sonidos](topic:live) y tienen menú del botón derecho.
 
 ## Buscar
 

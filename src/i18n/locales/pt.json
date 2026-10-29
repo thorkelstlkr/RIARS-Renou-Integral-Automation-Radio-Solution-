@@ -19,7 +19,7 @@
     "itemCount": "{{count}} elementos",
     "itemCount_one": "{{count}} elemento",
     "headerArtist": "Artista",
-    "empty": "Lista de reprodução vazia. Faça duplo clique numa faixa da biblioteca para a adicionar.",
+    "empty": "Lista de reprodução vazia. Faça duplo clique numa faixa da biblioteca ou arraste para aqui ficheiros e pastas.",
     "moveUp": "Mover para cima",
     "moveDown": "Mover para baixo",
     "remove": "Remover",
@@ -34,7 +34,20 @@
     "headerOutro": "Outro",
     "headerLufs": "LUFS",
     "overlayIntro": "sobre a intro",
-    "overlayOutro": "sobre a outro"
+    "overlayOutro": "sobre a outro",
+    "drop": {
+      "here": "Largue aqui para adicionar à lista",
+      "listing": "A procurar ficheiros de áudio…",
+      "reading": "A adicionar à biblioteca: {{done}} de {{total}}",
+      "added_one": "{{count}} ficheiro adicionado",
+      "added": "{{count}} ficheiros adicionados",
+      "skipped_one": "{{count}} ignorado: não é áudio",
+      "skipped": "{{count}} ignorados: não são áudio",
+      "failed_one": "{{count}} não pôde ser lido",
+      "failed": "{{count}} não puderam ser lidos",
+      "truncated": "apenas os primeiros 10 000",
+      "nothing": "O que largou não contém ficheiros de áudio."
+    }
   },
   "library": {
     "title": "Biblioteca",

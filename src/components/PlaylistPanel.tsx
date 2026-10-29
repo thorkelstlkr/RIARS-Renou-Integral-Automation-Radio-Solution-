@@ -9,6 +9,7 @@ import { analysis, preview, type TrackCues } from "../analysis/api";
 import { live } from "../live/api";
 import CueEditor from "../analysis/CueEditor";
 import ContextMenu, { type ContextEntry } from "../menu/ContextMenu";
+import { usePlaylistDrop } from "./usePlaylistDrop";
 
 interface Playlist {
   name?: string;
@@ -74,6 +75,10 @@ const S: Record<string, React.CSSProperties> = {
     borderBottom: "1px solid var(--border)", background: "var(--bg-secondary)",
   },
   foot: { padding: "6px 16px", fontSize: 12, color: "var(--text-muted)", borderTop: "1px solid var(--border)" },
+  // Insertion line of a drag: above a row, or below the last one.
+  dropBefore: { boxShadow: "inset 0 2px 0 var(--accent)" },
+  dropAfter: { boxShadow: "inset 0 -2px 0 var(--accent)" },
+  dropEmpty: { outline: "2px dashed var(--accent)", outlineOffset: -8, color: "var(--text-primary)" },
 };
 
 const fmt = (ms: number) => {
@@ -176,6 +181,7 @@ export default function PlaylistPanel() {
   const { items, current_index } = playlist;
   const total = items.reduce((sum, i) => sum + i.duration_ms, 0);
   const starts = engine ? startTimes(items, current_index, engine) : [];
+  const drop = usePlaylistDrop(listRef, items.map((item) => item.id));
 
   // Forget the rows that left the playlist.
   useEffect(() => {
@@ -510,8 +516,12 @@ export default function PlaylistPanel() {
       </div>
       {error && <div style={{ ...S.foot, color: "var(--red)", borderTop: "none" }}>{error}</div>}
       <div ref={listRef} style={S.list} tabIndex={0} onKeyDown={onListKeyDown}
-        onClick={() => listRef.current?.focus()}>
-        {items.length === 0 && <div style={S.empty}>{t("playlist.empty")}</div>}
+        onClick={() => listRef.current?.focus()} {...drop.listProps}>
+        {items.length === 0 && (
+          <div style={{ ...S.empty, ...(drop.dropAt !== null ? S.dropEmpty : {}) }}>
+            {drop.dropAt !== null ? t("playlist.drop.here") : t("playlist.empty")}
+          </div>
+        )}
         {items.map((item, i) => {
           const cue = cues[item.track_path];
           const introRoom = cue?.intro_end_ms != null
@@ -527,6 +537,8 @@ export default function PlaylistPanel() {
                 ...S.row,
                 ...(i === current_index ? S.active : {}),
                 ...(selected.has(item.id) ? S.selected : {}),
+                ...(drop.dropAt === i ? S.dropBefore : {}),
+                ...(drop.dropAt === items.length && i === items.length - 1 ? S.dropAfter : {}),
               }}
               onClick={(e) => onRowClick(e, i)}
               onContextMenu={(e) => onRowContext(e, i)}
@@ -565,8 +577,14 @@ export default function PlaylistPanel() {
           );
         })}
       </div>
-      <div style={S.foot}>
-        {t("playlist.itemCount", { count: items.length })} · {fmt(total)}
+      <div style={{ ...S.foot, display: "flex", gap: 12 }}>
+        <span>{t("playlist.itemCount", { count: items.length })} · {fmt(total)}</span>
+        {drop.notice && (
+          <span data-testid="playlist-drop-notice"
+            style={{ marginLeft: "auto", color: drop.notice.error ? "var(--red)" : "var(--text-secondary)" }}>
+            {drop.notice.text}
+          </span>
+        )}
       </div>
       {ctx && (
         <ContextMenu x={ctx.x} y={ctx.y} title={menuTitle} items={playlistMenu()} onClose={() => setCtx(null)} />
