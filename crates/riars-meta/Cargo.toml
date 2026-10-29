@@ -1,0 +1,13 @@
+[package]
+name = "riars-meta"
+description = "Completing track metadata for RIARS from MusicBrainz, AcoustID and the Cover Art Archive"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+riars-core = { path = "../riars-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+ureq = { version = "3", features = ["json"] }

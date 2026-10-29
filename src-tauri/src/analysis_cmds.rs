@@ -98,7 +98,7 @@ fn validate_detector(detector: &CueDetector) -> Result<(), String> {
 }
 
 /// The library as the background analyser reaches it.
-struct TauriLibrary(AppHandle);
+pub(crate) struct TauriLibrary(pub(crate) AppHandle);
 
 impl LibraryAccess for TauriLibrary {
     fn with_library(

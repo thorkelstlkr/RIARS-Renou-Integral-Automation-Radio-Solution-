@@ -17,3 +17,7 @@ symphonia = { version = "0.5", features = ["mp3", "flac", "ogg", "wav", "aac", "
 rusqlite = { version = "0.32", features = ["bundled"] }
 crossbeam-channel = "0.5"
 rtrb = "0.4"
+# Writing tags back into files (symphonia only reads them).
+lofty = "0.22"
+# Audio fingerprints for AcoustID, in pure Rust (no network: the lookup is in riars-meta).
+rusty-chromaprint = "0.3"

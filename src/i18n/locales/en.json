@@ -639,7 +639,8 @@
     "normalizationMaxCut": "Most cut (dB)",
     "normalizationPeak": "Peak ceiling (dBFS)",
     "normalizationHint": "One gain per track from its measured loudness: quiet tracks are raised, loud ones lowered, within these limits.",
-    "microphone": "Microphone…"
+    "microphone": "Microphone…",
+    "completeMetadata": "Complete library metadata…"
   },
   "help": {
     "title": "Manual",
@@ -777,7 +778,8 @@
     "pathCopied": "Path copied.",
     "keyEnter": "Enter",
     "keyDelete": "Del",
-    "stopAfter": "Stop after this item"
+    "stopAfter": "Stop after this item",
+    "completeMetadata": "Complete metadata…"
   },
   "live": {
     "title": "On air",
@@ -845,5 +847,58 @@
     "directMonitorHint": "Tick this if you hear yourself twice, the second time with a delay, like an echo. The card already sends the microphone to its output, so RIARS adds it only to the Internet stream; the music still ducks.",
     "chooseFile": "Choose file…",
     "searchLibrary": "Search the library…"
+  },
+  "metadata": {
+    "title": "Complete metadata",
+    "fingerprintOn": "Identification by audio fingerprint (AcoustID) is on.",
+    "fingerprintOff": "Tracks are looked up by their tags and file names. With an AcoustID key, untagged files are also identified by their sound.",
+    "keyLabel": "AcoustID application key",
+    "keyPlaceholder": "AcoustID application key (optional)",
+    "saveKey": "Save key",
+    "keyHint": "Free for non-commercial use: register an application at acoustid.org/new-application. A commercial station needs its own key from acoustid.biz.",
+    "keySaved": "Key saved: the next lookup also uses fingerprints.",
+    "keyCleared": "Key removed: fingerprints are not used.",
+    "scopeSelected_one": "The selected track will be looked up, even if it already has every field. It takes about {{minutes}} min; nothing changes until you apply.",
+    "scopeSelected": "The {{count}} selected tracks will be looked up, even if they already have every field. It takes about {{minutes}} min; nothing changes until you apply.",
+    "wholeLibrary_one": "{{count}} library track missing an artist, album, genre or year will be looked up. It takes about {{minutes}} min; nothing changes until you apply.",
+    "wholeLibrary": "{{count}} library tracks missing an artist, album, genre or year will be looked up. It takes about {{minutes}} min; nothing changes until you apply.",
+    "noneMissing": "No track of a minute or longer is missing an artist, album, genre or year. To check a particular track, select it in the library and choose Complete metadata… from the right-click menu.",
+    "skippedShort_one": "{{count}} track shorter than a minute (jingles, idents) is skipped. To look it up, select it and use the right-click menu.",
+    "skippedShort": "{{count}} tracks shorter than a minute (jingles, idents) are skipped. To look one up, select it and use the right-click menu.",
+    "busy": "A lookup is running: wait for it to finish or press Stop.",
+    "nothingToSearch": "There is nothing to look up.",
+    "start": "Look up",
+    "again": "Look up again",
+    "cancel": "Stop",
+    "progress": "Looking up {{done}} of {{total}} in MusicBrainz…",
+    "stopped": "Stopped after {{done}} of {{total}} tracks.",
+    "finished": "Done: matches for {{found}} of {{total}} tracks. Tick what to change.",
+    "unmatched_one": "{{count}} track without a match",
+    "unmatched": "{{count}} tracks without a match",
+    "unmatchedHint": "Untagged files are only recognised by their sound with an AcoustID key. Jingles and station IDs are not in any catalogue.",
+    "applied": "Applied ✓",
+    "empty": "(empty)",
+    "hasCover": "has one",
+    "coverArchive": "Cover Art Archive",
+    "writeFile": "Also write the tags into the audio files",
+    "confirmWrite_one": "Write the ticked values into {{count}} audio file? The file is rewritten with the new tags.",
+    "confirmWrite": "Write the ticked values into {{count}} audio files? Each file is rewritten with the new tags.",
+    "apply_one": "Apply to {{count}} track",
+    "apply": "Apply to {{count}} tracks",
+    "appliedCount_one": "Changes applied to {{count}} track.",
+    "appliedCount": "Changes applied to {{count}} tracks.",
+    "field": {
+      "title": "Title",
+      "artist": "Artist",
+      "album": "Album",
+      "genre": "Genre",
+      "year": "Year",
+      "cover": "Cover"
+    },
+    "method": {
+      "tags": "by tags",
+      "file_name": "by file name",
+      "fingerprint": "by fingerprint"
+    }
   }
 }

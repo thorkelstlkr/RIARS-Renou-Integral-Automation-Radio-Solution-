@@ -91,6 +91,7 @@ pub fn api_routes() -> Router<Arc<AppState>> {
         .merge(crate::automation_routes::automation_routes())
         .merge(crate::folder_routes::router())
         .merge(crate::live_routes::router())
+        .merge(crate::metadata_routes::router())
 }
 
 #[derive(Deserialize)]

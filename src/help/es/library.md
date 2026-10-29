@@ -22,7 +22,7 @@ Hay tres formas de añadir carpetas:
 
 RIARS escanea en segundo plano, con las subcarpetas, y la línea de avisos dice qué carpeta lee y cuántas pistas nuevas encuentra. Mientras tanto puedes seguir usando el programa. Volver a escanear solo añade lo nuevo: las pistas que ya estaban no se duplican y sus etiquetas no se vuelven a leer.
 
-Lee archivos **MP3, FLAC, WAV, OGG, AAC y M4A**. De cada uno toma título, artista, álbum, género y duración de sus etiquetas. Si no tiene etiquetas, usa el nombre del archivo como título.
+Lee archivos **MP3, FLAC, WAV, OGG, AAC y M4A**. De cada uno toma título, artista, álbum, género y duración de sus etiquetas. Si no tiene etiquetas, usa el nombre del archivo como título; lo que falte se puede [completar desde MusicBrainz](topic:metadata).
 
 En el [servidor sin pantalla](topic:headless-server), `--scan` añade una carpeta a la biblioteca al arrancar, y la API REST y el servidor MCP pueden listar, añadir, quitar y reescanear las carpetas de la biblioteca.
 
@@ -60,6 +60,7 @@ Clic derecho sobre una pista, o sobre la selección:
 | **Preescucha** | Por la [tarjeta de preescucha](topic:sound-cards), sin salir al aire. |
 | **Marcas…** | Abre el editor de [intros y outros](topic:intro-outro). |
 | **Detectar marcas** | Analiza las pistas elegidas; las marcas puestas a mano se conservan. |
+| **Completar metadatos…** | Busca en MusicBrainz el artista, álbum, año, género y carátula que les faltan. Ver [Completar metadatos](topic:metadata). |
 | **Abrir la carpeta del archivo** | Muestra el archivo en el explorador. |
 | **Copiar la ruta** | Copia la ruta del archivo. |
 | **Quitar de la biblioteca…** | Pide confirmación. El archivo **no se borra** del disco, pero la pista sale de sus categorías. También con **Supr**. |

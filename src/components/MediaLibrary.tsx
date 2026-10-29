@@ -7,6 +7,7 @@ import CueEditor from "../analysis/CueEditor";
 import { analysis, preview } from "../analysis/api";
 import ContextMenu, { type ContextEntry } from "../menu/ContextMenu";
 import FolderExplorer from "./FolderExplorer";
+import MetadataDialog from "./MetadataDialog";
 import { startTrackDrag } from "./trackDrag";
 import { useLibraryScan } from "./useLibraryScan";
 
@@ -78,6 +79,8 @@ export default function MediaLibrary() {
   const [anchor, setAnchor] = useState<number | null>(null);
   const [ctx, setCtx] = useState<{ x: number; y: number } | null>(null);
   const [tab, setTab] = useState<Tab>(readTab);
+  // Tracks of the "Complete metadata" dialog; empty: every track with gaps.
+  const [metadataIds, setMetadataIds] = useState<number[] | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   // Which search the loaded pages belong to, so a late page of an old search is dropped.
   const query = useRef({ search: "", busy: false, generation: 0 });
@@ -153,6 +156,7 @@ export default function MediaLibrary() {
   }, []);
   const searchInput = useRef<HTMLInputElement>(null);
   useCommand("library.addFolder", addFolder);
+  useCommand("library.completeMetadata", useCallback(() => setMetadataIds([]), []));
   // Ctrl+L from the Folders tab switches back to the list first.
   const focusSearch = useRef(false);
   useCommand("library.search", useCallback(() => {
@@ -384,6 +388,10 @@ export default function MediaLibrary() {
       label: t("contextMenu.detectMarks"), disabled: menuTracks.length === 0,
       action: () => { void detectMarks(); },
     },
+    {
+      label: t("contextMenu.completeMetadata"), disabled: menuTracks.length === 0,
+      action: () => setMetadataIds(menuTracks.map((tr) => tr.id)),
+    },
     "separator",
     {
       label: t("contextMenu.openFolder"), disabled: menuTrack === null,
@@ -476,6 +484,10 @@ export default function MediaLibrary() {
 
       {ctx && (
         <ContextMenu x={ctx.x} y={ctx.y} title={menuTitle} items={libraryMenu()} onClose={() => setCtx(null)} />
+      )}
+
+      {metadataIds && (
+        <MetadataDialog trackIds={metadataIds} onClose={() => setMetadataIds(null)} onApplied={() => { void loadTracks(); }} />
       )}
 
       {cueTrack && (

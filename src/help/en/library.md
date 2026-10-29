@@ -22,7 +22,7 @@ There are three ways to add folders:
 
 RIARS scans in the background, subfolders included, and the notice line says which folder it is reading and how many new tracks it found. You can keep working meanwhile. Rescanning only adds what is new: tracks already in the library are not duplicated and their tags are not read again.
 
-It reads **MP3, FLAC, WAV, OGG, AAC and M4A** files, taking title, artist, album, genre and duration from their tags; a file without tags uses its file name as the title.
+It reads **MP3, FLAC, WAV, OGG, AAC and M4A** files, taking title, artist, album, genre and duration from their tags; a file without tags uses its file name as the title. What is missing can be [completed from MusicBrainz](topic:metadata).
 
 On the [headless server](topic:headless-server), `--scan` adds a library folder at startup, and the REST API and MCP server can list, add, remove and rescan library folders.
 
@@ -61,6 +61,7 @@ Right-click a track, or the selection:
 | **Pre-listen** | On the [pre-listen card](topic:sound-cards), not on air. |
 | **Marks…** | Opens the [intro and outro](topic:intro-outro) editor. |
 | **Detect marks** | Analyses the chosen tracks; hand-set marks are kept. |
+| **Complete metadata…** | Looks up the missing artist, album, year, genre and cover in MusicBrainz. See [Complete metadata](topic:metadata). |
 | **Show in folder** | Shows the file in the file manager. |
 | **Copy path** | Copies the file path. |
 | **Remove from library…** | Asks first. The file **stays on disk**, but the track leaves its categories. **Delete** does the same. |

@@ -111,6 +111,7 @@ export function useAppMenus({ tab, setTab, openHelp, openDialog, setNotice }: Op
       ] },
       { id: "edit", label: t("menu.edit"), items: [
         { label: t("menu.searchLibrary"), shortcut: "Ctrl+L", action: () => runCommand("library.search") },
+        { label: t("menu.completeMetadata"), action: () => runCommand("library.completeMetadata") },
         { label: t("menu.clearPlaylist"), action: () => onTab("playlist", "playlist.clear") },
       ] },
       { id: "view", label: t("menu.view"), items: [

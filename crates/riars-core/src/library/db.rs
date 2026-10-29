@@ -78,6 +78,7 @@ impl MediaLibrary {
         migrate(&db)?;
         super::folders::init_schema(&db)?;
         crate::automation::store::init_schema(&db)?;
+        super::metadata::init_schema(&db)?;
         Ok(Self { db, revision: 0 })
     }
 
@@ -495,7 +496,7 @@ pub fn fold(text: &str) -> String {
         .collect()
 }
 
-fn search_key(fields: &[&str]) -> String {
+pub(super) fn search_key(fields: &[&str]) -> String {
     fold(&fields.join(" "))
 }
 
@@ -577,7 +578,29 @@ pub(super) fn read_tags(path: &Path) -> TrackTags {
     if let Some(revision) = probed.format.metadata().current() {
         apply(revision);
     }
+    if tags.title.is_none() || tags.artist.is_none() {
+        fill_from_lofty(path, &mut tags);
+    }
     tags
+}
+
+/// Tags symphonia does not read (RIFF INFO and ID3 chunks in WAV, among others).
+fn fill_from_lofty(path: &Path, tags: &mut TrackTags) {
+    use lofty::prelude::*;
+    let Ok(tagged) = lofty::read_from_path(path) else { return };
+    for tag in tagged.tags() {
+        let found = [
+            (&mut tags.title, tag.title()),
+            (&mut tags.artist, tag.artist()),
+            (&mut tags.album, tag.album()),
+            (&mut tags.genre, tag.genre()),
+        ];
+        for (slot, value) in found {
+            if let Some(value) = value.map(|v| v.trim().to_string()).filter(|v| !v.is_empty()) {
+                slot.get_or_insert(value);
+            }
+        }
+    }
 }
 
 #[cfg(test)]
