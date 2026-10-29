@@ -11,6 +11,8 @@ import CueEditor from "../analysis/CueEditor";
 import ContextMenu, { type ContextEntry } from "../menu/ContextMenu";
 import { usePlaylistDrop } from "./usePlaylistDrop";
 import { metadata, type TrackMetadata } from "./metadataReview";
+import PlaylistTabBar, { tabName } from "./PlaylistTabBar";
+import { plannedStarts, setShownTab, tabsApi, type TabList, type Tabs } from "./playlistTabs";
 
 interface Playlist {
   name?: string;
@@ -112,6 +114,48 @@ export default function PlaylistPanel() {
   const [cueItem, setCueItem] = useState<{ trackId: number; title: string } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // Tabs: several lists open for editing; only the one on air plays. `shown` is the
+  // tab in the panel (null until the tabs load: the list on air), `draft` its list when
+  // it is not the one on air.
+  const [tabs, setTabs] = useState<Tabs | null>(null);
+  const [shown, setShown] = useState<string | null>(() => {
+    try { return localStorage.getItem("riars.playlist.tab"); } catch { return null; }
+  });
+  const [draft, setDraft] = useState<TabList | null>(null);
+  const shownId = tabs && shown && tabs.tabs.some((tab) => tab.id === shown) ? shown : tabs?.on_air ?? null;
+  const onAir = !tabs || shownId === tabs.on_air;
+  const draftId = onAir ? null : shownId;
+  const shownInfo = tabs?.tabs.find((tab) => tab.id === shownId) ?? null;
+
+  const loadTabs = useCallback(async () => {
+    try { setTabs(await tabsApi.list()); } catch { /* not ready */ }
+  }, []);
+  useEffect(() => {
+    void loadTabs();
+    // The tab on air shows what it has left to play: follow the list on air.
+    const unlisten = listen("playlist-revision", () => { void loadTabs(); });
+    return () => { unlisten.then((f) => f()); };
+  }, [loadTabs]);
+
+  const showTab = useCallback((id: string) => {
+    setShown(id);
+    try { localStorage.setItem("riars.playlist.tab", id); } catch { /* private window */ }
+  }, []);
+
+  // Library and Folders "Add to playlist" add to the tab shown.
+  useEffect(() => { setShownTab(draftId); }, [draftId]);
+
+  const loadDraft = useCallback(async () => {
+    if (!draftId) { setDraft(null); return; }
+    try { setDraft(await tabsApi.get(draftId)); } catch { setDraft(null); }
+  }, [draftId]);
+  useEffect(() => {
+    void loadDraft();
+    const changed = () => { void loadDraft(); void loadTabs(); };
+    window.addEventListener("playlist-changed", changed);
+    return () => window.removeEventListener("playlist-changed", changed);
+  }, [loadDraft, loadTabs]);
+
   // Start times follow the position of the track on air.
   useEffect(() => {
     invoke<EngineState>("engine_get_state").then(setEngine).catch(() => {});
@@ -127,20 +171,23 @@ export default function PlaylistPanel() {
 
   const savePlaylist = useCallback(async () => {
     try {
-      setSaved(await invoke<SavedPlaylist[]>("playlists_save", { name: saveName }));
+      setSaved(await invoke<SavedPlaylist[]>("playlists_save", { name: saveName, tab: draftId }));
       setMenu("none");
       setSaveName("");
       setError(null);
     } catch (e) { setError(String(e)); }
-  }, [saveName]);
+  }, [saveName, draftId]);
 
+  // A saved playlist opens in a tab of its own: the list on air is left alone.
   const loadPlaylist = useCallback(async (id: string) => {
     try {
-      setPlaylist(await invoke<Playlist>("playlists_load", { id, play: false }));
+      const list = await tabsApi.open("", id);
+      await loadTabs();
+      showTab(list.id);
       setMenu("none");
       setError(null);
     } catch (e) { setError(String(e)); }
-  }, []);
+  }, [loadTabs, showTab]);
 
   const deletePlaylist = useCallback(async (id: string) => {
     try { setSaved(await invoke<SavedPlaylist[]>("playlists_delete", { id })); } catch (e) { setError(String(e)); }
@@ -167,25 +214,46 @@ export default function PlaylistPanel() {
     return () => { unlisten.then((f) => f()); window.removeEventListener("playlist-changed", refresh); };
   }, [refresh]);
 
+  // Playlist commands work on the tab shown (the list on air when `tab` is null).
   const run = useCallback(async (cmd: string, args?: Record<string, unknown>) => {
     try {
-      const result = await invoke<Playlist | null>(cmd, args);
-      if (result) setPlaylist(result); else await refresh();
+      const result = await invoke<Playlist | null>(cmd, { ...args, tab: draftId });
+      if (draftId) {
+        if (result) setDraft(result as unknown as TabList); else await loadDraft();
+      } else if (result) setPlaylist(result); else await refresh();
       setError(null);
+      if (draftId) void loadTabs();
     } catch (e) {
       setError(cmd === "playlist_play" ? t("library.loadError", { error: String(e) }) : String(e));
     }
-  }, [refresh, t]);
+  }, [refresh, t, draftId, loadDraft, loadTabs]);
+
+  const tabAction = useCallback(async (f: () => Promise<unknown>) => {
+    try {
+      await f();
+      await loadTabs();
+      await loadDraft();
+      await refresh();
+      setError(null);
+    } catch (e) { setError(String(e)); }
+  }, [loadTabs, loadDraft, refresh]);
 
   // File menu and shortcuts.
   useCommand("playlist.open", useCallback(() => { void openMenu("open"); }, [openMenu]));
   useCommand("playlist.save", useCallback(() => { void openMenu("save"); }, [openMenu]));
   useCommand("playlist.clear", useCallback(() => { void run("playlist_clear"); }, [run]));
 
-  const { items, current_index } = playlist;
+  const { items, current_index } = onAir ? playlist : { items: draft?.items ?? [], current_index: -1 };
   const total = items.reduce((sum, i) => sum + i.duration_ms, 0);
-  const starts = engine ? startTimes(items, current_index, engine) : [];
-  const drop = usePlaylistDrop(listRef, items.map((item) => item.id));
+  const starts = onAir
+    ? engine ? startTimes(items, current_index, engine) : []
+    : plannedStarts(items, shownInfo?.start_time ?? null);
+  const drop = usePlaylistDrop(listRef, items.map((item) => item.id), draftId);
+  // A list not on air does not play: double click and Enter pre-listen instead.
+  const activate = (i: number) => {
+    if (onAir) void run("playlist_play", { index: i });
+    else preview.playPath(items[i].track_path, 0).catch((e) => setError(String(e)));
+  };
 
   // Forget the rows that left the playlist.
   useEffect(() => {
@@ -309,7 +377,7 @@ export default function PlaylistPanel() {
     }
     if (e.key === "Enter") {
       e.preventDefault();
-      if (idxs.length === 1) void run("playlist_play", { index: idxs[0] });
+      if (idxs.length === 1) activate(idxs[0]);
       return;
     }
     if (e.key === "Delete") {
@@ -401,8 +469,8 @@ export default function PlaylistPanel() {
   const toggleStopAfter = async () => {
     if (!menuItem) return;
     try {
-      await live.setStopAfter(menuItem.id, !menuItem.stop_after);
-      await refresh();
+      await live.setStopAfter(menuItem.id, !menuItem.stop_after, draftId);
+      if (draftId) await loadDraft(); else await refresh();
       setError(null);
     } catch (e) {
       setError(String(e));
@@ -432,16 +500,36 @@ export default function PlaylistPanel() {
     }
   };
 
+  // Copy or move the selection to the other tabs; from a list not on air, also straight
+  // after the track on air.
+  const otherTabs = (tabs?.tabs ?? []).filter((tab) => tab.id !== shownId);
+  const copyEntries = (): ContextEntry[] => [
+    ...(onAir ? [] : [{
+      label: t("playlist.tabs.insertNextOnAir"), disabled: menuIds.length === 0,
+      action: () => { void tabAction(() => tabsApi.copy(menuIds, draftId, null, "Next", false)); },
+    }]),
+    ...otherTabs.map((tab) => ({
+      label: t("playlist.tabs.copyTo", { name: tabName(tab, t) }), disabled: menuIds.length === 0,
+      action: () => { void tabAction(() => tabsApi.copy(menuIds, draftId, tab.id === tabs?.on_air ? null : tab.id, "End", false)); },
+    })),
+    ...otherTabs.map((tab) => ({
+      label: t("playlist.tabs.moveTo", { name: tabName(tab, t) }), disabled: menuIds.length === 0,
+      action: () => { void tabAction(() => tabsApi.copy(menuIds, draftId, tab.id === tabs?.on_air ? null : tab.id, "End", true)); },
+    })),
+  ];
+
   const playlistMenu = (): ContextEntry[] => [
-    {
-      label: t("contextMenu.playNow"), shortcut: t("contextMenu.keyEnter"), disabled: menuIndex === null,
-      action: atItem((i) => { void run("playlist_play", { index: i }); }),
-    },
-    {
-      label: t("contextMenu.playNext"),
-      disabled: menuIndex === null || menuIndex === current_index,
-      action: () => { if (menuItem) void run("playlist_play_next", { id: menuItem.id }); },
-    },
+    ...(onAir ? [
+      {
+        label: t("contextMenu.playNow"), shortcut: t("contextMenu.keyEnter"), disabled: menuIndex === null,
+        action: atItem((i) => { void run("playlist_play", { index: i }); }),
+      },
+      {
+        label: t("contextMenu.playNext"),
+        disabled: menuIndex === null || menuIndex === current_index,
+        action: () => { if (menuItem) void run("playlist_play_next", { id: menuItem.id }); },
+      },
+    ] : []),
     {
       label: t("contextMenu.prelisten"), disabled: menuIndex === null,
       action: () => { void prelisten(); },
@@ -480,16 +568,17 @@ export default function PlaylistPanel() {
       disabled: menuIndexes.length === 0,
       action: () => { void run("playlist_remove_many", { ids: menuIds }); },
     },
-    {
+    ...(onAir ? [{
       label: t("contextMenu.removePlayed"), disabled: current_index === 0,
       action: () => { void run("playlist_remove_played"); },
-    },
+    }] : []),
     {
       label: t("contextMenu.clearPlaylist"), danger: true,
       action: () => {
         if (window.confirm(t("contextMenu.confirmClear"))) void run("playlist_clear");
       },
     },
+    ...(copyEntries().length > 0 ? ["separator" as const, ...copyEntries()] : []),
     "separator",
     {
       label: t("contextMenu.openFolder"), disabled: menuItem === null,
@@ -505,8 +594,30 @@ export default function PlaylistPanel() {
 
   return (
     <div style={S.panel}>
+      {tabs && shownId && (
+        <PlaylistTabBar tabs={tabs} shown={shownId} onShow={showTab} onTabs={setTabs} onError={setError} />
+      )}
       <div style={S.toolbar}>
         <h2 style={S.title}>{t("playlist.title")}</h2>
+        {draftId && shownInfo && (
+          <>
+            <label style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6 }}
+              title={t("playlist.tabs.startAtHint")}>
+              {t("playlist.tabs.startAt")}
+              <input key={draftId} type="time" step={1} style={{ fontSize: 12 }} data-testid="playlist-tab-start"
+                defaultValue={shownInfo.start_time ?? ""}
+                onBlur={(e) => {
+                  const value = e.target.value || null;
+                  if (value !== (shownInfo.start_time ?? null)) void tabAction(() => tabsApi.setStart(draftId, value));
+                }} />
+            </label>
+            <button style={{ ...S.btn, background: "var(--accent)", color: "#fff" }} data-testid="playlist-tab-on-air"
+              title={t("playlist.tabs.putOnAirHint")}
+              onClick={() => { void tabAction(() => tabsApi.onAir(draftId)); }}>
+              {t("playlist.tabs.putOnAir")}
+            </button>
+          </>
+        )}
         <button style={S.btn} onClick={() => openMenu("open")}>{t("playlist.open")}</button>
         <button style={S.btn} onClick={() => openMenu("save")} disabled={items.length === 0}>{t("playlist.save")}</button>
         <button style={S.btn} onClick={() => run("playlist_clear")} disabled={items.length === 0}>
@@ -576,7 +687,7 @@ export default function PlaylistPanel() {
               }}
               onClick={(e) => onRowClick(e, i)}
               onContextMenu={(e) => onRowContext(e, i)}
-              onDoubleClick={() => run("playlist_play", { index: i })}>
+              onDoubleClick={() => activate(i)}>
               <span style={S.num}>{i + 1}</span>
               <span style={S.start}>{clock(starts[i])}</span>
               <span style={{ ...S.tit, display: "flex", alignItems: "center" }}>

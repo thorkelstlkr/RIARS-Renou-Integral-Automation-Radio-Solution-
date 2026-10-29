@@ -9,6 +9,7 @@ import ContextMenu, { type ContextEntry } from "../menu/ContextMenu";
 import FolderExplorer from "./FolderExplorer";
 import MetadataDialog from "./MetadataDialog";
 import { startTrackDrag } from "./trackDrag";
+import { shownTab } from "./playlistTabs";
 import { useLibraryScan } from "./useLibraryScan";
 
 interface Track {
@@ -179,6 +180,8 @@ export default function MediaLibrary() {
           path: track.file_path, title: track.title, artist: track.artist, durationMs: track.duration_ms,
         })),
         position,
+        // "Add to playlist" goes to the tab being edited; "Play next" to the air.
+        tab: position === "End" ? shownTab() : null,
       });
       window.dispatchEvent(new Event("playlist-changed"));
       setNotice(null);

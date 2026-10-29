@@ -3,6 +3,7 @@ pub mod automation_tools;
 pub mod folder_tools;
 pub mod live_tools;
 pub mod metadata_tools;
+pub mod tab_tools;
 pub mod tools;
 
 use std::sync::{Arc, Mutex};

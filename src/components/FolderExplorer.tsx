@@ -6,6 +6,7 @@ import ContextMenu, { type ContextEntry } from "../menu/ContextMenu";
 import { preview } from "../analysis/api";
 import { useLibraryScan } from "./useLibraryScan";
 import { startTrackDrag } from "./trackDrag";
+import { shownTab } from "./playlistTabs";
 
 interface DirEntry {
   name: string;
@@ -332,6 +333,8 @@ export default function FolderExplorer({ onLibraryChanged }: { onLibraryChanged:
           path: file.path, title: fileTitle(file), artist: fileArtist(file), durationMs: fileDuration(file),
         })),
         position,
+        // "Add to playlist" goes to the tab being edited; "Play next" to the air.
+        tab: position === "End" ? shownTab() : null,
       });
       window.dispatchEvent(new Event("playlist-changed"));
       setNotice(null);

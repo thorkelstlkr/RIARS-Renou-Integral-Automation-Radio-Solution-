@@ -703,6 +703,40 @@ impl AudioEngine {
         self.advance_blocked = false;
     }
 
+    /// Put `incoming` on air, as from another playlist tab, without touching the audio:
+    /// the track playing goes on to its end, then `incoming` follows. The track playing
+    /// (and the next one, if already handed to the audio thread for a gapless start or
+    /// a crossfade) move to the top of the new list. Returns the list leaving the air,
+    /// cut down to what it had left to play, so putting it back resumes where it was.
+    pub fn take_over(&mut self, mut incoming: Playlist) -> Playlist {
+        let playing = self.playback_state() != PlaybackState::Stopped && self.on_air.is_some();
+        let current = self.playlist.current_index;
+        let queued_id = self.queued.as_ref().map(|(item, _)| item.id.clone());
+        let mut head = Vec::new();
+        let mut rest = Vec::new();
+        for (index, item) in self.playlist.items.iter().enumerate() {
+            if playing && (index == current || Some(&item.id) == queued_id.as_ref()) {
+                head.push(item.clone());
+            } else if index > current || (!playing && index == current) {
+                rest.push(item.clone());
+            }
+        }
+        let mut leaving = std::mem::replace(&mut self.playlist, Playlist::new(String::new()));
+        leaving.items = rest;
+        leaving.current_index = 0;
+        // Items keep their ids. A decode under way for an item of the old list finds it
+        // gone and is dropped (`play_index_unlocked`), unless it was carried over.
+        let carried: std::collections::HashSet<String> = head.iter().map(|i| i.id.clone()).collect();
+        incoming.items.retain(|item| !carried.contains(&item.id));
+        head.append(&mut incoming.items);
+        incoming.items = head;
+        incoming.current_index = 0;
+        self.playlist = incoming;
+        self.advance_blocked = false;
+        self.playlist_revision += 1;
+        leaving
+    }
+
     /// What to save so a restart can carry on (the stream is added by the caller).
     pub fn snapshot(&self) -> SessionState {
         SessionState {
@@ -1380,6 +1414,37 @@ mod tests {
         // Without a hold, the next item is prepared as usual.
         engine.start_index(0, short());
         assert_eq!(run_out(&mut engine), Some(1));
+    }
+
+    #[test]
+    fn take_over_keeps_the_track_on_air_and_returns_what_was_left() {
+        let mut engine = AudioEngine::new_headless().unwrap();
+        playlist(&mut engine, 4);
+        let main_id = engine.playlist().id.clone();
+        let mut programme = Playlist::new("Programme".into());
+        programme.add_item("p0.wav".into(), "p0".into(), String::new(), 200);
+        programme.add_item("p1.wav".into(), "p1".into(), String::new(), 200);
+        let programme_id = programme.id.clone();
+
+        // Stopped on item 1: nothing is carried over, item 1 is still to play.
+        engine.playlist_mut().current_index = 1;
+        let left = engine.take_over(programme.clone());
+        assert_eq!(left.id, main_id);
+        assert_eq!(left.items.iter().map(|i| i.title.as_str()).collect::<Vec<_>>(), ["t1", "t2", "t3"]);
+        assert_eq!(engine.playlist().id, programme_id);
+        assert_eq!(engine.playlist().items.len(), 2);
+
+        // Playing item 0 of the main list again: it stays on air at the top of the
+        // programme, which follows it; the main list keeps t1, t2.
+        engine.take_over(left);
+        engine.start_index(0, short());
+        let left = engine.take_over(programme);
+        assert_eq!(left.items.iter().map(|i| i.title.as_str()).collect::<Vec<_>>(), ["t2", "t3"]);
+        let titles: Vec<_> = engine.playlist().items.iter().map(|i| i.title.clone()).collect();
+        assert_eq!(titles, ["t1", "p0", "p1"]);
+        assert_eq!(engine.playlist().current_index, 0);
+        assert_eq!(engine.on_air().map(|(item, _)| item.title.as_str()), Some("t1"));
+        assert_eq!(run_out(&mut engine), Some(1), "the programme follows the track on air");
     }
 
     #[test]

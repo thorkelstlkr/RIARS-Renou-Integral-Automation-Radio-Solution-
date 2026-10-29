@@ -210,15 +210,11 @@ pub fn live_stop(button: Option<u32>, state: State<AppState>) -> Result<(), Stri
 pub fn playlist_set_stop_after(
     item_id: String,
     value: bool,
+    tab: Option<String>,
     state: State<AppState>,
 ) -> Result<(), String> {
-    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
-    let playlist = engine.playlist_mut();
-    match playlist.items.iter_mut().find(|item| item.id == item_id) {
-        Some(item) => {
-            item.stop_after = value;
-            Ok(())
-        }
-        None => Err(format!("No playlist item {item_id}")),
-    }
+    let (found, _) = crate::tab_cmds::edit_list(&state, tab.as_deref(), |playlist| {
+        playlist.items.iter_mut().find(|item| item.id == item_id).map(|item| item.stop_after = value)
+    })?;
+    found.ok_or_else(|| format!("No playlist item {item_id}"))
 }
