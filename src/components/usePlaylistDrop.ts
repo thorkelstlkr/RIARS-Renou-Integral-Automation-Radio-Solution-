@@ -3,9 +3,7 @@ import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-
-/** Type of the track a library or Folders row carries while dragged. */
-export const TRACK_DRAG_TYPE = "application/x-riars-track";
+import { useTrackDrop } from "./trackDrag";
 
 interface DropProgress {
   job: number;
@@ -32,12 +30,6 @@ export interface PlaylistDrop {
   dropAt: number | null;
   /** Progress line of the drops being added, or the result of the last one. */
   notice: DropNotice | null;
-  /** Handlers for drags from the library and the Folders tab (HTML5 drag and drop). */
-  listProps: {
-    onDragOver: (e: React.DragEvent) => void;
-    onDragLeave: (e: React.DragEvent) => void;
-    onDrop: (e: React.DragEvent) => void;
-  };
 }
 
 let nextJob = 1;
@@ -163,31 +155,18 @@ export function usePlaylistDrop(
     };
   }, [indexAt, autoScroll, add]);
 
-  // A track dragged from the library or the Folders tab.
-  const listProps = {
-    onDragOver: (e: React.DragEvent) => {
-      if (!e.dataTransfer.types.includes(TRACK_DRAG_TYPE)) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
-      autoScroll(e.clientY);
-      setDropAt(indexAt(e.clientX, e.clientY));
-    },
-    onDragLeave: (e: React.DragEvent) => {
-      const to = e.relatedTarget as Node | null;
-      if (!to || !listRef.current?.contains(to)) setDropAt(null);
-    },
-    onDrop: (e: React.DragEvent) => {
-      const raw = e.dataTransfer.getData(TRACK_DRAG_TYPE);
-      if (!raw) return;
-      e.preventDefault();
-      const at = indexAt(e.clientX, e.clientY) ?? ids.current.length;
+  // Tracks dragged from the library or the Folders tab (pointer drag, see trackDrag.ts).
+  useTrackDrop((e) => {
+    if (e.phase === "end") { setDropAt(null); return; }
+    const at = indexAt(e.x, e.y);
+    if (e.phase === "drop") {
       setDropAt(null);
-      try {
-        const track = JSON.parse(raw) as { file_path?: string };
-        if (track.file_path) void add([track.file_path], at);
-      } catch { /* not a track */ }
-    },
-  };
+      if (at !== null) void add(e.tracks.map((tr) => tr.file_path), at);
+      return;
+    }
+    if (at !== null) autoScroll(e.y);
+    setDropAt(at);
+  });
 
   const running = Object.values(progress);
   let notice: DropNotice | null = result;
@@ -200,5 +179,5 @@ export function usePlaylistDrop(
       : { text: t("playlist.drop.reading", { done, total }) };
   }
 
-  return { dropAt, notice, listProps };
+  return { dropAt, notice };
 }

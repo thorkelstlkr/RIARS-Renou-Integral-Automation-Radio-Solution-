@@ -516,7 +516,7 @@ export default function PlaylistPanel() {
       </div>
       {error && <div style={{ ...S.foot, color: "var(--red)", borderTop: "none" }}>{error}</div>}
       <div ref={listRef} style={S.list} tabIndex={0} onKeyDown={onListKeyDown}
-        onClick={() => listRef.current?.focus()} {...drop.listProps}>
+        onClick={() => listRef.current?.focus()}>
         {items.length === 0 && (
           <div style={{ ...S.empty, ...(drop.dropAt !== null ? S.dropEmpty : {}) }}>
             {drop.dropAt !== null ? t("playlist.drop.here") : t("playlist.empty")}
