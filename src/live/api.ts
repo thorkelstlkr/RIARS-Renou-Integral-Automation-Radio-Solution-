@@ -113,5 +113,6 @@ export const live = {
   stop: (button: number | null) => invoke<void>("live_stop", { button }),
 
   /** Stop when this playlist item ends. */
-  setStopAfter: (itemId: string, value: boolean) => invoke<void>("playlist_set_stop_after", { itemId, value }),
+  setStopAfter: (itemId: string, value: boolean, tab: string | null = null) =>
+    invoke<void>("playlist_set_stop_after", { itemId, value, tab }),
 };

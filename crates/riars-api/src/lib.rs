@@ -3,6 +3,7 @@ mod automation_routes;
 mod folder_routes;
 mod live_routes;
 mod metadata_routes;
+mod tab_routes;
 pub mod routes;
 pub mod ws;
 

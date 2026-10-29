@@ -3,7 +3,7 @@ id: playlist
 title: Lista de reproducción
 section: onair
 order: 2
-keywords: playlist, lista, cola, orden, guardar, abrir, hora de inicio, generado, queue, arrastrar, soltar, carpeta, explorador
+keywords: playlist, lista, cola, orden, guardar, abrir, hora de inicio, generado, queue, arrastrar, soltar, carpeta, explorador, pestañas, en antena, programa, insertos
 ---
 
 # Lista de reproducción
@@ -26,11 +26,24 @@ La lista de reproducción contiene lo que suena y lo que viene después. La pist
 - **▲ / ▼**: subir o bajar (también **Alt+↑ / Alt+↓**). **✕**: quitar (también **Supr**, con varios elementos seleccionados).
 - **Ctrl+clic**, **Mayús+clic** y **Ctrl+A** seleccionan varios elementos.
 - **Clic derecho**: Reproducir ahora, Reproducir a continuación, Preescucha, Marcas…, Subir, Bajar, Al principio, Al final, Quitar de la lista, Quitar las ya emitidas, Vaciar la lista, Abrir la carpeta del archivo y Copiar la ruta.
-- **Guardar** (**Ctrl+S**): guarda la lista con un nombre.
-- **Abrir** (**Ctrl+O**): carga una lista guardada. Las listas guardadas sirven también en la [parrilla](topic:grid) y en los [relojes](topic:clocks).
+- **Guardar** (**Ctrl+S**): guarda con un nombre la lista de la pestaña que ves.
+- **Abrir** (**Ctrl+O**): abre una lista guardada en una pestaña nueva; la lista en antena no cambia. Las listas guardadas sirven también en la [parrilla](topic:grid) y en los [relojes](topic:clocks).
 - **Limpiar**: vacía la lista.
 
 Al pie ves cuántos elementos hay y cuánto duran en total.
+
+## Pestañas: varias listas a la vez
+
+Encima de la lista hay una pestaña por cada lista abierta. Puedes preparar en una pestaña los insertos de un programa mientras suena otra.
+
+- Solo suena una lista: la que lleva el **punto rojo** (en antena). Las demás se editan igual, con los mismos arrastres, el clic derecho y las marcas, pero no reproducen nada: el doble clic y **Intro** hacen preescucha.
+- **+** abre una lista vacía. **Doble clic** en una pestaña le cambia el nombre, y **✕** la cierra (pide confirmación si tiene elementos; guárdala antes si quieres conservarla). La pestaña en antena no se puede cerrar.
+- **Añadir a la lista** desde la biblioteca o Carpetas añade a la pestaña que ves. **Reproducir a continuación** va siempre a la lista en antena.
+- **Empieza a las**: la hora prevista de inicio de una lista que no está en antena. La columna Inicio calcula desde ella a qué hora sonará cada elemento.
+- **Poner en antena** (botón, o clic derecho en la pestaña): la canción que suena termina y después sigue esta lista, sin cortes. La lista que sonaba se queda en su pestaña con lo que le faltaba por sonar, así que al volver a ponerla en antena sigue donde iba.
+- **Clic derecho** en elementos: **Copiar a** o **Mover a** otra pestaña y, desde una lista que no está en antena, **Insertar a continuación en antena**, que los pone justo después de lo que suena.
+
+Las pestañas se guardan solas con cada cambio y al abrir RIARS vuelven las mismas.
 
 ## Añadir arrastrando
 

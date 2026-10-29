@@ -41,11 +41,12 @@ let nextJob = 1;
  * files to the library and reports progress as `playlist-drop` events.
  *
  * `listRef` is the scrolling list of rows (`data-row-index` on each row); `itemIds`
- * the ids of the rows, in order.
+ * the ids of the rows, in order; `tab` the playlist tab shown (null: the list on air).
  */
 export function usePlaylistDrop(
   listRef: React.RefObject<HTMLDivElement | null>,
   itemIds: string[],
+  tab: string | null = null,
 ): PlaylistDrop {
   const { t } = useTranslation();
   const [dropAt, setDropAt] = useState<number | null>(null);
@@ -53,6 +54,8 @@ export function usePlaylistDrop(
   const [result, setResult] = useState<DropNotice | null>(null);
   const ids = useRef(itemIds);
   ids.current = itemIds;
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
   const tr = useRef(t);
   tr.current = t;
 
@@ -85,7 +88,7 @@ export function usePlaylistDrop(
     setResult(null);
     setProgress((p) => ({ ...p, [job]: { job, state: "listing", done: 0, total: 0 } }));
     try {
-      const r = await invoke<DropResult>("playlist_drop_files", { paths, beforeId, job });
+      const r = await invoke<DropResult>("playlist_drop_files", { paths, beforeId, tab: tabRef.current, job });
       const t = tr.current;
       const parts: string[] = [];
       if (r.added > 0) parts.push(t("playlist.drop.added", { count: r.added }));

@@ -29,6 +29,19 @@ Use the arrows on each row for **Move up** and **Move down** (or **Alt+Up / Alt+
 
 **Right-click** an item for: Play now, Play next, Pre-listen, Marks…, Move up, Move down, Move to top, Move to bottom, Remove from playlist, Remove played items, Clear the playlist, Show in folder and Copy path.
 
+## Tabs: several lists at once
+
+There is a tab above the playlist for each open list, so you can prepare a programme's inserts in one tab while another plays.
+
+- Only one list plays: the one with the **red dot** (on air). The others are edited the same way (dragging, right-click, marks) but play nothing: double-click and **Enter** pre-listen.
+- **+** opens an empty list. **Double-click** a tab to rename it; **✕** closes it (asking first when it has items; save it first to keep it). The tab on air cannot be closed.
+- **Add to playlist** in the library or Folders adds to the tab you are looking at. **Play next** always goes to the list on air.
+- **Starts at**: the planned start time of a list that is not on air. The Start column counts from it, so you see when each item will play.
+- **Put on air** (button, or right-click the tab): the track playing ends, then this list follows, with no cut. The list that was playing stays in its tab with what it had left, so putting it back on air carries on where it was.
+- **Right-click** items: **Copy to** or **Move to** another tab and, from a list not on air, **Insert next on air**, right after the track playing.
+
+Tabs are saved with every change and come back when RIARS starts.
+
 ## Add by dragging
 
 You can build the playlist by dragging:
@@ -48,7 +61,7 @@ Items added by the automation appear at the end. You can move or remove them; th
 
 ## Save and open
 
-Click **Save**, type a **Playlist name** and confirm. Saved playlists can be opened later with **Open**; the list shows their name, number of items and total duration, and a cross deletes them. Saved playlists can also be used as a source in clocks and grid rules.
+Click **Save**, type a **Playlist name** and confirm: it saves the list of the tab you are looking at. **Open** opens a saved playlist in a new tab, leaving the list on air alone; the list shows their name, number of items and total duration, and a cross deletes them. Saved playlists can also be used as a source in clocks and grid rules.
 
 **Ctrl+S** saves the current playlist and **Ctrl+O** opens a saved one.
 

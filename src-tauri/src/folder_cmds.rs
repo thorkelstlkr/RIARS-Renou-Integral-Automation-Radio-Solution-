@@ -184,13 +184,14 @@ pub struct DropResult {
 
 /// Add files and folders dropped from the system's file manager (or a track dragged
 /// from the library) to the playlist, before the item `before_id`, or at the end
-/// when it is missing or gone. Files not in the library join it first, so they get
+/// when it is missing or gone, in tab `tab` (the list on air when absent). Files not in the library join it first, so they get
 /// analysis, normalisation and intro/outro marks like the rest; the new ones are
 /// analysed in the background. Progress arrives as `playlist-drop` events.
 #[tauri::command]
 pub async fn playlist_drop_files(
     paths: Vec<String>,
     before_id: Option<String>,
+    tab: Option<String>,
     job: u32,
     app: AppHandle,
 ) -> Result<DropResult, String> {
@@ -212,12 +213,10 @@ pub async fn playlist_drop_files(
             .into_iter()
             .map(|t| PlaylistItem::new(t.file_path, t.title, t.artist, t.duration_ms))
             .collect();
-        {
-            let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
-            let playlist = engine.playlist_mut();
+        crate::tab_cmds::edit_list(&state, tab.as_deref(), |playlist| {
             let at = before_id.and_then(|id| playlist.index_of(&id)).unwrap_or(playlist.len());
             playlist.insert_items(at, items);
-        }
+        })?;
         crate::analysis_cmds::analyze_new_tracks(&app, ids);
         Ok(DropResult { added, skipped: dropped.skipped, failed, truncated: dropped.truncated })
     })

@@ -79,6 +79,7 @@ impl MediaLibrary {
         super::folders::init_schema(&db)?;
         crate::automation::store::init_schema(&db)?;
         super::metadata::init_schema(&db)?;
+        super::tabs::init_schema(&db)?;
         Ok(Self { db, revision: 0 })
     }
 

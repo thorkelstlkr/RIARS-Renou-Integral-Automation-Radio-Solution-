@@ -14,6 +14,7 @@ mod automation_cmds;
 mod folder_cmds;
 mod live_cmds;
 mod metadata_cmds;
+mod tab_cmds;
 
 #[tauri::command]
 fn set_locale(lang: String) -> Result<(), String> {
@@ -443,17 +444,13 @@ fn playlist_add(
 }
 
 #[tauri::command]
-fn playlist_remove(index: usize, state: State<AppState>) -> Result<Playlist, String> {
-    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
-    engine.playlist_mut().remove_item(index);
-    Ok(engine.playlist().clone())
+fn playlist_remove(index: usize, tab: Option<String>, state: State<AppState>) -> Result<Playlist, String> {
+    Ok(tab_cmds::edit_list(&state, tab.as_deref(), |list| { list.remove_item(index); })?.1)
 }
 
 #[tauri::command]
-fn playlist_move(from: usize, to: usize, state: State<AppState>) -> Result<Playlist, String> {
-    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
-    engine.playlist_mut().move_item(from, to);
-    Ok(engine.playlist().clone())
+fn playlist_move(from: usize, to: usize, tab: Option<String>, state: State<AppState>) -> Result<Playlist, String> {
+    Ok(tab_cmds::edit_list(&state, tab.as_deref(), |list| list.move_item(from, to))?.1)
 }
 
 /// A library track to put in the playlist.
@@ -474,7 +471,12 @@ enum InsertPosition {
 }
 
 #[tauri::command]
-fn playlist_insert(tracks: Vec<NewItem>, position: InsertPosition, state: State<AppState>) -> Result<Playlist, String> {
+fn playlist_insert(
+    tracks: Vec<NewItem>,
+    position: InsertPosition,
+    tab: Option<String>,
+    state: State<AppState>,
+) -> Result<Playlist, String> {
     if tracks.len() > 10_000 {
         return Err("At most 10000 tracks at once".to_string());
     }
@@ -482,21 +484,19 @@ fn playlist_insert(tracks: Vec<NewItem>, position: InsertPosition, state: State<
         .into_iter()
         .map(|t| riars_core::playlist::playlist::PlaylistItem::new(t.path, t.title, t.artist, t.duration_ms))
         .collect();
-    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
-    let playlist = engine.playlist_mut();
-    let at = match position {
-        InsertPosition::End => playlist.len(),
-        InsertPosition::Next => playlist.next_position(),
-    };
-    playlist.insert_items(at, items);
-    Ok(engine.playlist().clone())
+    Ok(tab_cmds::edit_list(&state, tab.as_deref(), |playlist| {
+        let at = match position {
+            InsertPosition::End => playlist.len(),
+            InsertPosition::Next => playlist.next_position(),
+        };
+        playlist.insert_items(at, items);
+    })?
+    .1)
 }
 
 #[tauri::command]
-fn playlist_remove_many(ids: Vec<String>, state: State<AppState>) -> Result<Playlist, String> {
-    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
-    engine.playlist_mut().remove_ids(&ids);
-    Ok(engine.playlist().clone())
+fn playlist_remove_many(ids: Vec<String>, tab: Option<String>, state: State<AppState>) -> Result<Playlist, String> {
+    Ok(tab_cmds::edit_list(&state, tab.as_deref(), |list| { list.remove_ids(&ids); })?.1)
 }
 
 #[tauri::command]
@@ -507,13 +507,13 @@ fn playlist_remove_played(state: State<AppState>) -> Result<Playlist, String> {
 }
 
 #[tauri::command]
-fn playlist_play_next(id: String, state: State<AppState>) -> Result<Playlist, String> {
-    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
-    let playlist = engine.playlist_mut();
-    if let Some(index) = playlist.index_of(&id) {
-        playlist.move_to_next(index);
-    }
-    Ok(engine.playlist().clone())
+fn playlist_play_next(id: String, tab: Option<String>, state: State<AppState>) -> Result<Playlist, String> {
+    Ok(tab_cmds::edit_list(&state, tab.as_deref(), |playlist| {
+        if let Some(index) = playlist.index_of(&id) {
+            playlist.move_to_next(index);
+        }
+    })?
+    .1)
 }
 
 /// Remove tracks from the library (the files stay on disk). Returns how many went.
@@ -551,10 +551,8 @@ fn reveal_in_folder(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn playlist_clear(state: State<AppState>) -> Result<Playlist, String> {
-    let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
-    engine.playlist_mut().clear();
-    Ok(engine.playlist().clone())
+fn playlist_clear(tab: Option<String>, state: State<AppState>) -> Result<Playlist, String> {
+    Ok(tab_cmds::edit_list(&state, tab.as_deref(), |list| list.clear())?.1)
 }
 
 #[tauri::command]
@@ -569,8 +567,8 @@ fn playlists_list(state: State<AppState>) -> Result<Vec<SavedPlaylist>, String> 
 }
 
 #[tauri::command]
-fn playlists_save(name: String, state: State<AppState>) -> Result<Vec<SavedPlaylist>, String> {
-    let playlist = state.engine.lock().map_err(|e| e.to_string())?.playlist().clone();
+fn playlists_save(name: String, tab: Option<String>, state: State<AppState>) -> Result<Vec<SavedPlaylist>, String> {
+    let (_, playlist) = tab_cmds::edit_list(&state, tab.as_deref(), |_| ())?;
     state.library.lock().map_err(|e| e.to_string())?.save_playlist(&name, &playlist)?;
     playlists_list(state)
 }
@@ -756,6 +754,15 @@ pub fn run() {
             metadata_cmds::metadata_settings_set,
             metadata_cmds::metadata_missing_count,
             metadata_cmds::metadata_for_paths,
+            tab_cmds::playlist_tabs,
+            tab_cmds::playlist_tab_get,
+            tab_cmds::playlist_tab_new,
+            tab_cmds::playlist_tab_close,
+            tab_cmds::playlist_tab_rename,
+            tab_cmds::playlist_tab_start,
+            tab_cmds::playlist_tab_order,
+            tab_cmds::playlist_tab_on_air,
+            tab_cmds::playlist_tab_copy,
             folder_cmds::playlist_drop_files,
             library_get_tracks,
             library_query,
