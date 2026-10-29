@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 
 export type CommandId =
-  | "library.addFolder" | "library.search"
+  | "library.addFolder" | "library.search" | "library.completeMetadata"
   | "playlist.open" | "playlist.save" | "playlist.clear"
   | "stream.settings" | "stream.start" | "stream.stop"
   | "categories.settings";

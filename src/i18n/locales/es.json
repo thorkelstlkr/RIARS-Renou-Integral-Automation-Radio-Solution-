@@ -626,7 +626,8 @@
     "normalizationMaxCut": "Bajada máxima (dB)",
     "normalizationPeak": "Techo de picos (dBFS)",
     "normalizationHint": "Una ganancia por pista según su sonoridad medida: las flojas suben y las fuertes bajan, dentro de estos límites.",
-    "microphone": "Micrófono…"
+    "microphone": "Micrófono…",
+    "completeMetadata": "Completar metadatos de la biblioteca…"
   },
   "help": {
     "title": "Manual",
@@ -764,7 +765,8 @@
     "pathCopied": "Ruta copiada.",
     "keyEnter": "Intro",
     "keyDelete": "Supr",
-    "stopAfter": "Parar tras esta pista"
+    "stopAfter": "Parar tras esta pista",
+    "completeMetadata": "Completar metadatos…"
   },
   "live": {
     "title": "En directo",
@@ -832,5 +834,58 @@
     "directMonitorHint": "Márcalo si te oyes dos veces, la segunda con retraso, como un eco. La tarjeta ya envía el micrófono a su salida, así que RIARS lo añade solo a la emisión por Internet; la música sigue bajando.",
     "chooseFile": "Elegir archivo…",
     "searchLibrary": "Buscar en la biblioteca…"
+  },
+  "metadata": {
+    "title": "Completar metadatos",
+    "fingerprintOn": "La identificación por huella de audio (AcoustID) está activada.",
+    "fingerprintOff": "Las pistas se buscan por sus etiquetas y su nombre de archivo. Con una clave de AcoustID, los archivos sin etiquetas también se identifican por cómo suenan.",
+    "keyLabel": "Clave de aplicación de AcoustID",
+    "keyPlaceholder": "Clave de aplicación de AcoustID (opcional)",
+    "saveKey": "Guardar clave",
+    "keyHint": "Gratis para uso no comercial: registra una aplicación en acoustid.org/new-application. Una emisora comercial necesita su propia clave de acoustid.biz.",
+    "keySaved": "Clave guardada: la próxima búsqueda también usará la huella.",
+    "keyCleared": "Clave quitada: no se usa la huella.",
+    "scopeSelected_one": "Se buscará la pista seleccionada, aunque ya tenga todos los datos. Tarda unos {{minutes}} min; no cambia nada hasta que apliques.",
+    "scopeSelected": "Se buscarán las {{count}} pistas seleccionadas, aunque ya tengan todos los datos. Tarda unos {{minutes}} min; no cambia nada hasta que apliques.",
+    "wholeLibrary_one": "Se buscará {{count}} pista de la biblioteca a la que le falta el artista, el álbum, el género o el año. Tarda unos {{minutes}} min; no cambia nada hasta que apliques.",
+    "wholeLibrary": "Se buscarán {{count}} pistas de la biblioteca a las que les falta el artista, el álbum, el género o el año. Tarda unos {{minutes}} min; no cambia nada hasta que apliques.",
+    "noneMissing": "A ninguna pista de un minuto o más le falta el artista, el álbum, el género o el año. Para revisar una pista concreta, selecciónala en la biblioteca y elige Completar metadatos… con el clic derecho.",
+    "skippedShort_one": "Se salta {{count}} pista de menos de un minuto (cuñas, caretas). Para buscarla, selecciónala y usa el clic derecho.",
+    "skippedShort": "Se saltan {{count}} pistas de menos de un minuto (cuñas, caretas). Para buscar alguna, selecciónala y usa el clic derecho.",
+    "busy": "Hay una búsqueda en marcha: espera a que termine o pulsa Detener.",
+    "nothingToSearch": "No hay nada que buscar.",
+    "start": "Buscar",
+    "again": "Buscar otra vez",
+    "cancel": "Detener",
+    "progress": "Buscando {{done}} de {{total}} en MusicBrainz…",
+    "stopped": "Detenida tras {{done}} de {{total}} pistas.",
+    "finished": "Terminado: hay coincidencias para {{found}} de {{total}} pistas. Marca lo que quieras cambiar.",
+    "unmatched_one": "{{count}} pista sin coincidencia",
+    "unmatched": "{{count}} pistas sin coincidencia",
+    "unmatchedHint": "Los archivos sin etiquetas solo se reconocen por cómo suenan con una clave de AcoustID. Las cuñas y las caretas no están en ningún catálogo.",
+    "applied": "Aplicado ✓",
+    "empty": "(vacío)",
+    "hasCover": "tiene una",
+    "coverArchive": "Cover Art Archive",
+    "writeFile": "Escribir también las etiquetas en los archivos de audio",
+    "confirmWrite_one": "¿Escribir los valores marcados en {{count}} archivo de audio? El archivo se reescribe con las etiquetas nuevas.",
+    "confirmWrite": "¿Escribir los valores marcados en {{count}} archivos de audio? Cada archivo se reescribe con las etiquetas nuevas.",
+    "apply_one": "Aplicar a {{count}} pista",
+    "apply": "Aplicar a {{count}} pistas",
+    "appliedCount_one": "Cambios aplicados a {{count}} pista.",
+    "appliedCount": "Cambios aplicados a {{count}} pistas.",
+    "field": {
+      "title": "Título",
+      "artist": "Artista",
+      "album": "Álbum",
+      "genre": "Género",
+      "year": "Año",
+      "cover": "Carátula"
+    },
+    "method": {
+      "tags": "por etiquetas",
+      "file_name": "por nombre de archivo",
+      "fingerprint": "por huella"
+    }
   }
 }

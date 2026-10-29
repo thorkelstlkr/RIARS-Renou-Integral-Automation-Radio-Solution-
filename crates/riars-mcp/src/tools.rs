@@ -268,6 +268,7 @@ pub fn list_tools() -> ToolList {
         .chain(crate::automation_tools::tool_defs())
         .chain(crate::folder_tools::tool_defs())
         .chain(crate::live_tools::tool_defs())
+        .chain(crate::metadata_tools::tool_defs())
         .collect(),
     }
 }
@@ -280,6 +281,9 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
         return result;
     }
     if let Some(result) = crate::folder_tools::handle(name, args, state) {
+        return result;
+    }
+    if let Some(result) = crate::metadata_tools::handle(name, args, state) {
         return result;
     }
     if let Some(result) = crate::live_tools::handle(name, args, state) {

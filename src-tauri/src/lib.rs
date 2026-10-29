@@ -13,6 +13,7 @@ mod analysis_cmds;
 mod automation_cmds;
 mod folder_cmds;
 mod live_cmds;
+mod metadata_cmds;
 
 #[tauri::command]
 fn set_locale(lang: String) -> Result<(), String> {
@@ -747,6 +748,13 @@ pub fn run() {
             folder_cmds::library_remove_folder,
             folder_cmds::library_rescan,
             folder_cmds::library_track_for_file,
+            metadata_cmds::metadata_lookup_start,
+            metadata_cmds::metadata_lookup_status,
+            metadata_cmds::metadata_lookup_cancel,
+            metadata_cmds::metadata_apply,
+            metadata_cmds::metadata_settings_get,
+            metadata_cmds::metadata_settings_set,
+            metadata_cmds::metadata_missing_count,
             library_get_tracks,
             library_query,
             library_search,
