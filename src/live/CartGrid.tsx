@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { analysis, preview } from "../analysis/api";
 import ContextMenu, { type ContextEntry } from "../menu/ContextMenu";
 import CartButtonDialog from "./CartButtonDialog";
+import { useTrackDrop, type DraggedTrack } from "../components/trackDrag";
 import {
   CART_COLUMNS, CART_KEYS, CART_PAGES, CART_SLOTS, cartId, live,
   type CartBank, type CartBankSummary, type CartButton, type CartPlaying,
@@ -251,18 +252,8 @@ export default function CartGrid({ carts }: { carts: CartPlaying[] }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [bySlot, page, fire]);
 
-  const dropTrack = async (e: React.DragEvent, slot: number) => {
-    e.preventDefault();
+  const dropTrack = async (track: DraggedTrack, slot: number) => {
     if (!bank) return;
-    const raw = e.dataTransfer.getData("application/x-riars-track");
-    if (!raw) return;
-    let track: { id?: number; title?: string; file_path?: string };
-    try {
-      track = JSON.parse(raw);
-    } catch {
-      return;
-    }
-    if (!track.file_path) return;
     const existing = bySlot.get(cartId(page, slot));
     const button: CartButton = {
       page,
@@ -283,6 +274,17 @@ export default function CartGrid({ carts }: { carts: CartPlaying[] }) {
       setNotice(String(err));
     }
   };
+
+  // A track dragged from the library or the Folders tab onto a button (the first, for several).
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [dropSlot, setDropSlot] = useState<number | null>(null);
+  useTrackDrop((e) => {
+    const cell = e.phase === "end" ? null
+      : document.elementFromPoint(e.x, e.y)?.closest<HTMLElement>("[data-cart-slot]") ?? null;
+    const slot = cell && gridRef.current?.contains(cell) ? Number(cell.dataset.cartSlot) : null;
+    if (e.phase === "drop" && slot !== null && e.tracks.length > 0) void dropTrack(e.tracks[0], slot);
+    setDropSlot(e.phase === "move" ? slot : null);
+  });
 
   const ctxButton = ctx ? bySlot.get(cartId(page, ctx.slot)) : undefined;
   const ctxItems = (): ContextEntry[] => [
@@ -353,7 +355,7 @@ export default function CartGrid({ carts }: { carts: CartPlaying[] }) {
         ))}
       </div>
 
-      <div style={{ ...S.grid, gridTemplateColumns: `repeat(${CART_COLUMNS}, minmax(0, 1fr))` }}>
+      <div ref={gridRef} style={{ ...S.grid, gridTemplateColumns: `repeat(${CART_COLUMNS}, minmax(0, 1fr))` }}>
         {Array.from({ length: CART_SLOTS }, (_, slot) => {
           const button = bySlot.get(cartId(page, slot));
           const cart = playing.get(cartId(page, slot));
@@ -374,12 +376,11 @@ export default function CartGrid({ carts }: { carts: CartPlaying[] }) {
                 ...S.cell,
                 ...(button ? { background: button.color || "var(--bg-panel)" } : S.cellEmpty),
                 ...(cart ? S.cellPlaying : {}),
+                ...(dropSlot === slot ? { outline: "2px solid var(--accent)", outlineOffset: -2 } : {}),
               }}
               title={button ? button.label : t("live.emptyButton")}
               onClick={() => openButton(slot, button)}
-              onContextMenu={(e) => { e.preventDefault(); setCtx({ x: e.clientX, y: e.clientY, slot }); }}
-              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
-              onDrop={(e) => { void dropTrack(e, slot); }}>
+              onContextMenu={(e) => { e.preventDefault(); setCtx({ x: e.clientX, y: e.clientY, slot }); }}>
               {key && <span style={S.keyHint}>{key}</span>}
               <span style={S.label}>
                 {button ? button.label : <span style={S.emptyLabel} aria-hidden>+</span>}

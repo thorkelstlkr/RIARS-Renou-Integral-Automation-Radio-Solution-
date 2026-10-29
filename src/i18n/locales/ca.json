@@ -19,7 +19,7 @@
     "itemCount": "{{count}} elements",
     "itemCount_one": "{{count}} element",
     "headerArtist": "Artista",
-    "empty": "Llista de reproducció buida. Fes doble clic en una pista de la biblioteca per afegir-la.",
+    "empty": "Llista de reproducció buida. Fes doble clic en una pista de la biblioteca o arrossega-hi fitxers i carpetes.",
     "moveUp": "Moure amunt",
     "moveDown": "Moure avall",
     "remove": "Eliminar",
@@ -34,7 +34,20 @@
     "headerOutro": "Outro",
     "headerLufs": "LUFS",
     "overlayIntro": "sobre la intro",
-    "overlayOutro": "sobre l'outro"
+    "overlayOutro": "sobre l'outro",
+    "drop": {
+      "here": "Deixa-ho anar aquí per afegir-ho a la llista",
+      "listing": "S'estan cercant fitxers d'àudio…",
+      "reading": "S'està afegint a la biblioteca: {{done}} de {{total}}",
+      "added_one": "{{count}} fitxer afegit",
+      "added": "{{count}} fitxers afegits",
+      "skipped_one": "{{count}} omès: no és àudio",
+      "skipped": "{{count}} omesos: no són àudio",
+      "failed_one": "{{count}} no s'ha pogut llegir",
+      "failed": "{{count}} no s'han pogut llegir",
+      "truncated": "només els primers 10.000",
+      "nothing": "El que has deixat anar no conté fitxers d'àudio."
+    }
   },
   "library": {
     "title": "Biblioteca",

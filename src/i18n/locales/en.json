@@ -19,7 +19,7 @@
     "itemCount": "{{count}} items",
     "itemCount_one": "{{count}} item",
     "headerArtist": "Artist",
-    "empty": "Empty playlist. Double-click a track in the library to add it.",
+    "empty": "Empty playlist. Double-click a track in the library, or drag files and folders here.",
     "moveUp": "Move up",
     "moveDown": "Move down",
     "remove": "Remove",
@@ -34,7 +34,20 @@
     "headerOutro": "Outro",
     "headerLufs": "LUFS",
     "overlayIntro": "over intro",
-    "overlayOutro": "over outro"
+    "overlayOutro": "over outro",
+    "drop": {
+      "here": "Drop here to add to the playlist",
+      "listing": "Looking for audio files…",
+      "reading": "Adding to the library: {{done}} of {{total}}",
+      "added_one": "{{count}} file added",
+      "added": "{{count}} files added",
+      "skipped_one": "{{count}} skipped: not audio",
+      "skipped": "{{count}} skipped: not audio",
+      "failed_one": "{{count}} could not be read",
+      "failed": "{{count}} could not be read",
+      "truncated": "only the first 10,000",
+      "nothing": "There are no audio files in what you dropped."
+    }
   },
   "library": {
     "title": "Library",

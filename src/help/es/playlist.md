@@ -3,7 +3,7 @@ id: playlist
 title: Lista de reproducción
 section: onair
 order: 2
-keywords: playlist, lista, cola, orden, guardar, abrir, hora de inicio, generado, queue
+keywords: playlist, lista, cola, orden, guardar, abrir, hora de inicio, generado, queue, arrastrar, soltar, carpeta, explorador
 ---
 
 # Lista de reproducción
@@ -30,6 +30,21 @@ La lista de reproducción contiene lo que suena y lo que viene después. La pist
 - **Limpiar**: vacía la lista.
 
 Al pie ves cuántos elementos hay y cuánto duran en total.
+
+## Añadir arrastrando
+
+Puedes montar la lista arrastrando:
+
+- **Desde el Explorador de archivos** (o el gestor de archivos de tu sistema): arrastra uno o varios archivos de audio, o una carpeta entera, y suéltalos sobre la lista.
+- **Desde la [biblioteca](topic:library)**, en las pestañas de pistas y de carpetas: arrastra una pista a la lista.
+
+Mientras arrastras, una **línea roja** marca dónde entrarán: encima de la fila que tienes debajo del ratón o, en la mitad inferior de la fila, justo debajo. Si sueltas por debajo de la última fila, se añaden al final. Al acercarte al borde de arriba o de abajo, la lista se desplaza sola.
+
+- Los archivos entran en el orden en que los arrastras.
+- Una **carpeta** aporta todos sus archivos de audio, también los de sus subcarpetas: primero los de la propia carpeta, por nombre, y luego cada subcarpeta, también por nombre. Las carpetas ocultas y de sistema se saltan, igual que en el árbol de carpetas de la biblioteca.
+- Lo que no es audio (imágenes, textos…) se omite. Se admiten MP3, FLAC, WAV, OGG, AAC y M4A.
+- Los archivos que aún no están en la biblioteca **se añaden a ella** primero y se analizan en segundo plano, para que tengan [intros y outros](topic:intro-outro) y [normalización](topic:normalization) como el resto.
+- Con una carpeta grande, el pie de la lista muestra el avance («Añadiendo a la biblioteca: 120 de 3000») y puedes seguir usando el programa. Al terminar, indica cuántos se añadieron y cuántos se omitieron. Como máximo se añaden 10 000 archivos de una vez.
 
 ## Paso entre pistas
 

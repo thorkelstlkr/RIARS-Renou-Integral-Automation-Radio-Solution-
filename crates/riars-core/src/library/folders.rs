@@ -214,6 +214,114 @@ pub fn track_for_file(library: &Mutex<MediaLibrary>, path: &str) -> Result<Track
         .ok_or_else(|| format!("Cannot add {path} to the library"))
 }
 
+/// The audio files of paths dropped on the playlist, in the order they will be added.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct DroppedFiles {
+    pub files: Vec<String>,
+    /// Dropped paths that are not a folder or a supported audio file.
+    pub skipped: usize,
+    /// More than the limit were found; the rest were left out.
+    pub truncated: bool,
+}
+
+/// The audio files of `paths`, as dropped from the system's file manager: a file is
+/// kept when it is audio; a folder brings its audio files, subfolders included,
+/// each folder's files first and then its subfolders, both by name. Hidden and
+/// system entries inside a folder are left out, as in the folder tree. A file
+/// dropped twice (on its own and inside its folder) comes once. At most `limit`.
+pub fn expand_dropped(paths: &[String], limit: usize) -> DroppedFiles {
+    let mut out = DroppedFiles::default();
+    let mut seen = HashSet::new();
+    let mut push = |out: &mut DroppedFiles, path: PathBuf| {
+        if out.files.len() >= limit {
+            out.truncated = true;
+            return;
+        }
+        let path = path.to_string_lossy().into_owned();
+        if seen.insert(path.clone()) {
+            out.files.push(path);
+        }
+    };
+    for dropped in paths {
+        // Same separators as a folder scan, so the paths match the library's.
+        let built: PathBuf = Path::new(dropped.trim()).components().collect();
+        if built.is_dir() {
+            // Depth first, keeping the order by name: subfolders go on the stack reversed.
+            let mut pending = vec![built];
+            while let Some(dir) = pending.pop() {
+                let Ok(entries) = std::fs::read_dir(&dir) else {
+                    log::warn!("Cannot read directory {}", dir.display());
+                    continue;
+                };
+                let mut dirs = Vec::new();
+                let mut files = Vec::new();
+                for entry in entries.filter_map(|e| e.ok()) {
+                    let name = entry.file_name().to_string_lossy().into_owned();
+                    let Ok(kind) = entry.file_type() else { continue };
+                    if hidden_name(&name) || hidden_entry(&entry) {
+                        continue;
+                    }
+                    // file_type() does not follow links: a link back up the tree is not walked.
+                    if kind.is_dir() {
+                        dirs.push((name.to_lowercase(), entry.path()));
+                    } else if is_audio(&entry.path()) && entry.path().is_file() {
+                        files.push((name.to_lowercase(), entry.path()));
+                    }
+                }
+                files.sort();
+                dirs.sort();
+                for (_, file) in files {
+                    push(&mut out, file);
+                }
+                pending.extend(dirs.into_iter().rev().map(|(_, dir)| dir));
+            }
+        } else if built.is_file() && is_audio(&built) {
+            push(&mut out, built);
+        } else {
+            out.skipped += 1;
+        }
+    }
+    out
+}
+
+/// Library tracks for `paths`, in the same order, adding the files not in the
+/// library yet. Tags are read with the library unlocked and stored in batches, so
+/// others keep using it during a big drop. `progress(done, total)` follows the
+/// files being read. A file that cannot be added is left out; returns the tracks
+/// and how many were left out.
+pub fn tracks_for_files(
+    library: &Mutex<MediaLibrary>,
+    paths: &[String],
+    progress: &mut dyn FnMut(usize, usize),
+) -> Result<(Vec<Track>, usize), String> {
+    const BATCH: usize = 200;
+    let mut found: Vec<Option<Track>> = {
+        let library = library.lock().map_err(|e| e.to_string())?;
+        paths.iter().map(|path| library.track_by_path(path)).collect::<Result<_, _>>()?
+    };
+    let missing: Vec<usize> = (0..paths.len()).filter(|&i| found[i].is_none()).collect();
+    let total = missing.len();
+    progress(0, total);
+    for (n, chunk) in missing.chunks(BATCH).enumerate() {
+        let mut read = Vec::with_capacity(chunk.len());
+        for (k, &i) in chunk.iter().enumerate() {
+            match read_audio_file(&paths[i]) {
+                Ok(file) => read.push((i, file)),
+                Err(e) => log::warn!("Cannot add {}: {e}", paths[i]),
+            }
+            progress(n * BATCH + k + 1, total);
+        }
+        let mut library = library.lock().map_err(|e| e.to_string())?;
+        let files: Vec<ScannedFile> = read.iter().map(|(_, file)| file.clone()).collect();
+        library.insert_scanned(&files)?;
+        for (i, file) in read {
+            found[i] = library.track_by_path(&file.path)?;
+        }
+    }
+    let left_out = found.iter().filter(|t| t.is_none()).count();
+    Ok((found.into_iter().flatten().collect(), left_out))
+}
+
 /// Names the folder tree hides: system folders nobody keeps music in.
 fn hidden_name(name: &str) -> bool {
     name.starts_with('.')
@@ -619,5 +727,51 @@ mod tests {
         lib.fill_tracks(&mut listing).unwrap();
         let tracked: Vec<_> = listing.files.iter().map(|f| (f.name.as_str(), f.track.is_some())).collect();
         assert_eq!(tracked, [("in.mp3", true), ("new.mp3", false)]);
+    }
+
+    #[test]
+    fn a_drop_expands_folders_by_name_and_skips_what_is_not_audio() {
+        let dir = temp_dir("drop");
+        let show = dir.join("Show");
+        touch(&show.join("b.mp3"));
+        touch(&show.join("A.flac"));
+        touch(&show.join("cover.jpg"));
+        touch(&show.join("Part 2").join("z.wav"));
+        touch(&show.join("part 1").join("y.ogg"));
+        touch(&show.join(".cache").join("hidden.mp3"));
+        touch(&dir.join("jingle.mp3"));
+        touch(&dir.join("notes.txt"));
+        let s = |p: &Path| p.to_string_lossy().into_owned();
+        let dropped = [s(&dir.join("jingle.mp3")), s(&show), s(&dir.join("notes.txt")),
+            s(&show.join("b.mp3")), s(&dir.join("missing.mp3"))];
+        let out = expand_dropped(&dropped, 100);
+        let names: Vec<_> = out.files.iter()
+            .map(|f| Path::new(f).strip_prefix(&dir).unwrap().to_string_lossy().replace('\\', "/"))
+            .collect();
+        assert_eq!(names, ["jingle.mp3", "Show/A.flac", "Show/b.mp3", "Show/part 1/y.ogg", "Show/Part 2/z.wav"]);
+        assert_eq!((out.skipped, out.truncated), (2, false));
+
+        let out = expand_dropped(&[s(&show)], 2);
+        assert_eq!((out.files.len(), out.truncated), (2, true));
+    }
+
+    #[test]
+    fn dropped_files_join_the_library_in_order() {
+        let dir = temp_dir("drop-lib");
+        let music = dir.join("music");
+        touch(&music.join("known.mp3"));
+        touch(&music.join("new.mp3"));
+        let lib = Mutex::new(library(&dir));
+        let known = track_for_file(&lib, &music.join("known.mp3").to_string_lossy()).unwrap();
+        let paths: Vec<String> = ["new.mp3", "known.mp3", "gone.mp3"]
+            .iter().map(|n| music.join(n).to_string_lossy().into_owned()).collect();
+        let mut seen = Vec::new();
+        let (tracks, left_out) = tracks_for_files(&lib, &paths, &mut |done, total| seen.push((done, total))).unwrap();
+        let titles: Vec<_> = tracks.iter().map(|t| t.title.as_str()).collect();
+        assert_eq!(titles, ["new", "known"]);
+        assert_eq!(tracks[1].id, known.id);
+        assert_eq!(left_out, 1);
+        assert_eq!(seen, [(0, 2), (1, 2), (2, 2)]);
+        assert_eq!(lib.lock().unwrap().track_count().unwrap(), 2);
     }
 }

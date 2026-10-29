@@ -36,7 +36,7 @@ Below it is the tree of the computer:
 - When you **untick** a folder, or press ✕ in the list, RIARS asks whether to remove only the folder (its tracks stay) or its tracks too. Files are **never deleted** from disk.
 - Clicking a folder's **name** lists its audio files underneath; **double-clicking** it also opens or closes it, like ▸. Files not yet in the library are dimmed, but you can still use them. Opening the **Marks…** of one of them from the playlist adds it to the library there and then, since marks are kept with the track.
 
-Files in that list work like library tracks: **double-click** or **Enter** adds them to the playlist, you can **drag** them onto a [sound bank](topic:live) button, and they have a right-click menu.
+Files in that list work like library tracks: **double-click** or **Enter** adds them to the playlist, you can **drag** them onto the [playlist](topic:playlist) or a [sound bank](topic:live) button, and they have a right-click menu.
 
 ## Search
 

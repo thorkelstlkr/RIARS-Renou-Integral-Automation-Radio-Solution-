@@ -5,6 +5,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import ContextMenu, { type ContextEntry } from "../menu/ContextMenu";
 import { preview } from "../analysis/api";
 import { useLibraryScan } from "./useLibraryScan";
+import { startTrackDrag } from "./trackDrag";
 
 interface DirEntry {
   name: string;
@@ -567,18 +568,16 @@ export default function FolderExplorer({ onLibraryChanged }: { onLibraryChanged:
           <div style={S.empty}>{t("library.folders.empty")}</div>
         )}
         {files.map((file, i) => (
-          <div key={file.path} data-testid="folder-file" data-row-index={i} draggable
+          <div key={file.path} data-testid="folder-file" data-row-index={i}
             style={{ ...S.fileRow, ...(selectedFiles.has(file.path) ? S.selected : {}), ...(file.track ? {} : S.dimmed) }}
             title={file.path}
             onClick={(e) => onFileClick(e, i)}
             onContextMenu={(e) => onFileContext(e, i)}
             onDoubleClick={() => { void insertFiles([file], "End"); }}
-            onDragStart={(e) => {
-              e.dataTransfer.effectAllowed = "copy";
-              e.dataTransfer.setData("application/x-riars-track", JSON.stringify({
-                id: file.track?.id ?? null, title: fileTitle(file), file_path: file.path, duration_ms: fileDuration(file),
-              }));
-            }}>
+            onPointerDown={(e) => startTrackDrag(e, () =>
+              (selectedFiles.has(file.path) ? selectedFileList() : [file]).map((f) => ({
+                id: f.track?.id ?? null, title: fileTitle(f), file_path: f.path, duration_ms: fileDuration(f),
+              })))}>
             <div style={S.fileBody}>
               <div style={S.fileName} title={file.track ? file.path : t("library.folders.notInLibrary")}>
                 {file.track ? file.track.title : file.name}

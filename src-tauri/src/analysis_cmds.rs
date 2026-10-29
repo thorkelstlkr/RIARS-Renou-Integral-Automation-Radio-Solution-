@@ -4,7 +4,7 @@
 
 use std::path::Path;
 use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use riars_core::analysis::{
     analyze_track_detailed, AnalysisStats, BatchScope, BatchStatus, CueAnalysis, CueDetector,
@@ -108,6 +108,61 @@ impl LibraryAccess for TauriLibrary {
         let state = self.0.state::<AppState>();
         let mut library = state.library.lock().map_err(|e| e.to_string())?;
         f(&mut library)
+    }
+}
+
+/// Tracks waiting for [`analyze_new_tracks`], and whether its thread is running.
+static NEW_TRACKS: Mutex<(Vec<i64>, bool)> = Mutex::new((Vec::new(), false));
+
+/// Analyse the not yet analysed `track_ids` in the background, as the library batch
+/// does. Only one analysis runs at a time, so they wait on a thread of their own
+/// for the running one to end; tracks queued meanwhile join the same batch.
+pub fn analyze_new_tracks(app: &AppHandle, track_ids: Vec<i64>) {
+    if track_ids.is_empty() {
+        return;
+    }
+    {
+        let mut queue = NEW_TRACKS.lock().unwrap_or_else(|e| e.into_inner());
+        queue.0.extend(track_ids);
+        if queue.1 {
+            return;
+        }
+        queue.1 = true;
+    }
+    let app = app.clone();
+    let spawned = std::thread::Builder::new().name("riars-analyse-new".into()).spawn(move || loop {
+        let state = app.state::<AppState>();
+        if !state.analysis.status().running {
+            let track_ids = {
+                let mut queue = NEW_TRACKS.lock().unwrap_or_else(|e| e.into_inner());
+                if queue.0.is_empty() {
+                    queue.1 = false;
+                    return;
+                }
+                std::mem::take(&mut queue.0)
+            };
+            let detector = state
+                .library
+                .lock()
+                .map_err(|e| e.to_string())
+                .and_then(|library| detector_from_library(&library))
+                .unwrap_or_default();
+            let library = Arc::new(TauriLibrary(app.clone()));
+            let scope = BatchScope::Tracks { track_ids: track_ids.clone() };
+            if let Err(e) = state.analysis.start(library, scope, false, detector) {
+                if state.analysis.status().running {
+                    // Another analysis started in between: wait for it too.
+                    NEW_TRACKS.lock().unwrap_or_else(|e| e.into_inner()).0.extend(track_ids);
+                } else {
+                    log::warn!("Cannot analyse the dropped tracks: {e}");
+                }
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_secs(2));
+    });
+    if let Err(e) = spawned {
+        NEW_TRACKS.lock().unwrap_or_else(|e| e.into_inner()).1 = false;
+        log::warn!("Cannot start analysing the dropped tracks: {e}");
     }
 }
 
