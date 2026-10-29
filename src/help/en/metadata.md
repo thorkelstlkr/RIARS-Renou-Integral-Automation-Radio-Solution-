@@ -14,8 +14,15 @@ Filling in year and genre also helps automation: smart [categories](topic:catego
 
 ## Opening it
 
-- **Right-click ▸ Complete metadata…** in the library looks up the selected tracks.
-- **Edit ▸ Complete library metadata…** says how many tracks of a minute or longer have a gap (no artist, album, genre or year) and looks them up when you press **Look up**. Shorter tracks, such as jingles and station IDs, are left out because no catalogue lists them.
+There are two ways to open it. Neither starts on its own: the top of the dialog says what will be looked up, and the lookup starts when you press **Look up**.
+
+- **Right-click ▸ Complete metadata…** in the library looks up the selected tracks, even if they already have every field. Use it to check a particular track.
+- **Edit ▸ Complete library metadata…** looks up the tracks of a minute or longer that have a gap (no artist, album, genre or year). Shorter ones, such as jingles and station IDs, are skipped because no catalogue lists them; the dialog says how many. To look one of them up, select it and use the right-click menu.
+
+When **Look up** can't be pressed, the reason is shown next to it:
+
+- **There is nothing to look up**: no track is missing anything.
+- **A lookup is running**: only one can run at a time. Wait for it to finish or press **Stop**.
 
 The lookup runs in the background. You can close the dialog and open it again to see how it is going. **Stop** ends it after the current track and keeps what was found.
 

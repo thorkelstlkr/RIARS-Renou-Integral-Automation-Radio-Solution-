@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import Dialog from "../menu/Dialog";
 import {
   applyItems, changes, initialTicks, metadata, thumbnail, tickKey,
-  type Field, type LookupStatus, type Ticks,
+  type Field, type LookupStatus, type MissingCount, type Ticks,
 } from "./metadataReview";
 
 const S: Record<string, React.CSSProperties> = {
@@ -41,13 +41,16 @@ const SECONDS_PER_TRACK = 3;
  * Library ▸ Complete metadata…: looks the tracks up in MusicBrainz (and AcoustID, with
  * a key), shows what it found next to what the track has, and applies only what the
  * operator ticks. `trackIds` empty means every track with gaps.
+ *
+ * Nothing starts on its own: the dialog first says what Search will look up (or why
+ * there is nothing to look up), and Search is always there.
  */
 export default function MetadataDialog({ trackIds, onClose, onApplied }: {
   trackIds: number[]; onClose: () => void; onApplied: () => void;
 }) {
   const { t } = useTranslation();
   const [status, setStatus] = useState<LookupStatus | null>(null);
-  const [missing, setMissing] = useState<number | null>(null);
+  const [missing, setMissing] = useState<MissingCount | null>(null);
   const [key, setKey] = useState("");
   const [savedKey, setSavedKey] = useState<string | null>(null);
   const [ticks, setTicks] = useState<Ticks>(new Set());
@@ -85,19 +88,18 @@ export default function MetadataDialog({ trackIds, onClose, onApplied }: {
     }
   }, [refresh]);
 
-  // On open: the key, then either join a lookup under way, start one for the
-  // selected tracks, or (whole library) say how many tracks it would take.
+  // On open: the key, the tracks a whole-library lookup would take, and a lookup
+  // already under way (shown, since only one runs at a time).
   useEffect(() => {
     metadata.getKey().then((k) => { setSavedKey(k); setKey(k ?? ""); }).catch(() => {});
     (async () => {
       try {
+        if (trackIds.length === 0) setMissing(await metadata.missingCount());
         const now = await metadata.status();
-        if (now.running) { await refresh(); return; }
-        if (trackIds.length > 0) await start(trackIds);
-        else setMissing(await metadata.missingCount());
+        if (now.running) await refresh();
       } catch (e) { setError(String(e)); }
     })();
-  }, [trackIds, start, refresh]);
+  }, [trackIds, refresh]);
 
   // Poll while the lookup runs.
   useEffect(() => {
@@ -148,6 +150,7 @@ export default function MetadataDialog({ trackIds, onClose, onApplied }: {
         setError(failed.map((o) => `${name(o.track_id)}: ${o.error}`).join("\n"));
       }
       await refresh();
+      if (trackIds.length === 0) setMissing(await metadata.missingCount());
       onApplied();
     } catch (e) {
       setError(String(e));
@@ -160,6 +163,21 @@ export default function MetadataDialog({ trackIds, onClose, onApplied }: {
   const methodLabel = (m: string) => t(`metadata.method.${m}`);
   const running = status?.running ?? false;
   const started = status !== null && (status.running || status.total > 0);
+  // What Search looks up: the selection as it is, or the library's tracks with gaps.
+  const count = trackIds.length > 0 ? trackIds.length : missing?.missing ?? 0;
+  const minutes = Math.max(1, Math.ceil((count * SECONDS_PER_TRACK) / 60));
+  const scope = trackIds.length > 0
+    ? t("metadata.scopeSelected", { count, minutes })
+    : missing === null
+      ? null
+      : missing.missing === 0
+        ? t("metadata.noneMissing")
+        : t("metadata.wholeLibrary", { count, minutes });
+  const skipped = trackIds.length === 0 && missing && missing.short > 0
+    ? t("metadata.skippedShort", { count: missing.short })
+    : null;
+  // Why Search can't be pressed, if it can't.
+  const blocked = running ? t("metadata.busy") : count === 0 && missing !== null ? t("metadata.nothingToSearch") : null;
 
   return (
     <Dialog title={t("metadata.title")} width={720} onClose={onClose}>
@@ -174,11 +192,10 @@ export default function MetadataDialog({ trackIds, onClose, onApplied }: {
         <div style={{ ...S.hint, marginTop: 4 }}>{t("metadata.keyHint")}</div>
       </div>
 
-      {!started && trackIds.length === 0 && missing !== null && (
+      {scope && (
         <div style={S.intro} data-testid="metadata-intro">
-          {missing === 0
-            ? t("metadata.noneMissing")
-            : t("metadata.wholeLibrary", { count: missing, minutes: Math.max(1, Math.ceil((missing * SECONDS_PER_TRACK) / 60)) })}
+          {scope}
+          {skipped && <div style={{ ...S.hint, marginTop: 4 }}>{skipped}</div>}
         </div>
       )}
 
@@ -275,12 +292,12 @@ export default function MetadataDialog({ trackIds, onClose, onApplied }: {
           </label>
         )}
         <span style={S.spacer} />
+        {blocked && <span style={S.hint} data-testid="metadata-blocked">{blocked}</span>}
         {running && <button style={S.btn} onClick={() => { metadata.cancel().catch(() => {}); }}>{t("metadata.cancel")}</button>}
-        {!running && trackIds.length === 0 && !!missing && (
-          <button style={started ? S.btn : S.primary} onClick={() => start([])} data-testid="metadata-start">
-            {started ? t("metadata.again") : t("metadata.start")}
-          </button>
-        )}
+        <button style={started || blocked ? S.btn : S.primary} disabled={!!blocked || (trackIds.length === 0 && missing === null)}
+          onClick={() => start(trackIds)} data-testid="metadata-start">
+          {started ? t("metadata.again") : t("metadata.start")}
+        </button>
         {found.length > 0 && (
           <button style={S.primary} disabled={busy || items.length === 0} onClick={apply} data-testid="metadata-apply">
             {t("metadata.apply", { count: items.length })}

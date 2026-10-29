@@ -56,9 +56,20 @@ pub fn metadata_settings_set(acoustid_key: String, state: State<AppState>) -> Re
     riars_meta::acoustid_key(&library)
 }
 
-/// How many tracks a whole-library lookup would take.
+/// Tracks with gaps, for the whole-library lookup.
+#[derive(serde::Serialize)]
+pub struct MissingCount {
+    /// Tracks the lookup would take.
+    missing: usize,
+    /// Tracks with gaps it leaves out for being shorter than a minute.
+    short: usize,
+}
+
+/// How many tracks a whole-library lookup would take, and how many short ones it skips.
 #[tauri::command]
-pub fn metadata_missing_count(state: State<AppState>) -> Result<usize, String> {
+pub fn metadata_missing_count(state: State<AppState>) -> Result<MissingCount, String> {
     let library = state.library.lock().map_err(|e| e.to_string())?;
-    Ok(library.tracks_missing_metadata(riars_meta::MIN_SONG_MS, riars_meta::MAX_TRACKS)?.len())
+    let missing = library.tracks_missing_metadata(riars_meta::MIN_SONG_MS, riars_meta::MAX_TRACKS)?.len();
+    let all = library.tracks_missing_metadata(0, usize::MAX)?.len();
+    Ok(MissingCount { missing, short: all.saturating_sub(missing) })
 }

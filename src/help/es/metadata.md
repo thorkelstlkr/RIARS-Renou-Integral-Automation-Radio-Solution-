@@ -14,8 +14,15 @@ Rellenar el año y el género sirve también para la automatización: las [categ
 
 ## Abrirlo
 
-- **Clic derecho ▸ Completar metadatos…** en la biblioteca: busca las pistas seleccionadas.
-- **Editar ▸ Completar metadatos de la biblioteca…**: dice cuántas pistas de un minuto o más tienen algún hueco (sin artista, álbum, género o año) y las busca al pulsar **Buscar**. Las pistas más cortas, como cuñas y caretas, se dejan fuera porque no están en ningún catálogo.
+Hay dos formas de abrirlo. Ninguna empieza a buscar sola: arriba del diálogo pone qué se va a buscar, y la búsqueda empieza al pulsar **Buscar**.
+
+- **Clic derecho ▸ Completar metadatos…** en la biblioteca: busca las pistas seleccionadas, aunque ya tengan todos los datos. Sirve para revisar una pista concreta.
+- **Edición ▸ Completar metadatos de la biblioteca…**: busca las pistas de un minuto o más que tienen algún hueco (sin artista, álbum, género o año). Las más cortas, como cuñas y caretas, se saltan porque no están en ningún catálogo; el diálogo dice cuántas. Si quieres buscar alguna, selecciónala y usa el clic derecho.
+
+Cuando **Buscar** no se puede pulsar, al lado pone por qué:
+
+- **No hay nada que buscar**: a ninguna pista le falta nada.
+- **Hay una búsqueda en marcha**: solo puede haber una a la vez. Espera a que termine o pulsa **Detener**.
 
 La búsqueda va en segundo plano. Puedes cerrar el diálogo y volver a abrirlo para ver cómo va. **Detener** la para tras la pista actual y conserva lo encontrado.
 

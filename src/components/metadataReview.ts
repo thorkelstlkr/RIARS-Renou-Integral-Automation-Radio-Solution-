@@ -143,5 +143,11 @@ export const metadata = {
   apply: (items: ApplyItem[]) => invoke<ApplyOutcome[]>("metadata_apply", { items }),
   getKey: () => invoke<string | null>("metadata_settings_get"),
   setKey: (acoustidKey: string) => invoke<string | null>("metadata_settings_set", { acoustidKey }),
-  missingCount: () => invoke<number>("metadata_missing_count"),
+  missingCount: () => invoke<MissingCount>("metadata_missing_count"),
 };
+
+/** Tracks with gaps: those a whole-library lookup takes, and the short ones it skips. */
+export interface MissingCount {
+  missing: number;
+  short: number;
+}
