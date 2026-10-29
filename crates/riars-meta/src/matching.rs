@@ -123,7 +123,10 @@ pub(crate) fn score(recording: &Recording, title: &str, artist: &str, duration_m
 
 /// "01 - Amulet - Roma" -> ("Amulet", "Roma"). A file name with no " - " gives nothing.
 pub(crate) fn split_file_name(path: &str) -> Option<(String, String)> {
-    let stem = std::path::Path::new(path).file_stem()?.to_string_lossy().replace('_', " ");
+    // Either separator, whatever the system: a library made on Windows can be served
+    // from Linux (a Raspberry Pi), where `Path` would not split at `\`.
+    let name = path.rsplit(['/', '\\']).next()?;
+    let stem = name.rsplit_once('.').map_or(name, |(stem, _)| stem).replace('_', " ");
     let stem = stem.trim_start_matches(|c: char| c.is_ascii_digit() || matches!(c, ' ' | '.' | '-'));
     let (artist, title) = stem.split_once(" - ")?;
     let (artist, title) = (artist.trim(), title.trim());
