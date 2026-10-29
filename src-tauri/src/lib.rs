@@ -755,6 +755,7 @@ pub fn run() {
             metadata_cmds::metadata_settings_get,
             metadata_cmds::metadata_settings_set,
             metadata_cmds::metadata_missing_count,
+            metadata_cmds::metadata_for_paths,
             folder_cmds::playlist_drop_files,
             library_get_tracks,
             library_query,

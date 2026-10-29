@@ -18,6 +18,7 @@ La lista de reproducción contiene lo que suena y lo que viene después. La pist
 | **Inicio** | Hora a la que empezará cada elemento, calculada desde la posición actual. |
 | **Título** | Con un punto de color según el tipo: azul música, amarillo imagen (jingle, indicativo, sweeper), rojo cuña, verde promo. |
 | **Artista** y **Duración** | Lo que dicen las etiquetas del archivo. |
+| **Álbum**, **Año** y **Género** | Los datos de la pista en la [biblioteca](topic:library). Salen con una raya si la pista no está en la biblioteca o le falta ese dato; puedes rellenarlos con [Completar metadatos](topic:metadata). |
 
 ## Manejarla
 

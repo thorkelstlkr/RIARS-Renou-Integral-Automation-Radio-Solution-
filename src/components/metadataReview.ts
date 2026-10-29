@@ -144,6 +144,8 @@ export const metadata = {
   getKey: () => invoke<string | null>("metadata_settings_get"),
   setKey: (acoustidKey: string) => invoke<string | null>("metadata_settings_set", { acoustidKey }),
   missingCount: () => invoke<MissingCount>("metadata_missing_count"),
+  /** Library tracks at these paths (the others are left out). */
+  forPaths: (paths: string[]) => invoke<TrackMetadata[]>("metadata_for_paths", { paths }),
 };
 
 /** Tracks with gaps: those a whole-library lookup takes, and the short ones it skips. */

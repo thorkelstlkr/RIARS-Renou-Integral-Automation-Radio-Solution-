@@ -129,6 +129,18 @@ impl MediaLibrary {
             .map_err(|e| format!("DB error: {e}"))
     }
 
+    /// The metadata of the library tracks at these paths; paths not in the library are
+    /// left out. For the playlist's album, year and genre columns.
+    pub fn metadata_for_paths(&self, paths: &[String]) -> Result<Vec<TrackMetadata>, String> {
+        let mut found = Vec::new();
+        for path in paths {
+            if let Some(track) = self.track_by_path(path)? {
+                found.extend(self.track_metadata(track.id)?);
+            }
+        }
+        Ok(found)
+    }
+
     /// Tracks missing an artist, album, genre or year, longest first, leaving out those
     /// shorter than `min_duration_ms` (jingles and promos, which no catalogue lists).
     pub fn tracks_missing_metadata(&self, min_duration_ms: u64, limit: usize) -> Result<Vec<i64>, String> {
@@ -450,6 +462,25 @@ mod tests {
         let jingle = lib.track_by_path("/m/jingle.wav").unwrap().unwrap();
         let jingle = lib.track_metadata(jingle.id).unwrap().unwrap();
         assert!(!jingle.title_from_file_name(), "title is 'Jingle', the stem is 'jingle'");
+    }
+
+    #[test]
+    fn metadata_by_path_skips_files_not_in_the_library() {
+        let mut lib = MediaLibrary::open(":memory:").unwrap();
+        let id = insert(&lib, "Roma", "Amulet", 230_000, "/m/07 Roma.mp3");
+        lib.apply_metadata(&MetadataChange {
+            track_id: id,
+            fields: MetadataFields { album: Some("Petit Viking".into()), year: Some(2017), ..Default::default() },
+            cover_path: None,
+            source: "test".into(),
+        })
+        .unwrap();
+        let paths = vec!["/m/elsewhere.mp3".to_string(), "/m/07 Roma.mp3".to_string()];
+        let found = lib.metadata_for_paths(&paths).unwrap();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].file_path, "/m/07 Roma.mp3");
+        assert_eq!(found[0].album, "Petit Viking");
+        assert_eq!(found[0].year, Some(2017));
     }
 
     #[test]

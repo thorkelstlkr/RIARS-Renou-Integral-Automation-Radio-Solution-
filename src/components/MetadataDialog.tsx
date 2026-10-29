@@ -152,6 +152,8 @@ export default function MetadataDialog({ trackIds, onClose, onApplied }: {
       await refresh();
       if (trackIds.length === 0) setMissing(await metadata.missingCount());
       onApplied();
+      // The playlist shows album, year and genre from the library.
+      window.dispatchEvent(new Event("library-changed"));
     } catch (e) {
       setError(String(e));
     } finally {
