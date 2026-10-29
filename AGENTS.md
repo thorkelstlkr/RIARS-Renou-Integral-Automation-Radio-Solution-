@@ -47,6 +47,8 @@ Agents connect via two protocols:
 
 Both expose the same capabilities: playback control, playlist management, library search, scheduling, streaming, and status monitoring.
 
+Completing missing track metadata (MusicBrainz, optional AcoustID fingerprints, Cover Art Archive) lives in `crates/riars-meta`, the network side; `riars-core/src/library/metadata.rs` holds the offline part (fingerprint, applying changes, writing tags). A lookup only proposes; nothing changes until a client applies what the operator accepts. MusicBrainz allows one request per second per IP: send every request through the gates in `riars-meta/src/http.rs`.
+
 Long-term automation (categories, format clocks, dayparts grid, playlist generator, proof-of-play log) lives in `riars-core/src/automation/` and is described in `docs/automation.md`; its data is in the library database.
 
 The schedule (`/api/v1/schedule`, MCP `add_scheduled_event` etc.) is saved as `riars_schedule.json` next to the library database and runs in riars-server, with second precision; one-shot `Time` events disable themselves after firing.

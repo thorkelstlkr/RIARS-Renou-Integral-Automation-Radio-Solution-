@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 riars-core = { path = "../riars-core" }
 riars-stream = { path = "../riars-stream" }
+riars-meta = { path = "../riars-meta" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

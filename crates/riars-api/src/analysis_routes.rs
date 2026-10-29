@@ -34,7 +34,7 @@ pub fn analysis_routes() -> Router<Arc<AppState>> {
         .route("/audio/devices", get(audio_devices))
 }
 
-struct ApiLibrary(std::sync::Weak<AppState>);
+pub(crate) struct ApiLibrary(pub(crate) std::sync::Weak<AppState>);
 
 impl LibraryAccess for ApiLibrary {
     fn with_library(
