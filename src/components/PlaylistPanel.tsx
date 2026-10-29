@@ -10,6 +10,7 @@ import { live } from "../live/api";
 import CueEditor from "../analysis/CueEditor";
 import ContextMenu, { type ContextEntry } from "../menu/ContextMenu";
 import { usePlaylistDrop } from "./usePlaylistDrop";
+import { metadata, type TrackMetadata } from "./metadataReview";
 
 interface Playlist {
   name?: string;
@@ -55,6 +56,9 @@ const S: Record<string, React.CSSProperties> = {
   kind: { width: 8, height: 8, borderRadius: "50%", display: "inline-block", marginRight: 8, flexShrink: 0 },
   tit: { flex: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
   art: { flex: 1, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
+  alb: { flex: 1, paddingLeft: 8, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
+  year: { width: 44, textAlign: "right" as const, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-secondary)" },
+  gen: { flex: 0.6, minWidth: 0, paddingLeft: 12, color: "var(--text-secondary)", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
   room: {
     width: 48, textAlign: "right" as const, fontFamily: "var(--font-mono)", fontSize: 11,
     color: "var(--text-secondary)",
@@ -342,6 +346,33 @@ export default function PlaylistPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cueKey]);
 
+  // Album, year and genre come from the library, also by path, so they follow the
+  // library: reloaded when the playlist or the library changes (metadata completed).
+  const [meta, setMeta] = useState<Record<string, TrackMetadata>>({});
+  const [libraryRev, setLibraryRev] = useState(0);
+  useEffect(() => {
+    const bump = () => setLibraryRev((n) => n + 1);
+    window.addEventListener("library-changed", bump);
+    return () => window.removeEventListener("library-changed", bump);
+  }, []);
+  useEffect(() => {
+    if (paths.length === 0) {
+      setMeta({});
+      return;
+    }
+    let alive = true;
+    metadata.forPaths(paths)
+      .then((list) => {
+        if (!alive) return;
+        const map: Record<string, TrackMetadata> = {};
+        for (const track of list) map[track.file_path] = track;
+        setMeta(map);
+      })
+      .catch(() => { /* library unavailable */ });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cueKey, libraryRev]);
+
   const clock = (ms: number | null | undefined) =>
     ms == null ? "" : new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 
@@ -508,6 +539,9 @@ export default function PlaylistPanel() {
         <span style={S.start}>{t("playlist.headerStart")}</span>
         <span style={S.tit}>{t("playlist.headerTitle")}</span>
         <span style={S.art}>{t("playlist.headerArtist")}</span>
+        <span style={S.alb}>{t("playlist.headerAlbum")}</span>
+        <span style={S.year}>{t("playlist.headerYear")}</span>
+        <span style={S.gen}>{t("playlist.headerGenre")}</span>
         <span style={S.room}>{t("playlist.headerIntro")}</span>
         <span style={S.room}>{t("playlist.headerOutro")}</span>
         <span style={S.lufs}>{t("playlist.headerLufs")}</span>
@@ -559,6 +593,9 @@ export default function PlaylistPanel() {
                 )}
               </span>
               <span style={S.art}>{item.artist || t("library.unknownArtist")}</span>
+              <span style={S.alb} title={meta[item.track_path]?.album}>{meta[item.track_path]?.album || "—"}</span>
+              <span style={S.year}>{meta[item.track_path]?.year ?? "—"}</span>
+              <span style={S.gen} title={meta[item.track_path]?.genre}>{meta[item.track_path]?.genre || "—"}</span>
               <span style={S.room}>{introRoom == null ? "—" : introRoom.toFixed(1)}</span>
               <span style={S.room}>{outroRoom == null ? "—" : outroRoom.toFixed(1)}</span>
               <span style={S.lufs}>

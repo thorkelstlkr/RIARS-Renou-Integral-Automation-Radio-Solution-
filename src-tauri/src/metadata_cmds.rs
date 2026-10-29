@@ -73,3 +73,11 @@ pub fn metadata_missing_count(state: State<AppState>) -> Result<MissingCount, St
     let all = library.tracks_missing_metadata(0, usize::MAX)?.len();
     Ok(MissingCount { missing, short: all.saturating_sub(missing) })
 }
+
+/// Album, year and genre (and the rest) of the library tracks at these paths, for the
+/// playlist's columns. Paths not in the library are left out.
+#[tauri::command]
+pub fn metadata_for_paths(state: State<AppState>, paths: Vec<String>) -> Result<Vec<riars_core::TrackMetadata>, String> {
+    let library = state.library.lock().map_err(|e| e.to_string())?;
+    library.metadata_for_paths(&paths)
+}

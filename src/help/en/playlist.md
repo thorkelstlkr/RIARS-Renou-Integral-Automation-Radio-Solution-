@@ -18,6 +18,7 @@ The **Playlist** tab is the running order of the station. It shows what has play
 | **Start** | Estimated start time, based on the position of the track on air |
 | **Title** | Track title, with a coloured dot for its kind |
 | **Artist** | Artist, or **Unknown** |
+| **Album**, **Year** and **Genre** | The track's data in the [library](topic:library). A dash means the track is not in the library or lacks that field; [Complete metadata](topic:metadata) can fill them in. |
 | **Duration** | Length of the item |
 
 The dot colour follows the item kind: music, **Jingle**, **Bumper**, **Station ID**, **Sweeper**, **Promo**, **Spot**, **Programme**, **Music bed** or **Other**. Hover over the dot to see the kind and whether the item was added by the automation. Start times move as the current track is seeked, paused or crossfaded.
