@@ -130,10 +130,3 @@ export const preview = {
   state: () => invoke<PreviewState>("preview_state"),
 };
 
-export const msToClock = (ms: number | null | undefined, withTenths = true) => {
-  if (ms == null) return "—";
-  const total = Math.max(0, ms) / 1000;
-  const m = Math.floor(total / 60);
-  const s = total - m * 60;
-  return `${m}:${(withTenths ? s.toFixed(1) : Math.floor(s).toString()).padStart(withTenths ? 4 : 2, "0")}`;
-};

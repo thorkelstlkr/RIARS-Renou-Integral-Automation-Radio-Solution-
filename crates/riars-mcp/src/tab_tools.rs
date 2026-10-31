@@ -162,6 +162,10 @@ fn dispatch(name: &str, args: &Value, state: &McpState) -> Result<Value, String>
             }
             let items: Vec<PlaylistItem> = {
                 let library = library.lock().map_err(|e| e.to_string())?;
+                let guard = library.media_guard()?;
+                for path in &paths {
+                    guard.check(path)?;
+                }
                 paths
                     .into_iter()
                     .map(|path| match library.track_by_path(&path).ok().flatten() {
@@ -270,5 +274,25 @@ mod tests {
         assert_eq!(tabs["on_air"], id.as_str());
         assert!(handle("close_playlist_tab", &json!({ "id": id }), &state).unwrap().is_err());
         assert!(handle("update_playlist_tab", &json!({ "id": id, "start_time": "nope" }), &state).unwrap().is_err());
+    }
+
+    #[test]
+    fn destructive_tools_need_confirm_and_paths_stay_in_roots() {
+        let state = test_state();
+        let err = crate::tools::handle_tool_call("close_playlist_tab", &json!({ "id": "x" }), &state).unwrap_err();
+        assert!(err.contains("confirm"), "{err}");
+        let tools = serde_json::to_value(crate::tools::list_tools_checked()).unwrap();
+        let clear = tools["tools"].as_array().unwrap().iter().find(|t| t["name"] == "playlist_clear").unwrap();
+        assert!(clear["inputSchema"]["required"].as_array().unwrap().contains(&json!("confirm")));
+
+        let outside = std::env::temp_dir().to_string_lossy().into_owned();
+        state.library.lock().unwrap().set_media_roots(&[]).unwrap();
+        let err = crate::tools::handle_tool_call("scan_folder", &json!({ "path": outside }), &state).unwrap_err();
+        assert!(err.contains("--media-root"), "{err}");
+    }
+
+    #[test]
+    fn control_characters_are_stripped() {
+        assert_eq!(crate::clean_text("Song\u{1b}[31m\nnext\tline\u{7}"), "Song[31m\nnext\tline");
     }
 }

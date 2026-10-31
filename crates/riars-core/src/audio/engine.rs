@@ -846,6 +846,11 @@ impl AudioEngine {
         self.volume
     }
 
+    /// The rate tracks are decoded at for this engine (see [`Self::load_decoded`]).
+    pub fn sample_rate(&self) -> u32 {
+        self.sample_rate
+    }
+
     pub fn load_track(&mut self, path: &str) -> Result<(), String> {
         let path = Path::new(path);
         if !path.exists() {

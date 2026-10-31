@@ -12,9 +12,10 @@ El servidor sin pantalla (`riars-server`) incluye un **panel de control en el na
 
 ## Entrar
 
-1. Abre en el navegador `http://<servidor>:3100/`. Por ejemplo, `http://192.168.1.50:3100/`.
-2. Escribe el **token de la API**: el que pasaste con `--api-token`, o el que el servidor muestra al arrancar si no pusiste ninguno.
-3. Pulsa **Entrar**.
+1. Arranca el servidor con `--bind 0.0.0.0`; si no, solo acepta conexiones del propio equipo.
+2. Abre en el navegador `http://<servidor>:3100/`. Por ejemplo, `http://192.168.1.50:3100/`.
+3. Escribe el **token de la API**: el que pasaste con `--api-token`, o el que el servidor generó y guardó en el archivo `riars_api_token`, junto a la base de datos.
+4. Pulsa **Entrar**.
 
 ## Qué tiene
 

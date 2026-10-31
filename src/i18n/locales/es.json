@@ -1,7 +1,7 @@
 {
   "app": {
     "subtitle": "Renou Integral Automation Radio Solution",
-    "version": "RIARS v0.1.0"
+    "version": "RIARS v0.1.1"
   },
   "transport": {
     "play": "Reproducir",
@@ -74,8 +74,6 @@
     "title": "Biblioteca",
     "load": "Cargar",
     "addFolder": "Añadir carpeta",
-    "scanning": "Escaneando carpeta...",
-    "added": "{{count}} canciones nuevas añadidas",
     "loadError": "No se puede reproducir este archivo: {{error}}",
     "searchPlaceholder": "Buscar...",
     "loading": "Cargando...",
@@ -744,9 +742,7 @@
     },
     "media": {
       "marks": "Marcas…",
-      "prelisten": "Preescucha",
-      "prelistenStarted": "Preescuchando {{title}}.",
-      "trackActions": "Acciones de la pista"
+      "prelistenStarted": "Preescuchando {{title}}."
     },
     "panel": {
       "title": "Análisis",
@@ -789,7 +785,6 @@
     "confirmClear": "¿Vaciar toda la lista de reproducción?",
     "openFolder": "Abrir la carpeta del archivo",
     "copyPath": "Copiar la ruta",
-    "notInLibrary": "Este archivo no está en la biblioteca.",
     "addToPlaylist": "Añadir a la lista",
     "detectMarks": "Detectar marcas",
     "analysing": "Analizando {{count}} pistas…",

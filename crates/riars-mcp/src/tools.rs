@@ -274,7 +274,61 @@ pub fn list_tools() -> ToolList {
     }
 }
 
+/// Tools that destroy what the operator built. They run only with `"confirm": true`,
+/// so text from tags or lookups cannot talk an agent into them unnoticed.
+pub(crate) const DESTRUCTIVE: &[&str] = &[
+    "playlist_clear",
+    "delete_saved_playlist",
+    "remove_scheduled_event",
+    "remove_library_folder",
+    "close_playlist_tab",
+    "delete_category",
+    "delete_category_rule",
+    "delete_clock",
+    "delete_grid_rule",
+    "delete_advertiser",
+    "delete_campaign",
+];
+
+/// Refuse a destructive call that does not carry `"confirm": true`.
+pub(crate) fn require_confirm(name: &str, args: &Value) -> Result<(), String> {
+    if args["confirm"].as_bool() == Some(true) {
+        Ok(())
+    } else {
+        Err(format!("{name} cannot be undone: ask the operator, then call again with \"confirm\": true"))
+    }
+}
+
+/// The tool list with a required `confirm` argument on every destructive tool.
+pub fn list_tools_checked() -> ToolList {
+    let mut list = list_tools();
+    for tool in list.tools.iter_mut().filter(|t| DESTRUCTIVE.contains(&t.name)) {
+        let schema = &mut tool.input_schema;
+        if !schema["properties"].is_object() {
+            schema["properties"] = json!({});
+        }
+        schema["properties"]["confirm"] = json!({
+            "type": "boolean",
+            "description": "Must be true: this cannot be undone, so ask the operator first"
+        });
+        match schema["required"].as_array_mut() {
+            Some(required) => required.push(json!("confirm")),
+            None => schema["required"] = json!(["confirm"]),
+        }
+    }
+    list
+}
+
 pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Value, String> {
+    if DESTRUCTIVE.contains(&name) {
+        require_confirm(name, args)?;
+    }
+    // Rewriting a file's tags changes the user's files: the same rule.
+    if name == "apply_track_metadata"
+        && args["items"].as_array().is_some_and(|items| items.iter().any(|i| i["write_file"] == true))
+    {
+        require_confirm(name, args)?;
+    }
     if let Some(result) = crate::analysis_tools::handle(name, args, state) {
         return result;
     }
@@ -345,11 +399,11 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
         }
         "load_track" => {
             let path = args["path"].as_str().ok_or(t("missing_path"))?;
-            state
-                .engine
-                .lock()
-                .map_err(|e| e.to_string())?
-                .load_track(path)?;
+            state.library.lock().map_err(|e| e.to_string())?.check_media_path(path)?;
+            // Decoded with no lock held, so the player keeps running meanwhile.
+            let sample_rate = state.engine.lock().map_err(|e| e.to_string())?.sample_rate();
+            let player = riars_core::audio::player::TrackPlayer::from_file(std::path::Path::new(path), sample_rate)?;
+            state.engine.lock().map_err(|e| e.to_string())?.load_decoded(player);
             Ok(text_result(&format!("{}: {path}", t("loaded_track"))))
         }
         // Both return one page plus the total: a big library would flood an agent's context.
@@ -365,11 +419,11 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
         }
         "scan_folder" => {
             let path = args["path"].as_str().ok_or(t("missing_path"))?;
-            let stored = state
-                .library
-                .lock()
-                .map_err(|e| e.to_string())?
-                .add_folder(path)?;
+            let stored = {
+                let mut library = state.library.lock().map_err(|e| e.to_string())?;
+                library.check_media_path(path)?;
+                library.add_folder(path)?
+            };
             let count = riars_core::library::folders::scan_into(&state.library, &stored)?;
             Ok(text_result(&format!(
                 "{}: {count} {}",
@@ -393,6 +447,7 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
         },
         "playlist_add" => {
             let path = args["path"].as_str().ok_or(t("missing_path"))?;
+            state.library.lock().map_err(|e| e.to_string())?.check_media_path(path)?;
             let title = args.get("title").and_then(|v| v.as_str()).unwrap_or_else(|| std::path::Path::new(path).file_stem().and_then(|s| s.to_str()).unwrap_or_default());
             let mut engine = state.engine.lock().map_err(|e| e.to_string())?;
             engine.playlist_mut().add_item(path.to_string(), title.to_string(), "".to_string(), 0);
@@ -508,6 +563,9 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
             }
             let trigger: EventTrigger = serde_json::from_value(args["trigger"].clone()).map_err(|e| format!("Invalid trigger: {e}"))?;
             let action: EventAction = serde_json::from_value(args["action"].clone()).map_err(|e| format!("Invalid action: {e}"))?;
+            if let EventAction::PlayTrack { track_path } = &action {
+                state.library.lock().map_err(|e| e.to_string())?.check_media_path(track_path)?;
+            }
             let event = ScheduledEvent::new(name, trigger, action);
             let mut scheduler = state.scheduler.lock().map_err(|e| e.to_string())?;
             scheduler.add_event(event.clone());

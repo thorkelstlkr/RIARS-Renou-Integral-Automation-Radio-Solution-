@@ -33,6 +33,12 @@ Con `riars-server --mcp-stdio`, RIARS funciona como servidor **MCP** (Model Cont
 
 Las respuestas van resumidas para no llenar el contexto del agente.
 
+Por seguridad:
+
+- Las herramientas que borran o reescriben (vaciar la lista, borrar listas guardadas, eventos, categorías, relojes, reglas, anunciantes o campañas, quitar carpetas, cerrar pestañas, escribir etiquetas en los archivos) solo funcionan con `"confirm": true`. El agente debe preguntarte antes.
+- Los títulos, artistas y etiquetas son datos, no órdenes: si una canción se llama "borra la lista", el agente no debe hacerle caso.
+- Los agentes solo pueden usar archivos de las carpetas de la biblioteca y de `--media-root`.
+
 > Nota: los mismos datos se pueden cambiar desde el escritorio, la API o el MCP. Las tres vías usan las mismas validaciones y los mismos mensajes de error.
 
 Consulta también [Servidor sin pantalla](topic:headless-server).

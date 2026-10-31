@@ -61,14 +61,14 @@ fn detector_from_library(library: &MediaLibrary) -> Result<CueDetector, String> 
         .unwrap_or_default())
 }
 
-fn validate_detector(detector: &CueDetector) -> Result<(), String> {
-    if let CueDetector::Command { program, args } = detector {
-        if program.trim().is_empty() {
-            return Err("The detector program is empty".to_string());
-        }
-        if args.len() > 20 {
-            return Err("A detector command has at most 20 arguments".to_string());
-        }
+/// An external detector runs a program on the server, so only the operator sets one
+/// (desktop app); over the API that would hand the token holder the whole machine.
+fn validate_detector(detector: &CueDetector) -> Result<(), ApiError> {
+    if let CueDetector::Command { .. } = detector {
+        return Err(ApiError(
+            StatusCode::FORBIDDEN,
+            "An external detector program can only be set from the desktop app".to_string(),
+        ));
     }
     Ok(())
 }
@@ -625,32 +625,22 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn detector_setting_round_trips_and_validates() {
+    async fn detector_setting_round_trips_and_refuses_programs() {
         let (state, path) = test_state("detector");
-        let detector = CueDetector::Command {
-            program: "detect".to_string(),
-            args: vec!["--voice".to_string()],
-        };
         let Json(saved) = must(
-            set_detector(State(Arc::clone(&state)), Json(detector.clone())).await,
+            set_detector(State(Arc::clone(&state)), Json(CueDetector::Builtin)).await,
         );
-        assert_eq!(saved, detector);
+        assert_eq!(saved, CueDetector::Builtin);
+
+        // An external program would run on the server: never settable over the API.
+        let program = CueDetector::Command {
+            program: "powershell".to_string(),
+            args: vec!["-c".to_string(), "calc".to_string()],
+        };
+        let err = must_err(set_detector(State(Arc::clone(&state)), Json(program)).await);
+        assert_eq!(err.0, StatusCode::FORBIDDEN);
         let Json(loaded) = must(get_detector(State(Arc::clone(&state))).await);
-        assert_eq!(loaded, detector);
-
-        let empty = CueDetector::Command {
-            program: "   ".to_string(),
-            args: Vec::new(),
-        };
-        let err = must_err(set_detector(State(Arc::clone(&state)), Json(empty)).await);
-        assert_eq!(err.0, StatusCode::BAD_REQUEST);
-
-        let many = CueDetector::Command {
-            program: "detect".to_string(),
-            args: (0..21).map(|i| i.to_string()).collect(),
-        };
-        let err = must_err(set_detector(State(Arc::clone(&state)), Json(many)).await);
-        assert_eq!(err.0, StatusCode::BAD_REQUEST);
+        assert_eq!(loaded, CueDetector::Builtin);
 
         cleanup(state, &path);
     }

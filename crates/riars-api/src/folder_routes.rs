@@ -67,11 +67,11 @@ async fn add_folder(
     State(state): State<Arc<AppState>>,
     Json(req): Json<FolderRequest>,
 ) -> Result<Json<AddFolderResponse>, ApiError> {
-    let stored = state
-        .library
-        .lock()
-        .map_err(ApiError::internal)?
-        .add_folder(&req.path)?;
+    let stored = {
+        let mut library = state.library.lock().map_err(ApiError::internal)?;
+        library.check_media_path(&req.path)?;
+        library.add_folder(&req.path)?
+    };
     let worker = Arc::clone(&state);
     let folder = stored.clone();
     let added = tokio::task::spawn_blocking(move || scan_into(&worker.library, &folder))

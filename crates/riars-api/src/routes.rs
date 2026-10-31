@@ -122,6 +122,7 @@ async fn playlist_add(
     State(state): State<Arc<AppState>>,
     Json(req): Json<PlaylistAddRequest>,
 ) -> Result<Json<Playlist>, ApiError> {
+    state.library.lock().map_err(ApiError::internal)?.check_media_path(&req.path)?;
     let mut engine = state.engine.lock().map_err(ApiError::internal)?;
     let title = req.title.unwrap_or_else(|| {
         std::path::Path::new(&req.path)
@@ -271,6 +272,9 @@ async fn schedule_get(State(state): State<Arc<AppState>>) -> Result<Json<Vec<Sch
 async fn schedule_add(State(state): State<Arc<AppState>>, Json(req): Json<AddEventRequest>) -> Result<Json<ScheduledEvent>, ApiError> {
     if req.name.trim().is_empty() {
         return Err(ApiError::from("name is required".to_string()));
+    }
+    if let EventAction::PlayTrack { track_path } = &req.action {
+        state.library.lock().map_err(ApiError::internal)?.check_media_path(track_path)?;
     }
     let mut scheduler = state.scheduler.lock().map_err(ApiError::internal)?;
     let event = ScheduledEvent::new(req.name, req.trigger, req.action);
@@ -476,11 +480,16 @@ async fn load_track(
     State(state): State<Arc<AppState>>,
     Json(req): Json<LoadTrackRequest>,
 ) -> Result<&'static str, ApiError> {
-    state
-        .engine
-        .lock()
-        .map_err(ApiError::internal)?
-        .load_track(&req.path)?;
+    state.library.lock().map_err(ApiError::internal)?.check_media_path(&req.path)?;
+    // Decode on a worker thread with no lock held, like `play_unlocked`: a big or slow
+    // file must not stall the API or the streaming loop.
+    let sample_rate = state.engine.lock().map_err(ApiError::internal)?.sample_rate();
+    let player = tokio::task::spawn_blocking(move || {
+        riars_core::audio::player::TrackPlayer::from_file(std::path::Path::new(&req.path), sample_rate)
+    })
+    .await
+    .map_err(ApiError::internal)??;
+    state.engine.lock().map_err(ApiError::internal)?.load_decoded(player);
     Ok("ok")
 }
 
@@ -511,11 +520,11 @@ async fn library_scan(
     State(state): State<Arc<AppState>>,
     Json(req): Json<ScanRequest>,
 ) -> Result<Json<CountResponse>, ApiError> {
-    let stored = state
-        .library
-        .lock()
-        .map_err(ApiError::internal)?
-        .add_folder(&req.path)?;
+    let stored = {
+        let mut library = state.library.lock().map_err(ApiError::internal)?;
+        library.check_media_path(&req.path)?;
+        library.add_folder(&req.path)?
+    };
     let worker = Arc::clone(&state);
     let count = tokio::task::spawn_blocking(move || {
         riars_core::library::folders::scan_into(&worker.library, &stored)
