@@ -278,6 +278,14 @@ fn play_log_from_raw(raw: PlayLogRaw) -> Result<PlayLogEntry, String> {
 }
 
 fn csv_field(value: &str) -> String {
+    // A field starting like a formula would run when the file is opened in a spreadsheet.
+    let guarded;
+    let value = if value.starts_with(['=', '+', '-', '@', '\t', '\r']) {
+        guarded = format!("'{value}");
+        guarded.as_str()
+    } else {
+        value
+    };
     if value.contains(',') || value.contains('"') || value.contains('\n') || value.contains('\r') {
         format!("\"{}\"", value.replace('"', "\"\""))
     } else {
@@ -1024,6 +1032,14 @@ impl super::generator::Catalog for MediaLibrary {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn csv_fields_cannot_start_a_formula() {
+        assert_eq!(super::csv_field("=SUM(A1)"), "'=SUM(A1)");
+        assert_eq!(super::csv_field("-5,3"), "\"'-5,3\"");
+        assert_eq!(super::csv_field("@cmd"), "'@cmd");
+        assert_eq!(super::csv_field("Plain text"), "Plain text");
+    }
+
     use std::path::{Path, PathBuf};
 
     use chrono::{NaiveDate, NaiveTime};

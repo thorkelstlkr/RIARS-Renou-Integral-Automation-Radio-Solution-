@@ -43,7 +43,7 @@ Si la canción no tiene intro, marca **Sin intro**.
 
 En el recuadro **Análisis** puedes elegir otro detector:
 
-- **Programa externo**: un programa que separa la voz con inteligencia artificial (por ejemplo, Demucs o Spleeter con un pequeño script). RIARS le pasa cada archivo y lee el resultado. Es más preciso, pero gasta más ordenador. Si tarda más de dos minutos con un archivo, se detiene.
+- **Programa externo**: un programa que separa la voz con inteligencia artificial (por ejemplo, Demucs o Spleeter con un pequeño script). RIARS le pasa cada archivo y lee el resultado. Es más preciso, pero gasta más ordenador. Si tarda más de dos minutos con un archivo, se detiene. Por seguridad, solo se puede elegir desde la app de escritorio: la API lo rechaza.
 - **Agente por MCP**: un agente como Claude puede revisar las canciones dudosas con `list_tracks_needing_review`, leer la línea de voz de cada una con `analyze_track` y fijar las marcas con `set_track_cues`. Quedan con origen *Agente*. Un agente no puede cambiar las marcas que has puesto a mano. Consulta [API y agentes de IA](topic:api-agents).
 
 ## Cómo pisa la automatización

@@ -702,6 +702,20 @@ mod tests {
         let mut out = Vec::new();
         let mut spins = 0;
         while out.len() < count && !p.is_finished() {
+            // When the decoder is behind and holds only the current frame, the player
+            // plays it without interpolating towards the next one: inaudible, but the
+            // exact comparisons in these tests would see it. Let the decoder catch up.
+            let channels = p.channels;
+            if let Source::Stream(s) = &mut p.source {
+                let mut waits = 0;
+                while s.win_valid == 1 && !(s.control.eof.load(Ordering::Acquire) && s.is_drained()) && waits < 10_000 {
+                    s.fill(channels);
+                    if s.win_valid == 1 {
+                        waits += 1;
+                        std::thread::sleep(Duration::from_millis(1));
+                    }
+                }
+            }
             let before = p.frame_pos;
             let pair = (p.sample(0), p.sample(1));
             p.advance(step);

@@ -43,7 +43,7 @@ If the song has no intro, tick **No intro**.
 
 In the **Track analysis** box you can choose another detector:
 
-- **External program**: a program that separates the voice with AI (for example Demucs or Spleeter with a small script). RIARS passes it each file and reads the result. It is more accurate but uses more computer power. A program that takes longer than two minutes on one file is stopped.
+- **External program**: a program that separates the voice with AI (for example Demucs or Spleeter with a small script). RIARS passes it each file and reads the result. It is more accurate but uses more computer power. A program that takes longer than two minutes on one file is stopped. For safety it can only be chosen in the desktop app; the API refuses it.
 - **Agent over MCP**: an agent such as Claude can review the doubtful songs with `list_tracks_needing_review`, read the voice line of each one with `analyze_track` and set the marks with `set_track_cues`. They are saved with source *Agent*. An agent cannot replace marks you set by hand. See [API and AI agents](topic:api-agents).
 
 ## How the automation talks over

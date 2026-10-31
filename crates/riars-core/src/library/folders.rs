@@ -583,6 +583,70 @@ pub fn rescan_all(library: &Mutex<MediaLibrary>) -> Result<usize, String> {
     Ok(added)
 }
 
+
+/// `path` with links and `..` resolved, as a plain string (no `\\?\` prefix on
+/// Windows), so a prefix check cannot be fooled by `Music\..\Windows`.
+fn resolved(path: &str) -> Result<String, String> {
+    let real = std::fs::canonicalize(path.trim()).map_err(|e| format!("Cannot open {path}: {e}"))?;
+    let real = real.to_string_lossy().into_owned();
+    #[cfg(windows)]
+    let real = match real.strip_prefix(r"\\?\UNC\") {
+        Some(share) => format!(r"\\{share}"),
+        None => real.strip_prefix(r"\\?\").map(str::to_string).unwrap_or(real),
+    };
+    Ok(real)
+}
+
+/// Where remote clients may point, resolved once: check many paths with one guard
+/// (see [`MediaLibrary::media_guard`]).
+pub struct MediaGuard(Option<Vec<String>>);
+
+impl MediaGuard {
+    /// Whether a remote client may use `path` (a file or a folder): it must exist and,
+    /// once links and `..` are resolved, lie inside a media root or a library folder.
+    /// Missing and outside paths get the same answer, so clients cannot probe the disk.
+    pub fn check(&self, path: &str) -> Result<(), String> {
+        let Some(bases) = &self.0 else {
+            return Ok(());
+        };
+        match resolved(path) {
+            Ok(real) if bases.iter().any(|base| is_within(&real, base)) => Ok(()),
+            outcome => {
+                if let Err(e) = outcome {
+                    log::debug!("{e}");
+                }
+                Err(format!("{path} is not an existing file or folder in the library folders or media roots of this server (--media-root)"))
+            }
+        }
+    }
+}
+
+impl MediaLibrary {
+    /// Keep remote clients (API, MCP) inside `roots` and the library folders: the
+    /// paths they send to play, add, scan or tag go through [`Self::check_media_path`].
+    /// Returns the roots as resolved. Without a call (the desktop app) anything goes.
+    pub fn set_media_roots(&mut self, roots: &[String]) -> Result<Vec<String>, String> {
+        let roots = roots.iter().map(|r| resolved(r)).collect::<Result<Vec<_>, _>>()?;
+        self.media_roots = Some(roots.clone());
+        Ok(roots)
+    }
+
+    /// The media roots and library folders, resolved, for checking paths.
+    pub fn media_guard(&self) -> Result<MediaGuard, String> {
+        let Some(roots) = &self.media_roots else {
+            return Ok(MediaGuard(None));
+        };
+        let mut bases = roots.clone();
+        bases.extend(self.folder_paths()?.iter().filter_map(|f| resolved(f).ok()));
+        Ok(MediaGuard(Some(bases)))
+    }
+
+    /// [`MediaGuard::check`] for one path.
+    pub fn check_media_path(&self, path: &str) -> Result<(), String> {
+        self.media_guard()?.check(path)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -773,5 +837,36 @@ mod tests {
         assert_eq!(left_out, 1);
         assert_eq!(seen, [(0, 2), (1, 2), (2, 2)]);
         assert_eq!(lib.lock().unwrap().track_count().unwrap(), 2);
+    }
+    #[test]
+    fn media_roots_keep_remote_paths_inside_roots_and_library_folders() {
+        let dir = temp_dir("roots");
+        let (root, other, music) = (dir.join("root"), dir.join("other"), dir.join("music"));
+        for d in [&root, &other, &music] {
+            std::fs::create_dir_all(d).unwrap();
+        }
+        touch(&root.join("a.mp3"));
+        touch(&other.join("b.mp3"));
+        touch(&music.join("c.mp3"));
+        let s = |p: &Path| p.to_string_lossy().into_owned();
+        let mut lib = library(&dir);
+        // The desktop app sets no roots: anything goes.
+        assert!(lib.check_media_path(&s(&other.join("b.mp3"))).is_ok());
+
+        lib.set_media_roots(&[s(&root)]).unwrap();
+        assert!(lib.check_media_path(&s(&root.join("a.mp3"))).is_ok());
+        assert!(lib.check_media_path(&s(&root)).is_ok());
+        assert!(lib.check_media_path(&s(&other.join("b.mp3"))).is_err());
+        // `..` cannot climb out of a root.
+        assert!(lib.check_media_path(&s(&root.join("..").join("other").join("b.mp3"))).is_err());
+        // A sibling whose name starts like the root is not inside it.
+        std::fs::create_dir_all(dir.join("root2")).unwrap();
+        assert!(lib.check_media_path(&s(&dir.join("root2"))).is_err());
+        // Missing files are refused.
+        assert!(lib.check_media_path(&s(&root.join("missing.mp3"))).is_err());
+        // Library folders count as roots.
+        lib.add_folder(&s(&music)).unwrap();
+        assert!(lib.check_media_path(&s(&music.join("c.mp3"))).is_ok());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

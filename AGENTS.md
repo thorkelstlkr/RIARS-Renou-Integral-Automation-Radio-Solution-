@@ -42,8 +42,8 @@ cargo test --workspace
 
 Agents connect via two protocols:
 
-1. **REST API** (riars-api) — HTTP endpoints at `http://host:3100/api/v1/...`. Every request needs `Authorization: Bearer <token>` (`--api-token` or `RIARS_API_TOKEN`; generated and logged if unset). The WebSocket at `/ws/events` takes `?token=` instead. Errors are 4xx/5xx with `{"error": "..."}`.
-2. **MCP Server** (riars-mcp) — stdio or SSE transport for Claude and compatible agents
+1. **REST API** (riars-api) — HTTP endpoints at `http://host:3100/api/v1/...`. Every request needs `Authorization: Bearer <token>` (`--api-token` or `RIARS_API_TOKEN`; generated once and saved in `riars_api_token` if unset). It listens on 127.0.0.1 unless `--bind` says otherwise. Paths sent by API and MCP clients must lie in a library folder or a `--media-root` (`MediaLibrary::check_media_path`); an external cue detector cannot be set over the API. The WebSocket at `/ws/events` takes `?token=` instead. Errors are 4xx/5xx with `{"error": "..."}`.
+2. **MCP Server** (riars-mcp) — stdio transport (`riars-server --mcp-stdio`) for Claude and compatible agents
 
 Both expose the same capabilities: playback control, playlist management, library search, scheduling, streaming, and status monitoring.
 

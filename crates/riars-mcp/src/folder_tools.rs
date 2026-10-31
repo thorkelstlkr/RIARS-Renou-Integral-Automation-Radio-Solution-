@@ -87,11 +87,11 @@ fn dispatch(name: &str, args: &Value, state: &McpState) -> Result<Value, String>
         }
         "add_library_folder" => {
             let path = args["path"].as_str().ok_or("Missing path")?;
-            let stored = state
-                .library
-                .lock()
-                .map_err(|e| e.to_string())?
-                .add_folder(path)?;
+            let stored = {
+                let mut library = state.library.lock().map_err(|e| e.to_string())?;
+                library.check_media_path(path)?;
+                library.add_folder(path)?
+            };
             let added = scan_into(&state.library, &stored)?;
             Ok(text_result(&format!("{stored}: {added} tracks added")))
         }

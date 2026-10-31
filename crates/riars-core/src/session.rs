@@ -41,9 +41,30 @@ impl SessionState {
     pub fn save(&self, path: &Path) -> Result<(), String> {
         let json = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
         let tmp = path.with_extension("json.tmp");
-        std::fs::write(&tmp, json).map_err(|e| format!("Cannot write {}: {e}", tmp.display()))?;
+        write_private(&tmp, json.as_bytes()).map_err(|e| format!("Cannot write {}: {e}", tmp.display()))?;
         std::fs::rename(&tmp, path).map_err(|e| format!("Cannot write {}: {e}", path.display()))
     }
+}
+
+/// Write `bytes` to `path` readable by its owner only (the session holds the
+/// Icecast password). On Windows the file inherits the folder's permissions.
+pub fn write_private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options.open(path)?;
+    #[cfg(unix)]
+    {
+        // `mode` only applies when the file is created.
+        use std::os::unix::fs::PermissionsExt;
+        file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
+    }
+    file.write_all(bytes)
 }
 
 /// Restore `state` into the engine and, if it was playing, carry on from the same

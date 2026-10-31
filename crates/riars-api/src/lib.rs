@@ -15,7 +15,7 @@ use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::{Json, Router};
 use riars_core::{AudioEngine, MediaLibrary, Scheduler};
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
 pub struct AppState {
     pub engine: Mutex<AudioEngine>,
@@ -66,8 +66,6 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         // Added after the auth layer: the page itself is public, everything it does
         // goes through the API with the token.
         .route("/", axum::routing::get(panel))
-        // Outermost, so CORS preflight requests are answered without a token.
-        .layer(CorsLayer::permissive())
         .with_state(state)
 }
 
@@ -120,16 +118,34 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
     a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
-pub async fn serve(state: Arc<AppState>, port: u16) -> Result<(), Box<dyn std::error::Error>> {
-    let app = create_router(Arc::clone(&state));
-    let addr = format!("0.0.0.0:{port}");
+/// Serve the API on `addr`. The panel is served from the same origin, so browsers
+/// from other origins get no CORS access unless listed in `cors_origins`.
+pub async fn serve(
+    state: Arc<AppState>,
+    addr: std::net::SocketAddr,
+    cors_origins: &[String],
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut app = create_router(Arc::clone(&state));
+    if !cors_origins.is_empty() {
+        let origins = cors_origins
+            .iter()
+            .map(|o| o.parse::<header::HeaderValue>())
+            .collect::<Result<Vec<_>, _>>()?;
+        // Outermost, so CORS preflight requests are answered without a token.
+        app = app.layer(
+            CorsLayer::new()
+                .allow_origin(AllowOrigin::list(origins))
+                .allow_methods(Any)
+                .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE]),
+        );
+    }
     log::info!("RIARS API server listening on {addr}");
     tokio::spawn(auto_advance(Arc::clone(&state)));
     let scheduler_state = Arc::clone(&state);
     std::thread::Builder::new()
         .name("riars-scheduler".into())
         .spawn(move || run_scheduler(&scheduler_state))?;
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
     Ok(())
 }

@@ -152,7 +152,7 @@ fn send(
                 503 | 429 => format!("busy ({})", response.status()),
                 status => {
                     let mut response = response;
-                    let body = response.body_mut().read_to_string().unwrap_or_default();
+                    let body = response.body_mut().with_config().limit(64 * 1024).read_to_string().unwrap_or_default();
                     return Err(HttpError::Other(format!("HTTP {status}: {}", body.chars().take(300).collect::<String>())));
                 }
             },

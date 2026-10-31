@@ -8,11 +8,11 @@ keywords: web panel, browser, token, phone, remote, automation card
 
 # Web panel
 
-`riars-server` serves a small control panel in the browser. Open `http://YOUR-SERVER:3100/`, replacing `YOUR-SERVER` with the machine's name or IP address. It is designed to work on a phone as well as on a computer. The desktop app does not serve this panel.
+`riars-server` serves a small control panel in the browser. Start the server with `--bind 0.0.0.0` (without it, it only accepts connections from the same machine), then open `http://YOUR-SERVER:3100/`, replacing `YOUR-SERVER` with the machine's name or IP address. It is designed to work on a phone as well as on a computer. The desktop app does not serve this panel.
 
 ## Signing in
 
-The panel asks for the API token. Use the token given with `--api-token`, the value of `RIARS_API_TOKEN`, or the random token printed in the server log at startup. The browser remembers it on that device; use the token only on trusted devices. A wrong token shows **Wrong token**.
+The panel asks for the API token. Use the token given with `--api-token`, the value of `RIARS_API_TOKEN`, or the token the server generated and saved in the `riars_api_token` file, next to the database. The browser remembers it on that device; use the token only on trusted devices. A wrong token shows **Wrong token**.
 
 ## What you can do
 

@@ -1,7 +1,7 @@
 {
   "app": {
     "subtitle": "Renou Integral Automation Radio Solution",
-    "version": "RIARS v0.1.0"
+    "version": "RIARS v0.1.1"
   },
   "transport": {
     "play": "Reproduir",
@@ -74,8 +74,6 @@
     "title": "Biblioteca",
     "load": "Carregar",
     "addFolder": "Afegeix carpeta",
-    "scanning": "S'està escanejant la carpeta...",
-    "added": "{{count}} pistes noves afegides",
     "loadError": "No es pot reproduir aquest fitxer: {{error}}",
     "searchPlaceholder": "Cercar...",
     "loading": "Carregant...",
@@ -743,9 +741,7 @@
     },
     "media": {
       "marks": "Marques…",
-      "prelisten": "Preescolta",
-      "prelistenStarted": "S'està preescoltant {{title}}.",
-      "trackActions": "Accions de la pista"
+      "prelistenStarted": "S'està preescoltant {{title}}."
     },
     "panel": {
       "title": "Anàlisi",
@@ -788,7 +784,6 @@
     "confirmClear": "Vols buidar tota la llista de reproducció?",
     "openFolder": "Obre la carpeta del fitxer",
     "copyPath": "Copia el camí",
-    "notInLibrary": "Aquest fitxer no és a la biblioteca.",
     "addToPlaylist": "Afegeix a la llista",
     "detectMarks": "Detecta les marques",
     "analysing": "S'estan analitzant {{count}} pistes…",

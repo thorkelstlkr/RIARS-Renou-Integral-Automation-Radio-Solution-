@@ -93,7 +93,9 @@ fn run_command(program: &str, args: &[String], path: &Path, cancel: &AtomicBool)
         std::thread::spawn(move || {
             let mut out = Vec::new();
             if let Some(mut pipe) = pipe {
-                let _ = pipe.read_to_end(&mut out);
+                // Keep the first MiB; drain the rest so the program never blocks on a full pipe.
+                let _ = (&mut pipe).take(1 << 20).read_to_end(&mut out);
+                let _ = std::io::copy(&mut pipe, &mut std::io::sink());
             }
             out
         })

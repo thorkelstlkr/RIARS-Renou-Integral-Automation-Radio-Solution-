@@ -250,7 +250,11 @@ fn apply_one(library: &dyn LibraryAccess, covers: &Path, item: ApplyItem) -> App
             outcome.cover_saved = cover.is_some();
             job().mark_applied(item.track_id, &track);
             if item.write_file {
-                match write_tags(Path::new(&track.file_path), &item.fields, cover.as_ref().map(|(_, b)| b.as_slice())) {
+                // A remote client may only rewrite files inside the server's media roots.
+                let allowed = library.with_library(&mut |lib| lib.check_media_path(&track.file_path));
+                match allowed.and_then(|()| {
+                    write_tags(Path::new(&track.file_path), &item.fields, cover.as_ref().map(|(_, b)| b.as_slice()))
+                }) {
                     Ok(()) => outcome.wrote_file = true,
                     Err(e) => errors.push(e),
                 }

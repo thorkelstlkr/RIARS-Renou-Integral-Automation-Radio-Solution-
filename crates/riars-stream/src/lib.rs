@@ -46,6 +46,8 @@ struct Control {
     title: Option<String>,
     /// Settings of the last start, for `resume` (scheduled starts).
     last_config: Option<IcecastConfig>,
+    /// Icecast servers `start` may connect to (`host` or `host:port`); empty means any.
+    allowed_hosts: Vec<String>,
 }
 
 struct Inner {
@@ -90,10 +92,24 @@ impl StreamService {
             return Err("mount must start with '/'".to_string());
         }
         let mut control = self.inner.control.lock().map_err(|e| e.to_string())?;
+        if !host_allowed(&control.allowed_hosts, &config.host, config.port) {
+            return Err(format!(
+                "Icecast host {}:{} is not allowed on this server (see --stream-host)",
+                config.host, config.port
+            ));
+        }
         control.last_config = Some(config.clone());
         control.config = Some(config);
         control.generation += 1;
         Ok(())
+    }
+
+    /// Restrict `start` to these Icecast servers, each `host` or `host:port`
+    /// (case-insensitive). An empty list allows any server.
+    pub fn set_allowed_hosts(&self, hosts: Vec<String>) {
+        if let Ok(mut control) = self.inner.control.lock() {
+            control.allowed_hosts = hosts.into_iter().map(|h| h.trim().to_lowercase()).filter(|h| !h.is_empty()).collect();
+        }
     }
 
     /// Start again with the settings of the last `start`.
@@ -403,38 +419,73 @@ fn stream(
     }
 }
 
+/// Whether `host:port` is in `allowed` (lowercase `host` or `host:port` entries).
+fn host_allowed(allowed: &[String], host: &str, port: u16) -> bool {
+    if allowed.is_empty() {
+        return true;
+    }
+    let host = host.trim().to_lowercase();
+    let with_port = format!("{host}:{port}");
+    allowed.iter().any(|a| *a == host || *a == with_port)
+}
+
 /// Update the song title through Icecast's admin endpoint, off the streaming thread.
+/// One worker sends them all; titles replaced while it was busy are skipped.
 fn send_metadata(config: &IcecastConfig, title: String) {
-    let config = config.clone();
-    std::thread::spawn(move || {
-        let result = (|| -> Result<String, String> {
-            let addr = (config.host.as_str(), config.port)
-                .to_socket_addrs()
-                .map_err(|e| e.to_string())?
-                .next()
-                .ok_or("cannot resolve host")?;
-            let mut socket = TcpStream::connect_timeout(&addr, Duration::from_secs(5))
-                .map_err(|e| e.to_string())?;
-            socket.set_read_timeout(Some(Duration::from_secs(5))).ok();
-            let auth = base64_encode(format!("{}:{}", config.username, config.password).as_bytes());
-            let request = format!(
-                "GET /admin/metadata?mount={}&mode=updinfo&song={} HTTP/1.0\r\n\
-                 Host: {}:{}\r\nAuthorization: Basic {auth}\r\nUser-Agent: RIARS/{}\r\n\r\n",
-                url_encode(&config.mount),
-                url_encode(&title),
-                header_value(&config.host),
-                config.port,
-                env!("CARGO_PKG_VERSION"),
-            );
-            socket.write_all(request.as_bytes()).map_err(|e| e.to_string())?;
-            read_status_line(&mut socket)
-        })();
-        match result {
-            Ok(line) if line.contains(" 200") => log::info!("Stream title: {title}"),
-            Ok(line) => log::warn!("Icecast refused the title update: {line}"),
-            Err(e) => log::warn!("Cannot update the stream title: {e}"),
-        }
+    type TitleSender = Mutex<std::sync::mpsc::Sender<(IcecastConfig, String)>>;
+    static WORKER: std::sync::OnceLock<Option<TitleSender>> = std::sync::OnceLock::new();
+    let worker = WORKER.get_or_init(|| {
+        let (sender, receiver) = std::sync::mpsc::channel::<(IcecastConfig, String)>();
+        std::thread::Builder::new()
+            .name("riars-icecast-title".into())
+            .spawn(move || {
+                while let Ok(mut latest) = receiver.recv() {
+                    while let Ok(newer) = receiver.try_recv() {
+                        latest = newer;
+                    }
+                    let (config, title) = latest;
+                    post_title(&config, &title);
+                }
+            })
+            .ok()
+            .map(|_| Mutex::new(sender))
     });
+    match worker.as_ref().and_then(|w| w.lock().ok()) {
+        Some(sender) => {
+            let _ = sender.send((config.clone(), title));
+        }
+        None => log::warn!("Cannot update the stream title: no worker thread"),
+    }
+}
+
+fn post_title(config: &IcecastConfig, title: &str) {
+    let result = (|| -> Result<String, String> {
+        let addr = (config.host.as_str(), config.port)
+            .to_socket_addrs()
+            .map_err(|e| e.to_string())?
+            .next()
+            .ok_or("cannot resolve host")?;
+        let mut socket = TcpStream::connect_timeout(&addr, Duration::from_secs(5))
+            .map_err(|e| e.to_string())?;
+        socket.set_read_timeout(Some(Duration::from_secs(5))).ok();
+        let auth = base64_encode(format!("{}:{}", config.username, config.password).as_bytes());
+        let request = format!(
+            "GET /admin/metadata?mount={}&mode=updinfo&song={} HTTP/1.0\r\n\
+             Host: {}:{}\r\nAuthorization: Basic {auth}\r\nUser-Agent: RIARS/{}\r\n\r\n",
+            url_encode(&config.mount),
+            url_encode(title),
+            header_value(&config.host),
+            config.port,
+            env!("CARGO_PKG_VERSION"),
+        );
+        socket.write_all(request.as_bytes()).map_err(|e| e.to_string())?;
+        read_status_line(&mut socket)
+    })();
+    match result {
+        Ok(line) if line.contains(" 200") => log::info!("Stream title: {title}"),
+        Ok(line) => log::warn!("Icecast refused the title update: {line}"),
+        Err(e) => log::warn!("Cannot update the stream title: {e}"),
+    }
 }
 
 #[cfg(test)]
@@ -444,6 +495,19 @@ mod tests {
     #[test]
     fn header_values_cannot_inject_lines() {
         assert_eq!(header_value("Radio\r\nX-Evil: 1"), "RadioX-Evil: 1");
+    }
+
+    #[test]
+    fn allowed_hosts_match_host_or_host_and_port() {
+        let list = |l: &[&str]| l.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert!(host_allowed(&[], "anything.example", 1));
+        let host = list(&["radio.example.com"]);
+        assert!(host_allowed(&host, "Radio.Example.com", 8000));
+        assert!(host_allowed(&host, "radio.example.com", 9000));
+        assert!(!host_allowed(&host, "evil.example.com", 8000));
+        let port = list(&["radio.example.com:8000"]);
+        assert!(host_allowed(&port, "radio.example.com", 8000));
+        assert!(!host_allowed(&port, "radio.example.com", 22));
     }
 
     #[test]
