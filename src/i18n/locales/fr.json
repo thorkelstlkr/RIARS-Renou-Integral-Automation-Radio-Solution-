@@ -74,8 +74,6 @@
     "title": "Bibliothèque",
     "load": "Charger",
     "addFolder": "Ajouter un dossier",
-    "scanning": "Analyse du dossier...",
-    "added": "{{count}} nouvelles pistes ajoutées",
     "loadError": "Impossible de lire ce fichier : {{error}}",
     "searchPlaceholder": "Rechercher...",
     "loading": "Chargement...",
@@ -743,9 +741,7 @@
     },
     "media": {
       "marks": "Repères…",
-      "prelisten": "Pré-écoute",
-      "prelistenStarted": "Pré-écoute de {{title}}.",
-      "trackActions": "Actions du titre"
+      "prelistenStarted": "Pré-écoute de {{title}}."
     },
     "panel": {
       "title": "Analyse des titres",
@@ -788,7 +784,6 @@
     "confirmClear": "Vider toute la playlist ?",
     "openFolder": "Afficher dans le dossier",
     "copyPath": "Copier le chemin",
-    "notInLibrary": "Ce fichier n'est pas dans la bibliothèque.",
     "addToPlaylist": "Ajouter à la playlist",
     "detectMarks": "Détecter les repères",
     "analysing": "Analyse de {{count}} titres…",

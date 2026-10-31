@@ -74,8 +74,6 @@
     "title": "Biblioteca",
     "load": "Carregar",
     "addFolder": "Adicionar pasta",
-    "scanning": "A analisar a pasta...",
-    "added": "{{count}} novas faixas adicionadas",
     "loadError": "Não é possível reproduzir este ficheiro: {{error}}",
     "searchPlaceholder": "Pesquisar...",
     "loading": "A carregar...",
@@ -743,9 +741,7 @@
     },
     "media": {
       "marks": "Marcas…",
-      "prelisten": "Pré-escuta",
-      "prelistenStarted": "A pré-escutar {{title}}.",
-      "trackActions": "Ações da faixa"
+      "prelistenStarted": "A pré-escutar {{title}}."
     },
     "panel": {
       "title": "Análise",
@@ -788,7 +784,6 @@
     "confirmClear": "Limpar toda a lista de reprodução?",
     "openFolder": "Abrir a pasta do ficheiro",
     "copyPath": "Copiar o caminho",
-    "notInLibrary": "Este ficheiro não está na biblioteca.",
     "addToPlaylist": "Adicionar à lista",
     "detectMarks": "Detetar marcas",
     "analysing": "A analisar {{count}} faixas…",

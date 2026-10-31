@@ -138,10 +138,6 @@ export function sectionTitle(sectionId: string, t: Translator): string {
   return t(`help.sections.${sectionId}`);
 }
 
-export function getTopic(lang: string, id: string): HelpTopic | undefined {
-  return topicsFor(lang).find((topic) => topic.id === id);
-}
-
 function fold(value: string): string {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }

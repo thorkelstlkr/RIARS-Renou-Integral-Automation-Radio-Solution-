@@ -74,8 +74,6 @@
     "title": "Bibliothek",
     "load": "Laden",
     "addFolder": "Ordner hinzufügen",
-    "scanning": "Ordner wird durchsucht...",
-    "added": "{{count}} neue Titel hinzugefügt",
     "loadError": "Diese Datei kann nicht abgespielt werden: {{error}}",
     "searchPlaceholder": "Suchen...",
     "loading": "Wird geladen...",
@@ -743,9 +741,7 @@
     },
     "media": {
       "marks": "Marken…",
-      "prelisten": "Vorhören",
-      "prelistenStarted": "Vorhören: {{title}}.",
-      "trackActions": "Titelaktionen"
+      "prelistenStarted": "Vorhören: {{title}}."
     },
     "panel": {
       "title": "Titelanalyse",
@@ -788,7 +784,6 @@
     "confirmClear": "Die ganze Playlist leeren?",
     "openFolder": "Im Ordner anzeigen",
     "copyPath": "Pfad kopieren",
-    "notInLibrary": "Diese Datei ist nicht in der Bibliothek.",
     "addToPlaylist": "Zur Playlist hinzufügen",
     "detectMarks": "Marken erkennen",
     "analysing": "{{count}} Titel werden analysiert…",

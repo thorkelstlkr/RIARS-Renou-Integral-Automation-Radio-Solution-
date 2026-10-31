@@ -57,7 +57,7 @@ Software de automatizacion de emisora de radio, open source y multiplataforma. D
 |------|------------|
 | Motor de audio | Rust (`cpal`, `symphonia`) |
 | API REST | Rust (`axum`, `tokio`) |
-| Servidor MCP | Rust (JSON-RPC stdio/SSE) |
+| Servidor MCP | Rust (JSON-RPC stdio) |
 | Base de datos | SQLite (`rusqlite`) |
 | Desktop + Android | Tauri v2 |
 | Interfaz | React 19 + TypeScript + Vite |
