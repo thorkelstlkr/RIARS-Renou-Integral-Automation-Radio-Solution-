@@ -80,8 +80,12 @@ npm run tauri dev
 # Solo necesita Rust — sin Node.js ni GUI
 cargo build -p riars-server --release
 
-# Ejecutar (la API exige un token; si no se indica, se genera uno y se muestra al arrancar)
-./target/release/riars-server --port 3100 --api-token MI_TOKEN_SECRETO
+# Ejecutar (la API exige un token; si no se indica, se genera uno y se guarda en
+# riars_api_token, junto a la base de datos). Por defecto solo escucha en este equipo
+# (127.0.0.1); --bind 0.0.0.0 la abre a la red, mejor detrás de un proxy HTTPS.
+./target/release/riars-server --port 3100 --api-token MI_TOKEN_SECRETO --bind 0.0.0.0
+# La API y los agentes solo usan archivos de la biblioteca y de --media-root:
+./target/release/riars-server --api-token MI_TOKEN_SECRETO --media-root /srv/musica
 # o bien: RIARS_API_TOKEN=MI_TOKEN_SECRETO ./target/release/riars-server --port 3100
 
 # Sin tarjeta de sonido (p. ej. un servidor que solo emite a Icecast): reloj interno
@@ -99,7 +103,7 @@ cargo build -p riars-server --release
 # Conectar Claude u otro agente via MCP
 ./target/release/riars-server --mcp-stdio
 
-# O abrir el panel web desde el móvil u otro ordenador: http://IP-DEL-SERVIDOR:3100/
+# O abrir el panel web desde el móvil u otro ordenador (servidor con --bind 0.0.0.0): http://IP-DEL-SERVIDOR:3100/
 # (pide el token una vez y lo recuerda en ese navegador)
 
 # O usar la API REST

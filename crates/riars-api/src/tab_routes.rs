@@ -124,6 +124,9 @@ async fn close(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Re
 }
 
 async fn order(State(state): State<Arc<AppState>>, Json(req): Json<IdsRequest>) -> Result<Json<Tabs>, ApiError> {
+    if req.ids.len() > 1_000 {
+        return Err("At most 1000 tabs".to_string().into());
+    }
     Ok(Json(tabs::order(&state.engine, &state.library, &req.ids)?))
 }
 
@@ -134,6 +137,12 @@ async fn add_items(
 ) -> Result<Json<Playlist>, ApiError> {
     if req.items.len() > 10_000 {
         return Err("At most 10000 items at once".to_string().into());
+    }
+    {
+        let library = state.library.lock().map_err(ApiError::internal)?;
+        for item in &req.items {
+            library.check_media_path(&item.path)?;
+        }
     }
     let items: Vec<PlaylistItem> = req
         .items
@@ -162,6 +171,9 @@ async fn remove_items(
     Path(id): Path<String>,
     Json(req): Json<IdsRequest>,
 ) -> Result<Json<Playlist>, ApiError> {
+    if req.ids.len() > 10_000 {
+        return Err("At most 10000 items at once".to_string().into());
+    }
     Ok(Json(tabs::edit_list(&state.engine, &state.library, Some(&id), |list| { list.remove_ids(&req.ids); })?.1))
 }
 

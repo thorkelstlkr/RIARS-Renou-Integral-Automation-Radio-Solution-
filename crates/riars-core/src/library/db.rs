@@ -24,6 +24,9 @@ pub struct MediaLibrary {
     db: Connection,
     /// Bumped when tracks or their categories change, so caches know to reload.
     revision: u64,
+    /// Where remote clients (API, MCP) may point: `None` (the desktop app) means
+    /// anywhere. See [`MediaLibrary::check_media_file`].
+    pub(crate) media_roots: Option<Vec<String>>,
 }
 
 impl MediaLibrary {
@@ -80,7 +83,7 @@ impl MediaLibrary {
         crate::automation::store::init_schema(&db)?;
         super::metadata::init_schema(&db)?;
         super::tabs::init_schema(&db)?;
-        Ok(Self { db, revision: 0 })
+        Ok(Self { db, revision: 0, media_roots: None })
     }
 
     /// Add every playable audio file under `folder_path`, including subfolders.

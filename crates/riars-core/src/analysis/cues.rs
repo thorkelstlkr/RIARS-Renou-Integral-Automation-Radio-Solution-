@@ -125,6 +125,10 @@ fn resample(input: &[f32], from: u32, to: u32) -> Vec<f32> {
     if from == to || input.is_empty() {
         return input.to_vec();
     }
+    // A broken or crafted file may claim a zero rate: no audio rather than a huge buffer.
+    if from == 0 || to == 0 {
+        return Vec::new();
+    }
     let step = from as f64 / to as f64;
     let width = step.ceil().max(1.0) as usize;
     let n = (input.len() as f64 / step) as usize;
@@ -409,6 +413,12 @@ fn waveform(samples: &[f32], buckets: usize) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn resample_with_a_zero_rate_gives_nothing() {
+        assert!(super::resample(&[0.5; 100], 0, 8000).is_empty());
+        assert!(super::resample(&[0.5; 100], 44100, 0).is_empty());
+    }
+
     use super::*;
 
     const R: u32 = RATE;

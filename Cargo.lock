@@ -3229,7 +3229,7 @@ dependencies = [
 
 [[package]]
 name = "riars-api"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "axum",
  "chrono",
@@ -3245,7 +3245,7 @@ dependencies = [
 
 [[package]]
 name = "riars-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "cpal",
@@ -3263,7 +3263,7 @@ dependencies = [
 
 [[package]]
 name = "riars-desktop"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "env_logger",
@@ -3280,7 +3280,7 @@ dependencies = [
 
 [[package]]
 name = "riars-mcp"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "log",
@@ -3294,7 +3294,7 @@ dependencies = [
 
 [[package]]
 name = "riars-meta"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "log",
  "riars-core",
@@ -3305,7 +3305,7 @@ dependencies = [
 
 [[package]]
 name = "riars-server"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap",
  "env_logger",
@@ -3320,7 +3320,7 @@ dependencies = [
 
 [[package]]
 name = "riars-stream"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "log",
  "mp3lame-encoder",

@@ -1,7 +1,7 @@
 {
   "app": {
     "subtitle": "Renou Integral Automation Radio Solution",
-    "version": "RIARS v0.1.0"
+    "version": "RIARS v0.1.1"
   },
   "transport": {
     "play": "Reproducir",

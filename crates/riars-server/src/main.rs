@@ -12,6 +12,26 @@ struct Cli {
     #[arg(long, default_value_t = 3100)]
     port: u16,
 
+    /// Address the API listens on. The default only accepts this machine; use
+    /// 0.0.0.0 for the whole network, ideally behind a TLS proxy (the API is plain HTTP).
+    #[arg(long, default_value = "127.0.0.1")]
+    bind: std::net::IpAddr,
+
+    /// Folder API and MCP clients may play, add, scan and tag files from (repeatable).
+    /// Library folders and --scan always count; paths elsewhere are refused.
+    #[arg(long = "media-root", value_name = "FOLDER")]
+    media_roots: Vec<String>,
+
+    /// Icecast server streaming may connect to, as host or host:port (repeatable).
+    /// Without it, any server is allowed.
+    #[arg(long = "stream-host", value_name = "HOST[:PORT]")]
+    stream_hosts: Vec<String>,
+
+    /// Browser origin allowed to call the API from another site (repeatable), e.g.
+    /// https://panel.example.com. The built-in panel needs none.
+    #[arg(long = "cors-origin", value_name = "ORIGIN")]
+    cors_origins: Vec<String>,
+
     /// Run as MCP server over stdio (for AI agent integration)
     #[arg(long)]
     mcp_stdio: bool,
@@ -22,7 +42,7 @@ struct Cli {
 
     /// Token required by the REST API and WebSocket (`Authorization: Bearer <token>`).
     /// Defaults to the RIARS_API_TOKEN environment variable; if neither is set, a
-    /// random token is generated and printed at startup.
+    /// random token is generated once and kept in riars_api_token next to the database.
     #[arg(long)]
     api_token: Option<String>,
 
@@ -119,6 +139,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             log::warn!("{} {folder}: {e}", t("scan_failed"));
         }
     }
+    // Remote clients stay inside the media roots and the library folders.
+    match library.set_media_roots(&cli.media_roots) {
+        Ok(roots) if roots.is_empty() => log::info!("Media roots: the library folders only (see --media-root)"),
+        Ok(roots) => log::info!("Media roots: {} and the library folders", roots.join(", ")),
+        Err(e) => return Err(format!("--media-root: {e}").into()),
+    }
+    if let Some(stream) = &stream {
+        stream.set_allowed_hosts(cli.stream_hosts.clone());
+    }
 
     if cli.mcp_stdio {
         log::info!("{}", t("mcp_started"));
@@ -160,14 +189,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         riars_mcp::run_stdio(mcp_state).await?;
     } else {
-        log::info!("{} 0.0.0.0:{}", t("api_listening"), cli.port);
-        let api_token = match cli.api_token.or_else(|| std::env::var("RIARS_API_TOKEN").ok()) {
+        let addr = std::net::SocketAddr::new(cli.bind, cli.port);
+        log::info!("{} {addr}", t("api_listening"));
+        if !cli.bind.is_loopback() {
+            log::warn!("The API is open to the network over plain HTTP: put a TLS proxy in front of it");
+        }
+        let api_token = match cli.api_token.clone().or_else(|| std::env::var("RIARS_API_TOKEN").ok()) {
             Some(token) if !token.trim().is_empty() => token,
-            _ => {
-                let token = uuid::Uuid::new_v4().simple().to_string();
-                log::warn!("No --api-token given; generated one for this run: {token}");
-                token
-            }
+            _ => stored_token(&std::path::Path::new(&cli.db_path).with_file_name("riars_api_token"))?,
         };
         let state = Arc::new(AppState {
             api_token,
@@ -207,10 +236,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        riars_api::serve(state, cli.port).await?;
+        riars_api::serve(state, addr, &cli.cors_origins).await?;
     }
 
     Ok(())
+}
+
+/// The token kept in `path`, generated there (readable by its owner only) the first
+/// time. Its path is logged, never the token itself.
+fn stored_token(path: &std::path::Path) -> Result<String, Box<dyn std::error::Error>> {
+    if let Ok(token) = std::fs::read_to_string(path) {
+        let token = token.trim().to_string();
+        if !token.is_empty() {
+            log::info!("API token: read from {}", path.display());
+            return Ok(token);
+        }
+    }
+    let token = uuid::Uuid::new_v4().simple().to_string();
+    riars_core::session::write_private(path, token.as_bytes())
+        .map_err(|e| format!("Cannot save the API token in {}: {e}", path.display()))?;
+    log::warn!("No --api-token given; generated one and saved it in {}", path.display());
+    Ok(token)
 }
 
 /// Pick up files added to the library folders since the last run.

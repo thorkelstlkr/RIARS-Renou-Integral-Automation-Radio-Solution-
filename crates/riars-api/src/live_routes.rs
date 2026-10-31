@@ -150,11 +150,13 @@ async fn save_bank(
     State(state): State<Arc<AppState>>,
     Json(bank): Json<CartBank>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let id = state
-        .library
-        .lock()
-        .map_err(ApiError::internal)?
-        .save_cart_bank(&bank)?;
+    let id = {
+        let mut library = state.library.lock().map_err(ApiError::internal)?;
+        for button in bank.buttons.iter().filter(|b| !b.file_path.is_empty()) {
+            library.check_media_path(&button.file_path)?;
+        }
+        library.save_cart_bank(&bank)?
+    };
     Ok(Json(serde_json::json!({ "id": id })))
 }
 
@@ -203,10 +205,11 @@ async fn put_button(
     Path(id): Path<i64>,
     Json(button): Json<CartButton>,
 ) -> Result<&'static str, ApiError> {
-    state
-        .library
-        .lock()
-        .map_err(ApiError::internal)?
+    let mut library = state.library.lock().map_err(ApiError::internal)?;
+    if !button.file_path.is_empty() {
+        library.check_media_path(&button.file_path)?;
+    }
+    library
         .set_cart_button(id, &button)
         .map_err(|error| {
             if error.starts_with("No cart bank") {
