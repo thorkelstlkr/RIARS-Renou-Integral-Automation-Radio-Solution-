@@ -139,9 +139,9 @@ async fn add_items(
         return Err("At most 10000 items at once".to_string().into());
     }
     {
-        let library = state.library.lock().map_err(ApiError::internal)?;
+        let guard = state.library.lock().map_err(ApiError::internal)?.media_guard()?;
         for item in &req.items {
-            library.check_media_path(&item.path)?;
+            guard.check(&item.path)?;
         }
     }
     let items: Vec<PlaylistItem> = req

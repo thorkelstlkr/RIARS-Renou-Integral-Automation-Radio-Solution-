@@ -26,7 +26,7 @@
         "default-src": "'self'",
         "script-src": "'self'",
         "style-src": "'self' 'unsafe-inline'",
-        "img-src": "'self' data: blob: https://coverartarchive.org https://*.archive.org",
+        "img-src": "'self' data: blob: https://coverartarchive.org https://archive.org https://*.archive.org",
         "font-src": "'self' data:",
         "connect-src": "ipc: http://ipc.localhost",
         "object-src": "'none'",
@@ -37,7 +37,7 @@
         "default-src": "'self'",
         "script-src": "'self' 'unsafe-inline' 'unsafe-eval'",
         "style-src": "'self' 'unsafe-inline'",
-        "img-src": "'self' data: blob: https://coverartarchive.org https://*.archive.org",
+        "img-src": "'self' data: blob: https://coverartarchive.org https://archive.org https://*.archive.org",
         "font-src": "'self' data:",
         "connect-src": "ipc: http://ipc.localhost ws://localhost:1420 http://localhost:1420",
         "object-src": "'none'"

@@ -584,17 +584,41 @@ pub fn rescan_all(library: &Mutex<MediaLibrary>) -> Result<usize, String> {
 }
 
 
-/// `path` with links and `..` resolved, as a plain string (no `\?\` prefix on
+/// `path` with links and `..` resolved, as a plain string (no `\\?\` prefix on
 /// Windows), so a prefix check cannot be fooled by `Music\..\Windows`.
 fn resolved(path: &str) -> Result<String, String> {
     let real = std::fs::canonicalize(path.trim()).map_err(|e| format!("Cannot open {path}: {e}"))?;
     let real = real.to_string_lossy().into_owned();
     #[cfg(windows)]
-    let real = match real.strip_prefix(r"\?\UNC\") {
-        Some(share) => format!(r"\{share}"),
-        None => real.strip_prefix(r"\?\").map(str::to_string).unwrap_or(real),
+    let real = match real.strip_prefix(r"\\?\UNC\") {
+        Some(share) => format!(r"\\{share}"),
+        None => real.strip_prefix(r"\\?\").map(str::to_string).unwrap_or(real),
     };
     Ok(real)
+}
+
+/// Where remote clients may point, resolved once: check many paths with one guard
+/// (see [`MediaLibrary::media_guard`]).
+pub struct MediaGuard(Option<Vec<String>>);
+
+impl MediaGuard {
+    /// Whether a remote client may use `path` (a file or a folder): it must exist and,
+    /// once links and `..` are resolved, lie inside a media root or a library folder.
+    /// Missing and outside paths get the same answer, so clients cannot probe the disk.
+    pub fn check(&self, path: &str) -> Result<(), String> {
+        let Some(bases) = &self.0 else {
+            return Ok(());
+        };
+        match resolved(path) {
+            Ok(real) if bases.iter().any(|base| is_within(&real, base)) => Ok(()),
+            outcome => {
+                if let Err(e) = outcome {
+                    log::debug!("{e}");
+                }
+                Err(format!("{path} is not an existing file or folder in the library folders or media roots of this server (--media-root)"))
+            }
+        }
+    }
 }
 
 impl MediaLibrary {
@@ -607,21 +631,19 @@ impl MediaLibrary {
         Ok(roots)
     }
 
-    /// Whether a remote client may use `path` (a file or a folder): it must exist and,
-    /// once links and `..` are resolved, lie inside a media root or a library folder.
-    pub fn check_media_path(&self, path: &str) -> Result<(), String> {
+    /// The media roots and library folders, resolved, for checking paths.
+    pub fn media_guard(&self) -> Result<MediaGuard, String> {
         let Some(roots) = &self.media_roots else {
-            return Ok(());
+            return Ok(MediaGuard(None));
         };
-        let real = resolved(path)?;
-        let folders = self.folder_paths()?;
-        let inside = roots.iter().any(|root| is_within(&real, root))
-            || folders.iter().filter_map(|f| resolved(f).ok()).any(|f| is_within(&real, &f));
-        if inside {
-            Ok(())
-        } else {
-            Err(format!("{path} is outside the library folders and media roots of this server (--media-root)"))
-        }
+        let mut bases = roots.clone();
+        bases.extend(self.folder_paths()?.iter().filter_map(|f| resolved(f).ok()));
+        Ok(MediaGuard(Some(bases)))
+    }
+
+    /// [`MediaGuard::check`] for one path.
+    pub fn check_media_path(&self, path: &str) -> Result<(), String> {
+        self.media_guard()?.check(path)
     }
 }
 

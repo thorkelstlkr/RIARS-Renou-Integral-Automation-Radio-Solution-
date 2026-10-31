@@ -162,8 +162,9 @@ fn dispatch(name: &str, args: &Value, state: &McpState) -> Result<Value, String>
             }
             let items: Vec<PlaylistItem> = {
                 let library = library.lock().map_err(|e| e.to_string())?;
+                let guard = library.media_guard()?;
                 for path in &paths {
-                    library.check_media_path(path)?;
+                    guard.check(path)?;
                 }
                 paths
                     .into_iter()

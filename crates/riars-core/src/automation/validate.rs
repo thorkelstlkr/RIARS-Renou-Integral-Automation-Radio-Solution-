@@ -102,6 +102,8 @@ pub fn validate_clock(clock: &Clock, library: &MediaLibrary) -> Result<(), Strin
                 if !std::path::Path::new(path).is_file() {
                     return Err(format!("No track file {path}"));
                 }
+                // Clocks also come from remote clients: same limits as any other path.
+                library.check_media_path(path)?;
             }
             _ => {}
         }

@@ -168,22 +168,23 @@ pub async fn run_stdio(state: McpState) -> Result<(), Box<dyn std::error::Error>
     let stdin = tokio::io::stdin();
     let mut stdout = tokio::io::stdout();
     let mut reader = BufReader::new(stdin);
-    let mut line = String::new();
+    // Bytes, not text: a cut at the size limit may split a character.
+    let mut bytes = Vec::new();
 
     log::info!("RIARS MCP server started (stdio transport)");
 
     loop {
-        line.clear();
-        let bytes_read = (&mut reader).take(MAX_LINE).read_line(&mut line).await?;
+        bytes.clear();
+        let bytes_read = (&mut reader).take(MAX_LINE).read_until(b'\n', &mut bytes).await?;
         if bytes_read == 0 {
             break;
         }
-        if !line.ends_with('\n') && bytes_read as u64 == MAX_LINE {
+        if bytes.last() != Some(&b'\n') && bytes_read as u64 == MAX_LINE {
             // Skip the rest of the oversized line, then answer once.
             loop {
-                line.clear();
-                let more = (&mut reader).take(MAX_LINE).read_line(&mut line).await?;
-                if more == 0 || line.ends_with('\n') {
+                bytes.clear();
+                let more = (&mut reader).take(MAX_LINE).read_until(b'\n', &mut bytes).await?;
+                if more == 0 || bytes.last() == Some(&b'\n') {
                     break;
                 }
             }
@@ -195,6 +196,8 @@ pub async fn run_stdio(state: McpState) -> Result<(), Box<dyn std::error::Error>
             continue;
         }
 
+        // Invalid UTF-8 becomes U+FFFD and then a parse error, not a dead server.
+        let line = String::from_utf8_lossy(&bytes);
         let trimmed = line.trim();
         if trimmed.is_empty() {
             continue;

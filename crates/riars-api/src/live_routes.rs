@@ -152,8 +152,9 @@ async fn save_bank(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let id = {
         let mut library = state.library.lock().map_err(ApiError::internal)?;
+        let guard = library.media_guard()?;
         for button in bank.buttons.iter().filter(|b| !b.file_path.is_empty()) {
-            library.check_media_path(&button.file_path)?;
+            guard.check(&button.file_path)?;
         }
         library.save_cart_bank(&bank)?
     };
