@@ -74,8 +74,6 @@
     "title": "Library",
     "load": "Load",
     "addFolder": "Add folder",
-    "scanning": "Scanning folder...",
-    "added": "{{count}} new tracks added",
     "loadError": "Cannot play this file: {{error}}",
     "searchPlaceholder": "Search...",
     "loading": "Loading...",
@@ -744,9 +742,7 @@
     },
     "media": {
       "marks": "Marks…",
-      "prelisten": "Pre-listen",
-      "prelistenStarted": "Pre-listening {{title}}.",
-      "trackActions": "Track actions"
+      "prelistenStarted": "Pre-listening {{title}}."
     },
     "panel": {
       "title": "Track analysis",
@@ -789,7 +785,6 @@
     "confirmClear": "Clear the whole playlist?",
     "openFolder": "Show in folder",
     "copyPath": "Copy path",
-    "notInLibrary": "This file is not in the library.",
     "addToPlaylist": "Add to playlist",
     "detectMarks": "Detect marks",
     "analysing": "Analysing {{count}} tracks…",

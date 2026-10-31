@@ -24,7 +24,6 @@ log = "0.4"
 env_logger = "0.11"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4", "serde"] }
-thiserror = "2"
 
 # Decoding audio in an unoptimized build takes seconds per track; optimize dependencies
 # in dev too (our own crates stay fast to compile).
