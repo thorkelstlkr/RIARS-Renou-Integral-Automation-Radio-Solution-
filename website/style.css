@@ -430,3 +430,10 @@ section { padding-block: 96px; }
   .shots { grid-template-columns: minmax(0, 1fr); }
   .lightbox-bar p { font-size: 0.85rem; }
 }
+
+/* Policy pages: one readable column of text */
+.doc .wrap { max-width: 760px; }
+.doc h1 { margin-bottom: 16px; }
+.doc h2 { margin-top: 40px; font-size: 1.35rem; }
+.doc ul { padding-left: 1.2em; }
+.doc li { margin-bottom: 8px; }
