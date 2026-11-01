@@ -138,6 +138,7 @@ mod tests {
             schedule_path: temp_path(name, ".schedule.json"),
             api_token: "t".into(),
             stream: None,
+            rds: riars_rds::RdsService::new(None),
             session: Mutex::new(SessionSaver::new(temp_path(name, ".session.json"))),
             automation: Mutex::new(Automation::new()),
             automation_events: tokio::sync::broadcast::channel(4).0,

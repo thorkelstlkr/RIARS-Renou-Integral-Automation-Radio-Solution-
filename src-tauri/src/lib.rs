@@ -14,6 +14,7 @@ mod automation_cmds;
 mod folder_cmds;
 mod live_cmds;
 mod metadata_cmds;
+mod rds_cmds;
 mod tab_cmds;
 
 #[tauri::command]
@@ -34,6 +35,8 @@ pub struct AppState {
     pub stream: Option<StreamService>,
     /// Last title sent to the stream, to send it only when the track changes.
     pub stream_title: Mutex<String>,
+    /// RDS texts for external encoders, following what is on air.
+    pub rds: riars_rds::RdsService,
     pub scheduler: Mutex<Scheduler>,
     /// Where the schedule is saved after every change.
     pub schedule_path: PathBuf,
@@ -258,7 +261,7 @@ fn engine_get_state(state: State<AppState>) -> Result<EngineStateInfo, String> {
     Ok(state.engine.lock().map_err(|e| e.to_string())?.state_info())
 }
 
-/// Auto-advance, stream title, session saving and UI events, on a backend thread:
+/// Auto-advance, stream title and RDS, session saving and UI events, on a backend thread:
 /// playback must go on while the window is minimised, and the UI is told about
 /// changes instead of polling for them.
 fn run_engine_loop(app: AppHandle) {
@@ -296,6 +299,7 @@ fn run_engine_loop(app: AppHandle) {
                     }
                 }
             }
+            state.rds.update(engine.rds_on_air(), engine.mic_on());
             (engine.state_info(), engine.playlist_revision())
         };
 
@@ -610,6 +614,7 @@ pub fn run() {
             let schedule_path = data_dir.join("riars_schedule.json");
             let session_path = data_dir.join("riars_session.json");
             let audio_settings_path = data_dir.join("riars_audio.json");
+            let rds = riars_rds::RdsService::new(Some(data_dir.join("riars_rds.json")));
             let scheduler = Scheduler::load(&schedule_path).unwrap_or_else(|e| {
                 log::warn!("{e}; starting with an empty schedule");
                 Scheduler::new()
@@ -628,6 +633,7 @@ pub fn run() {
             app.manage(AppState {
                 stream,
                 stream_title: Mutex::new(String::new()),
+                rds,
                 scheduler: Mutex::new(scheduler),
                 schedule_path,
                 session: Mutex::new(riars_core::session::SessionSaver::new(session_path.clone())),
@@ -735,6 +741,9 @@ pub fn run() {
             schedule_remove,
             schedule_toggle,
             stream_get,
+            rds_cmds::rds_get,
+            rds_cmds::rds_set_config,
+            rds_cmds::rds_set_text,
             stream_start,
             stream_stop,
             engine_load_track,

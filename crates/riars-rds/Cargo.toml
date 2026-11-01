@@ -1,0 +1,12 @@
+[package]
+name = "riars-rds"
+version = "0.1.0"
+edition = "2021"
+description = "RDS output for RIARS: PS, RadioText and RT+ to external encoders (UECP or ASCII over TCP, UDP, serial or a file)"
+
+[dependencies]
+riars-core = { path = "../riars-core" }
+log = { workspace = true }
+serde = { workspace = true }
+# No libudev: port enumeration is not needed, the operator names the port.
+serialport = { version = "4", default-features = false }

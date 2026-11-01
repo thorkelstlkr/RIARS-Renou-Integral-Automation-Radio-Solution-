@@ -110,6 +110,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     log::info!("Schedule: {} ({} events)", schedule_path.display(), scheduler.events().len());
     let session_path = std::path::Path::new(&cli.db_path).with_file_name("riars_session.json");
+    let rds = riars_rds::RdsService::new(Some(std::path::Path::new(&cli.db_path).with_file_name("riars_rds.json")));
     let session = Mutex::new(riars_core::session::SessionSaver::new(session_path.clone()));
 
     // --scan adds a library folder; every library folder is rescanned in the
@@ -127,6 +128,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             library: Arc::new(Mutex::new(library)),
             scheduler: Arc::new(Mutex::new(scheduler)),
             stream,
+            rds,
             schedule_path,
             session,
             automation: Arc::new(Mutex::new(riars_core::automation::Automation::new())),
@@ -172,6 +174,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let state = Arc::new(AppState {
             api_token,
             stream,
+            rds,
             schedule_path,
             session,
             engine: Mutex::new(engine),

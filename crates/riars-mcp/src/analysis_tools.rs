@@ -386,6 +386,7 @@ mod tests {
             library: Arc::new(Mutex::new(library)),
             scheduler: Arc::new(Mutex::new(Scheduler::new())),
             stream: None,
+            rds: riars_rds::RdsService::new(None),
             schedule_path: path.with_extension("schedule.json"),
             session: Mutex::new(SessionSaver::new(path.with_extension("session.json"))),
             automation: Arc::new(Mutex::new(Automation::new())),

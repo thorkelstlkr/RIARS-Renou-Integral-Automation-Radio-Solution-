@@ -27,7 +27,7 @@ curl -H "Authorization: Bearer MY_TOKEN" http://localhost:3100/api/v1/status
 curl -X POST -H "Authorization: Bearer MY_TOKEN" http://localhost:3100/api/v1/player/play
 ```
 
-The API covers status, player, library, playlist, saved playlists, schedule, streaming and automation. Automation endpoints live under `/api/v1/automation`: status and config, categories and rules, clocks, grid, advertisers and campaigns, preview, log, delivery and the CSV exports. The full route table is in `docs/automation.md`, section 6.
+The API covers status, player, library, playlist, saved playlists, schedule, streaming, RDS and automation. Automation endpoints live under `/api/v1/automation`: status and config, categories and rules, clocks, grid, advertisers and campaigns, preview, log, delivery and the CSV exports. The full route table is in `docs/automation.md`, section 6.
 
 ## WebSocket events
 
@@ -35,7 +35,7 @@ Connect to `ws://YOUR-SERVER:3100/ws/events?token=YOUR_TOKEN`. The socket sends 
 
 ## MCP for AI agents
 
-Run `riars-server --mcp-stdio` to expose RIARS as an MCP server on standard input/output. Agents get tools for playback, library search, playlists, scheduling, streaming and automation: status, categories, clocks, grid, campaigns, `preview_schedule`, `get_play_log` and `delivery_report`, among others. Configure your agent to launch that command, as described in `AGENTS.md`.
+Run `riars-server --mcp-stdio` to expose RIARS as an MCP server on standard input/output. Agents get tools for playback, library search, playlists, scheduling, streaming, RDS (see [RDS](topic:rds)) and automation: status, categories, clocks, grid, campaigns, `preview_schedule`, `get_play_log` and `delivery_report`, among others. Configure your agent to launch that command, as described in `AGENTS.md`.
 
 > Note: give the token only to the clients you trust. Anyone with it can control the station.
 

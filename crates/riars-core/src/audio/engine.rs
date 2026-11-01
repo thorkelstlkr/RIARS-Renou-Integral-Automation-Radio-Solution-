@@ -688,6 +688,25 @@ impl AudioEngine {
         })
     }
 
+    /// What RDS shows: the item on air, or the file name of a track played outside the
+    /// playlist. `None` while stopped.
+    pub fn rds_on_air(&self) -> Option<crate::rds::OnAirInfo> {
+        if self.playback_state() == PlaybackState::Stopped {
+            return None;
+        }
+        if let Some((item, _)) = &self.on_air {
+            return Some(crate::rds::OnAirInfo { artist: item.artist.clone(), title: item.title.clone(), kind: item.kind });
+        }
+        let name = &self.current_track.as_ref()?.name;
+        let title = Path::new(name).file_stem().map_or_else(|| name.clone(), |s| s.to_string_lossy().into_owned());
+        Some(crate::rds::OnAirInfo { artist: String::new(), title, kind: crate::playlist::playlist::ItemKind::Music })
+    }
+
+    /// The microphone is on air (unlike `mic_status`, this does not reset the level).
+    pub fn mic_on(&self) -> bool {
+        self.output.as_ref().is_some_and(|o| o.shared.mic.on.load(Ordering::Relaxed))
+    }
+
     pub fn playlist(&self) -> &Playlist {
         &self.playlist
     }

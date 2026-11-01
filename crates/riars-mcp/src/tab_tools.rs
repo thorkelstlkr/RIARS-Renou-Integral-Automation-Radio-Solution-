@@ -222,6 +222,7 @@ mod tests {
             library: Arc::new(Mutex::new(MediaLibrary::open(":memory:").unwrap())),
             scheduler: Arc::new(Mutex::new(Scheduler::new())),
             stream: None,
+            rds: riars_rds::RdsService::new(None),
             schedule_path: base.with_extension("schedule.json"),
             session: Mutex::new(SessionSaver::new(base.with_extension("session.json"))),
             automation: Arc::new(Mutex::new(Automation::new())),

@@ -21,7 +21,7 @@ export const TAB_LABEL: Record<Tab, string> = {
   live: "live.title",
 };
 
-export type DialogId = "crossfade" | "deadAir" | "normalization" | "audio" | "preview" | "about" | "mic";
+export type DialogId = "crossfade" | "deadAir" | "normalization" | "audio" | "preview" | "about" | "mic" | "rds";
 const LANGS = ["en", "es", "fr", "de", "pt", "ca"] as const;
 
 interface Options {
@@ -154,6 +154,8 @@ export function useAppMenus({ tab, setTab, openHelp, openDialog, setNotice }: Op
         { label: t("menu.streamSettings"), action: () => runCommand("stream.settings") },
         { label: t("menu.streamStart"), action: () => runCommand("stream.start") },
         { label: t("menu.streamStop"), action: () => runCommand("stream.stop") },
+        "separator",
+        { label: t("menu.rds"), action: () => openDialog("rds") },
       ] },
       { id: "help", label: t("menu.help"), items: [
         { label: t("menu.manual"), shortcut: "F1", action: () => openHelp() },
