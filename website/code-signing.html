@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Política de firma de código (Code signing policy) — RIARS</title>
+  <meta name="description" content="Cómo se firman los instaladores de RIARS para Windows, quién aprueba cada firma y qué datos envía el programa.">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/code-signing.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/code-signing.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/code-signing.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/code-signing.html">
+  <link rel="icon" type="image/png" href="img/favicon.png">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Principal">
+        <a class="nav-link" href="./">Volver a la portada</a>
+        <a class="lang" href="en/code-signing.html" hreflang="en" lang="en" aria-label="English">EN</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="doc">
+      <div class="wrap">
+
+        <p class="kicker">Code signing policy</p>
+        <h1>Política de firma de código</h1>
+        <p class="lead">Firma de código gratuita proporcionada por <a href="https://signpath.io" target="_blank" rel="noopener">SignPath.io</a>, con certificado de <a href="https://signpath.org" target="_blank" rel="noopener">SignPath Foundation</a>.</p>
+        <p class="note">Estado: RIARS ha solicitado entrar en el programa de SignPath Foundation. Hasta que lo aprueben, los instaladores siguen sin firmar.</p>
+
+        <h2>Qué se firma</h2>
+        <ul>
+          <li>El instalador de Windows (<code>RIARS-windows-x64-setup.exe</code>) y los programas que instala.</li>
+          <li>Solo se firma lo que se compila desde el <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">repositorio público</a> con GitHub Actions, en máquinas alojadas por GitHub. Nada se compila ni se firma en un ordenador personal.</li>
+          <li>Cada firma la aprueba a mano una persona del equipo, versión por versión.</li>
+          <li>No se firman bibliotecas de terceros con este certificado.</li>
+        </ul>
+
+        <h2>Equipo</h2>
+        <ul>
+          <li><strong>Autores y revisores</strong> (pueden cambiar el código y revisan las contribuciones externas): <a href="https://github.com/thorkelstlkr" target="_blank" rel="noopener">thorkelstlkr</a></li>
+          <li><strong>Aprobadores</strong> (aprueban cada firma): <a href="https://github.com/thorkelstlkr" target="_blank" rel="noopener">thorkelstlkr</a></li>
+        </ul>
+        <p>Todos usan verificación en dos pasos en GitHub y en SignPath.</p>
+
+        <h2>Privacidad</h2>
+        <p>Este programa no transfiere ninguna información a otros sistemas de red salvo que lo pida expresamente el usuario o la persona que lo instala o lo maneja. Los detalles están en la <a href="privacy.html">política de privacidad</a>.</p>
+
+        <h2>Desinstalar</h2>
+        <p>En Windows, desde Configuración ▸ Aplicaciones ▸ RIARS ▸ Desinstalar. La biblioteca de música y los archivos de audio no se borran.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Software libre con licencia MIT.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Pie de página">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Incidencias</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a>
+        <a href="code-signing.html">Política de firma de código</a>
+        <a href="privacy.html">Privacidad</a>
+        <a href="en/code-signing.html" hreflang="en" lang="en">English</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Política de privacidad — RIARS</title>
+  <meta name="description" content="RIARS no recoge datos de uso. Qué conexiones hace el programa y solo cuando tú lo pides.">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/privacy.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/privacy.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/privacy.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/privacy.html">
+  <link rel="icon" type="image/png" href="img/favicon.png">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Principal">
+        <a class="nav-link" href="./">Volver a la portada</a>
+        <a class="lang" href="en/privacy.html" hreflang="en" lang="en" aria-label="English">EN</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="doc">
+      <div class="wrap">
+
+        <p class="kicker">Privacidad</p>
+        <h1>Política de privacidad</h1>
+        <p class="lead">RIARS no recoge ni envía datos de uso. No tiene telemetría, ni cuentas, ni publicidad.</p>
+
+        <h2>Cuándo se conecta a otros sistemas</h2>
+        <p>Solo cuando tú lo pides:</p>
+        <ul>
+          <li><strong>Completar datos de las pistas.</strong> Al buscar los datos de una pista, RIARS envía su título y artista a <a href="https://musicbrainz.org" target="_blank" rel="noopener">MusicBrainz</a>, y descarga la carátula del <a href="https://coverartarchive.org" target="_blank" rel="noopener">Cover Art Archive</a>. Si activas AcoustID con tu propia clave, también envía la huella acústica y la duración de la pista a <a href="https://acoustid.org" target="_blank" rel="noopener">AcoustID</a>. No se envía el audio.</li>
+          <li><strong>Emitir por Internet.</strong> El audio y el título de la canción van al servidor Icecast que configures.</li>
+        </ul>
+        <p>Cada uno de esos servicios tiene su propia política de privacidad.</p>
+
+        <h2>Control remoto</h2>
+        <p>La API, el panel web y el servidor MCP escuchan solo en tu propio equipo, salvo que los abras a la red con <code>--bind</code>. Todas las peticiones necesitan una clave que solo está en tu equipo.</p>
+
+        <h2>Esta web</h2>
+        <p>La web no usa cookies ni analítica. Está alojada en GitHub Pages, que puede registrar datos técnicos de las visitas, como la dirección IP, según la <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">política de privacidad de GitHub</a>.</p>
+
+        <h2>Contacto</h2>
+        <p>Para cualquier duda, abre una <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">incidencia en GitHub</a>.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Software libre con licencia MIT.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Pie de página">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Incidencias</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a>
+        <a href="code-signing.html">Política de firma de código</a>
+        <a href="privacy.html">Privacidad</a>
+        <a href="en/privacy.html" hreflang="en" lang="en">English</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>
