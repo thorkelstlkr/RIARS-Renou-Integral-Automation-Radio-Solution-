@@ -3,6 +3,7 @@ mod automation_routes;
 mod folder_routes;
 mod live_routes;
 mod metadata_routes;
+mod rds_routes;
 mod tab_routes;
 pub mod routes;
 pub mod ws;
@@ -28,6 +29,8 @@ pub struct AppState {
     pub api_token: String,
     /// Icecast streaming; `None` without a sound card (nothing to stream).
     pub stream: Option<riars_stream::StreamService>,
+    /// RDS texts for external encoders, following what is on air.
+    pub rds: riars_rds::RdsService,
     /// Saves playlist, position, volume, crossfade and streaming for restarts.
     pub session: Mutex<riars_core::session::SessionSaver>,
     /// Long-term automation: playlist generator and proof-of-play log.
@@ -161,9 +164,13 @@ async fn auto_advance(state: Arc<AppState>) {
         let watch = Watchdog::new();
         save_session(&state).await;
         watch.step("session save");
-        // Keep the stream's song title in step with what is playing.
+        // Keep the stream's song title and the RDS texts in step with what is playing.
+        let (title, on_air, mic_on) = match state.engine.lock() {
+            Ok(e) => (e.now_playing_title(), e.rds_on_air(), e.mic_on()),
+            Err(_) => (None, None, false),
+        };
+        state.rds.update(on_air, mic_on);
         if let Some(stream) = &state.stream {
-            let title = state.engine.lock().ok().and_then(|e| e.now_playing_title());
             if let Some(title) = title.filter(|t| *t != last_title) {
                 stream.set_title(&title);
                 last_title = title;

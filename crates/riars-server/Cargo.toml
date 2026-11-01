@@ -11,6 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 riars-stream = { path = "../riars-stream" }
+riars-rds = { path = "../riars-rds" }
 uuid = { workspace = true }
 riars-core = { path = "../riars-core" }
 riars-api = { path = "../riars-api" }

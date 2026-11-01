@@ -26,6 +26,7 @@ import PlaybackSettingsDialog from "./menu/PlaybackSettingsDialog";
 import AudioSettingsDialog from "./menu/AudioSettingsDialog";
 import PreviewDialog from "./menu/PreviewDialog";
 import AboutDialog from "./menu/AboutDialog";
+import RdsDialog from "./menu/RdsDialog";
 import MicSettingsDialog from "./live/MicSettingsDialog";
 import HelpDialog from "./help/HelpDialog";
 
@@ -150,6 +151,7 @@ export default function App() {
       {dialog === "audio" && <AudioSettingsDialog onClose={closeDialog} />}
       {dialog === "mic" && <MicSettingsDialog onClose={closeDialog} />}
       {dialog === "preview" && <PreviewDialog onClose={closeDialog} />}
+      {dialog === "rds" && <RdsDialog onClose={closeDialog} />}
       {dialog === "about" && <AboutDialog onClose={closeDialog} />}
       <HelpDialog open={help.open} topic={help.topic} onClose={() => setHelp({ open: false })} />
     </div>

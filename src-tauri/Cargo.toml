@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 riars-core = { path = "../crates/riars-core" }
 riars-stream = { path = "../crates/riars-stream" }
+riars-rds = { path = "../crates/riars-rds" }
 riars-meta = { path = "../crates/riars-meta" }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"

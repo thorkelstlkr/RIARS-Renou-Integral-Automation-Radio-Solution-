@@ -53,6 +53,8 @@ Long-term automation (categories, format clocks, dayparts grid, playlist generat
 
 Playlist tabs (`/api/v1/playlist/tabs`, MCP `list_playlist_tabs` etc.) are lists open for editing next to the one on air; only the on-air tab plays (`riars-core/src/playlist/tabs.rs`, stored in the library database). Putting a tab on air never cuts: the track playing ends first.
 
+RDS for external encoders (`/api/v1/rds`, MCP `get_rds` etc.): `riars-core/src/rds/` makes the PS, RadioText and RT+ from what is on air and holds the settings; `crates/riars-rds` sends them (UECP or ASCII templates over TCP, UDP, serial or a `.txt` file) on its own thread. Settings are in `riars_rds.json` next to the library database. Generating the FM/MPX signal itself is not done.
+
 The schedule (`/api/v1/schedule`, MCP `add_scheduled_event` etc.) is saved as `riars_schedule.json` next to the library database and runs in riars-server, with second precision; one-shot `Time` events disable themselves after firing.
 
 ## User manual

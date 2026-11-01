@@ -5,6 +5,7 @@ pub mod library;
 pub mod live;
 pub mod locale;
 pub mod playlist;
+pub mod rds;
 pub mod session;
 pub mod streaming;
 

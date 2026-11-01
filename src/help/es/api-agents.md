@@ -30,6 +30,7 @@ Con `riars-server --mcp-stdio`, RIARS funciona como servidor **MCP** (Model Cont
 - buscar en la biblioteca y montar listas;
 - montar la programación de la semana: categorías, relojes, parrilla, campañas;
 - consultar la vista previa, el registro y el cumplimiento.
+- cambiar los textos RDS y poner un radiotexto propio durante unos minutos (consulta [RDS](topic:rds)).
 
 Las respuestas van resumidas para no llenar el contexto del agente.
 

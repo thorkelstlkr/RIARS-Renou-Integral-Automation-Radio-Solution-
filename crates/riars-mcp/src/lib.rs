@@ -3,6 +3,7 @@ pub mod automation_tools;
 pub mod folder_tools;
 pub mod live_tools;
 pub mod metadata_tools;
+pub mod rds_tools;
 pub mod tab_tools;
 pub mod tools;
 
@@ -20,6 +21,8 @@ pub struct McpState {
     pub scheduler: Arc<Mutex<Scheduler>>,
     /// Icecast streaming; `None` without a sound card.
     pub stream: Option<riars_stream::StreamService>,
+    /// RDS texts for external encoders, following what is on air.
+    pub rds: riars_rds::RdsService,
     /// Where the schedule is saved after every change.
     pub schedule_path: std::path::PathBuf,
     /// Saves playlist, position, volume, crossfade and streaming for restarts.
@@ -318,7 +321,7 @@ async fn auto_advance(
     }
 }
 
-/// Keep the stream's song title in step with what is playing.
+/// Keep the stream's song title and the RDS texts in step with what is playing.
 async fn follow_title(state: Arc<McpState>) {
     let mut tick = tokio::time::interval(tokio::time::Duration::from_millis(500));
     let mut last = String::new();
@@ -334,8 +337,12 @@ async fn follow_title(state: Arc<McpState>) {
                 saver.write(&session);
             }
         }
+        let (title, on_air, mic_on) = match state.engine.lock() {
+            Ok(e) => (e.now_playing_title(), e.rds_on_air(), e.mic_on()),
+            Err(_) => (None, None, false),
+        };
+        state.rds.update(on_air, mic_on);
         let Some(stream) = &state.stream else { continue };
-        let title = state.engine.lock().ok().and_then(|e| e.now_playing_title());
         if let Some(title) = title.filter(|t| *t != last) {
             stream.set_title(&title);
             last = title;

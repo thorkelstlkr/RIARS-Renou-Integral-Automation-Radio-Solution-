@@ -92,6 +92,7 @@ pub fn api_routes() -> Router<Arc<AppState>> {
         .merge(crate::folder_routes::router())
         .merge(crate::live_routes::router())
         .merge(crate::metadata_routes::router())
+        .merge(crate::rds_routes::router())
         .merge(crate::tab_routes::router())
 }
 
