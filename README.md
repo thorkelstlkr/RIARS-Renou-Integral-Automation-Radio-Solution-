@@ -2,19 +2,26 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Software de automatizacion de emisora de radio, open source y multiplataforma. Diseñado para ser gestionado tanto por humanos como por agentes de IA.
+Automatización de radio completa, de la parrilla al transmisor. Gratis, open source y multiplataforma: lleva una emisora entera las 24 horas, emite por Internet y por FM con RDS, y si quieres, un asistente de IA puede manejarla contigo.
+
+Web: https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/
 
 ## Funcionalidades
 
-- **Reproductor de audio** — MP3, FLAC, WAV, OGG, AAC con crossfade automatico
-- **Gestor de playlists** — Crea, edita y organiza listas de reproduccion
-- **Programador horario** — Automatiza la emision por franjas horarias y dias de la semana
-- **Biblioteca musical** — Escanea carpetas, lee metadatos, busca por titulo/artista/genero
-- **Streaming** — Emision en directo a servidores Icecast y Shoutcast
-- **Mezclador** — Control de volumen, panorama y medidores VU en tiempo real
-- **API REST + WebSocket** — Control remoto completo para integraciones y dashboards
-- **Servidor MCP** — Soporte nativo para agentes IA (Claude, etc.) via Model Context Protocol
-- **Modo headless** — Funciona sin interfaz grafica en servidores y Raspberry Pi
+- **Automatización de largo plazo** — Relojes de formato, parrilla semanal con excepciones por fecha y categorías con reglas; el generador llena la lista durante días o semanas
+- **Publicidad** — Anunciantes y campañas con cuñas al día, franjas, máximo por hora y patrocinios, con informes de emisión
+- **Directo con micrófono** — La música baja sola al abrir el micro; modos automático, asistido y manual
+- **Banco de sonidos** — Ocho páginas de 24 botones para jingles, efectos y cortinas
+- **Intros y outros** — El identificativo suena sobre la intro instrumental y termina antes de la voz
+- **Normalización** — Sonoridad EBU R128, −16 LUFS por defecto
+- **Crossfade y detector de silencio** — Transiciones suaves; salta el elemento si la salida se queda en silencio
+- **Pestañas de lista** — Prepara el siguiente programa mientras suena la lista en antena
+- **Biblioteca y metadatos** — Escanea carpetas y completa datos y carátulas con MusicBrainz, con tu visto bueno
+- **Streaming** — Emite en MP3 a Icecast, incluso sin tarjeta de sonido en modo servidor
+- **RDS** — PS, RadioText y RT+ a codificadores externos (UECP o texto, por red, serie o archivo)
+- **Codificador estéreo FM** — Genera la señal MPX completa con piloto, estéreo y RDS en 57 kHz, en una tarjeta de 192 kHz
+- **API REST + WebSocket y servidor MCP** — Control remoto para paneles, integraciones y agentes de IA (Claude, etc.)
+- **Modo headless** — Funciona sin interfaz gráfica en servidores y Raspberry Pi
 
 ## Plataformas soportadas
 
