@@ -186,6 +186,24 @@
       "Error": "Error, reintentando"
     },
     "lastSent": "último envío {{time}}",
+    "mpx": {
+      "title": "Codificador estéreo FM (MPX)",
+      "enabled": "Generar la señal FM en una tarjeta de sonido",
+      "device": "Tarjeta de sonido (192 kHz)",
+      "defaultDevice": "Tarjeta predeterminada",
+      "refresh": "Actualizar",
+      "preEmphasis": "Preénfasis",
+      "preOff": "No (lo pone el transmisor)",
+      "pre50": "50 µs (Europa)",
+      "pre75": "75 µs (América)",
+      "pilot": "Piloto %",
+      "rdsLevel": "RDS %",
+      "output": "Nivel dB",
+      "stereo": "Estéreo",
+      "rds": "RDS en la señal",
+      "underruns": "{{n}} cortes en el audio",
+      "hint": "Para un transmisor con entrada MPX: RIARS genera la señal estéreo (piloto, 38 kHz) y el RDS a 57 kHz. La tarjeta debe funcionar a 192 kHz (176,4 kHz con audio a 44,1 kHz). No necesita ningún codificador de los de arriba."
+    },
     "addOutput": "Añadir codificador",
     "save": "Guardar"
   },

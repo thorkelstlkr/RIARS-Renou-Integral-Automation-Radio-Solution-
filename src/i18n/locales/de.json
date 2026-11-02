@@ -186,6 +186,24 @@
       "Error": "Fehler, neuer Versuch"
     },
     "lastSent": "zuletzt gesendet {{time}}",
+    "mpx": {
+      "title": "FM-Stereocoder (MPX)",
+      "enabled": "FM-Signal auf einer Soundkarte erzeugen",
+      "device": "Soundkarte (192 kHz)",
+      "defaultDevice": "Standardkarte",
+      "refresh": "Aktualisieren",
+      "preEmphasis": "Preemphasis",
+      "preOff": "Aus (macht der Sender)",
+      "pre50": "50 µs (Europa)",
+      "pre75": "75 µs (Amerika)",
+      "pilot": "Pilot %",
+      "rdsLevel": "RDS %",
+      "output": "Pegel dB",
+      "stereo": "Stereo",
+      "rds": "RDS im Signal",
+      "underruns": "{{n}} Aussetzer im Audio",
+      "hint": "Für Sender mit MPX-Eingang: RIARS erzeugt das Stereosignal (Pilot, 38 kHz) und das RDS auf 57 kHz selbst. Die Karte muss mit 192 kHz laufen (176,4 kHz bei 44,1-kHz-Audio). Keiner der Coder oben ist nötig."
+    },
     "addOutput": "Coder hinzufügen",
     "save": "Speichern"
   },

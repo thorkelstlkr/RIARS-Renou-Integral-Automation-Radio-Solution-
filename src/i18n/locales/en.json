@@ -186,6 +186,24 @@
       "Error": "Error, retrying"
     },
     "lastSent": "last sent {{time}}",
+    "mpx": {
+      "title": "FM stereo encoder (MPX)",
+      "enabled": "Make the FM signal on a sound card",
+      "device": "Sound card (192 kHz)",
+      "defaultDevice": "Default card",
+      "refresh": "Refresh",
+      "preEmphasis": "Pre-emphasis",
+      "preOff": "Off (the transmitter adds it)",
+      "pre50": "50 µs (Europe)",
+      "pre75": "75 µs (Americas)",
+      "pilot": "Pilot %",
+      "rdsLevel": "RDS %",
+      "output": "Level dB",
+      "stereo": "Stereo",
+      "rds": "RDS in the signal",
+      "underruns": "{{n}} gaps in the audio",
+      "hint": "For a transmitter with an MPX input: RIARS makes the stereo signal (pilot, 38 kHz) and the RDS at 57 kHz itself. The card must play at 192 kHz (176.4 kHz for 44.1 kHz audio). Works without any encoder above."
+    },
     "addOutput": "Add encoder",
     "save": "Save"
   },

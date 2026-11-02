@@ -345,6 +345,11 @@ impl AudioEngine {
         self.output.as_mut().and_then(|o| o.take_tap())
     }
 
+    /// The copy of the output for the FM stereo encoder (see `audio::mpx`). Once only.
+    pub fn take_mpx_tap(&mut self) -> Option<StreamTap> {
+        self.output.as_mut().and_then(|o| o.take_mpx_tap())
+    }
+
     /// Name of the sound card in use, if any.
     pub fn output_device(&self) -> Option<&str> {
         self.output.as_ref().map(|o| o.device_name())

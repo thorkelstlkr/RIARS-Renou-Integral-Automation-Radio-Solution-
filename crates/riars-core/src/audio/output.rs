@@ -165,6 +165,12 @@ pub struct StreamTap {
     pub channels: u16,
 }
 
+/// The two copies of the output: one for streaming, one for the FM stereo encoder (MPX).
+pub(crate) struct Taps {
+    pub stream: StreamTap,
+    pub mpx: StreamTap,
+}
+
 /// Device name reported when running on the internal clock.
 pub const NO_DEVICE: &str = "none (internal clock)";
 
@@ -176,6 +182,7 @@ pub(crate) struct AudioOutput {
     pub shared: Arc<Shared>,
     device_name: String,
     tap: Option<StreamTap>,
+    mpx_tap: Option<StreamTap>,
     // Dropping the sender wakes the output thread so it drops the stream and exits.
     _shutdown: Sender<()>,
     _thread: JoinHandle<()>,
@@ -199,7 +206,7 @@ impl AudioOutput {
         let (garbage_tx, garbage_rx) = bounded::<Box<TrackPlayer>>(32);
         let (mic_garbage_tx, mic_garbage_rx) = bounded::<Box<MicFeed>>(4);
         let (shutdown_tx, shutdown_rx) = bounded::<()>(0);
-        let (ready_tx, ready_rx) = bounded::<Result<(String, StreamTap), String>>(1);
+        let (ready_tx, ready_rx) = bounded::<Result<(String, Taps), String>>(1);
         let shared = Arc::new(Shared::new(volume));
         let callback_shared = Arc::clone(&shared);
 
@@ -228,7 +235,7 @@ impl AudioOutput {
             })
             .map_err(|e| format!("Cannot start audio thread: {e}"))?;
 
-        let (device_name, tap) = ready_rx
+        let (device_name, taps) = ready_rx
             .recv()
             .map_err(|_| "Audio thread exited during start-up".to_string())??;
 
@@ -238,7 +245,8 @@ impl AudioOutput {
             mic_garbage: mic_garbage_rx,
             shared,
             device_name,
-            tap: Some(tap),
+            tap: Some(taps.stream),
+            mpx_tap: Some(taps.mpx),
             _shutdown: shutdown_tx,
             _thread: thread,
         })
@@ -250,6 +258,10 @@ impl AudioOutput {
 
     pub fn take_tap(&mut self) -> Option<StreamTap> {
         self.tap.take()
+    }
+
+    pub fn take_mpx_tap(&mut self) -> Option<StreamTap> {
+        self.mpx_tap.take()
     }
 
     /// Free players the audio thread retired (they can hold a whole decoded track).
@@ -291,7 +303,7 @@ pub fn default_output_device() -> Option<String> {
     cpal::default_host().default_output_device().and_then(|d| d.name().ok())
 }
 
-fn start_stream(parts: Parts, name: Option<&str>, strict: bool) -> Result<(cpal::Stream, String, StreamTap), String> {
+fn start_stream(parts: Parts, name: Option<&str>, strict: bool) -> Result<(cpal::Stream, String, Taps), String> {
     let host = cpal::default_host();
     let named = name.and_then(|wanted| {
         host.output_devices().ok()?.find(|d| d.name().is_ok_and(|n| n == wanted))
@@ -361,6 +373,7 @@ struct Renderer {
     parts: Parts,
     decks: Decks,
     tap: rtrb::Producer<f32>,
+    mpx_tap: rtrb::Producer<f32>,
     out_channels: usize,
     out_rate: f64,
     /// Volume applied now, moving towards the shared target.
@@ -383,9 +396,12 @@ struct Parts {
 }
 
 impl Renderer {
-    fn new(parts: Parts, sample_rate: u32, channels: u16) -> (Self, StreamTap) {
-        // Two seconds of audio between the callback and the streaming encoder.
+    fn new(parts: Parts, sample_rate: u32, channels: u16) -> (Self, Taps) {
+        // Two seconds of audio between the callback and the streaming encoder (and the
+        // stereo encoder).
         let (producer, consumer) =
+            rtrb::RingBuffer::new(sample_rate as usize * channels as usize * 2);
+        let (mpx_producer, mpx_consumer) =
             rtrb::RingBuffer::new(sample_rate as usize * channels as usize * 2);
         let volume_now = parts.shared.volume();
         parts.shared.out_rate.store(sample_rate, Ordering::Relaxed);
@@ -393,6 +409,7 @@ impl Renderer {
             parts,
             decks: Decks::default(),
             tap: producer,
+            mpx_tap: mpx_producer,
             out_channels: channels as usize,
             out_rate: sample_rate as f64,
             volume_now,
@@ -401,7 +418,11 @@ impl Renderer {
             mic_buf: vec![0.0; LIVE_BLOCK],
             live_buf: vec![0.0; LIVE_BLOCK * channels as usize],
         };
-        (renderer, StreamTap { consumer, sample_rate, channels })
+        let taps = Taps {
+            stream: StreamTap { consumer, sample_rate, channels },
+            mpx: StreamTap { consumer: mpx_consumer, sample_rate, channels },
+        };
+        (renderer, taps)
     }
 
     /// Fill one buffer. Real-time safe.
@@ -535,9 +556,9 @@ impl Renderer {
                 if stream_only {
                     let voice = &self.mic_buf[..frames];
                     let volume = self.volume_now;
-                    push_tap(&mut self.tap, chunk.len(), |i| {
-                        limit(f32::from_sample_(chunk[i]) + voice[i / channels] * volume)
-                    });
+                    let mut sample = |i: usize| limit(f32::from_sample_(chunk[i]) + voice[i / channels] * volume);
+                    push_tap(&mut self.tap, chunk.len(), &mut sample);
+                    push_tap(&mut self.mpx_tap, chunk.len(), &mut sample);
                 }
             }
         }
@@ -584,6 +605,7 @@ impl Renderer {
         // the tap it is full and this copies nothing.
         if !tapped {
             push_tap(&mut self.tap, data.len(), |i| f32::from_sample_(data[i]));
+            push_tap(&mut self.mpx_tap, data.len(), |i| f32::from_sample_(data[i]));
         }
 
         if let Some(p) = decks.current.as_ref() {
@@ -1122,7 +1144,7 @@ mod tests {
             renderer.process(&mut chunk);
             card.extend_from_slice(&chunk);
         }
-        let stream: Vec<f32> = std::iter::from_fn(|| tap.consumer.pop().ok()).collect();
+        let stream: Vec<f32> = std::iter::from_fn(|| tap.stream.consumer.pop().ok()).collect();
         assert_eq!(stream.len(), card.len(), "the stream gets every frame once");
         // Ducked music only on the card; the stream has the voice on top.
         let ducked = 0.5 * 10f32.powf(-12.0 / 20.0);

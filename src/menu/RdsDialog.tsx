@@ -16,6 +16,18 @@ type Protocol =
 
 interface RdsOutput { name: string; enabled: boolean; transport: Transport; protocol: Protocol }
 
+type PreEmphasis = "off" | "50us" | "75us";
+interface MpxConfig {
+  enabled: boolean;
+  device: string;          // "" = default sound card
+  pre_emphasis: PreEmphasis;
+  stereo: boolean;
+  rds: boolean;
+  pilot_percent: number;   // 6..12
+  rds_percent: number;     // 1..10
+  output_db: number;       // -40..0
+}
+
 interface RdsConfig {
   enabled: boolean;
   pi: string;
@@ -27,9 +39,18 @@ interface RdsConfig {
   station_text: string;
   live_text: string;
   outputs: RdsOutput[];
+  mpx: MpxConfig;
 }
 
 type OutputState = "Off" | "Waiting" | "Ok" | "Error";
+
+interface MpxStatus {
+  state: OutputState;
+  device: string | null;
+  sample_rate: number | null;
+  underruns: number;
+  last_error: string | null;
+}
 
 interface RdsInfo {
   config: RdsConfig;
@@ -39,6 +60,7 @@ interface RdsInfo {
     manual: string | null;
     manual_until: number | null;
     outputs: { name: string; state: OutputState; last_sent: number | null; last_error: string | null }[];
+    mpx: MpxStatus;
   };
 }
 
@@ -88,6 +110,7 @@ export default function RdsDialog({ onClose }: { onClose: () => void }) {
   const [manual, setManual] = useState("");
   const [minutes, setMinutes] = useState(10);
   const [error, setError] = useState<string | null>(null);
+  const [mpxDevices, setMpxDevices] = useState<string[] | null>(null);
   // Read by the timer: settings changed elsewhere (an agent, the API) replace the form
   // only while nothing is being edited here.
   const dirtyRef = useRef(false);
@@ -101,12 +124,22 @@ export default function RdsDialog({ onClose }: { onClose: () => void }) {
     } catch (e) { setError(String(e)); }
   }, []);
 
+  const loadDevices = useCallback(async () => {
+    try {
+      setMpxDevices(await invoke<string[]>("rds_mpx_devices"));
+    } catch (e) { setError(String(e)); }
+  }, []);
+
   // The status (texts on air, each output's state) changes on its own.
   useEffect(() => {
     void refresh();
     const timer = setInterval(() => { void refresh(); }, 2000);
     return () => clearInterval(timer);
   }, [refresh]);
+
+  useEffect(() => {
+    void loadDevices();
+  }, [loadDevices]);
 
   const edit = (change: Partial<RdsConfig>) => {
     setConfig((c) => (c ? { ...c, ...change } : c));
@@ -115,6 +148,10 @@ export default function RdsDialog({ onClose }: { onClose: () => void }) {
   const editOutput = (index: number, change: Partial<RdsOutput>) => {
     if (!config) return;
     edit({ outputs: config.outputs.map((o, i) => (i === index ? { ...o, ...change } : o)) });
+  };
+  const editMpx = (change: Partial<MpxConfig>) => {
+    if (!config) return;
+    edit({ mpx: { ...config.mpx, ...change } });
   };
 
   const save = async () => {
@@ -153,10 +190,10 @@ export default function RdsDialog({ onClose }: { onClose: () => void }) {
       <input style={S.input} value={value} maxLength={max} onChange={(e) => onChange(e.target.value)} />
     </label>
   );
-  const number = (labelKey: string, value: number, onChange: (v: number) => void, min: number, max: number, width = 90) => (
+  const number = (labelKey: string, value: number, onChange: (v: number) => void, min: number, max: number, width = 90, step = 1) => (
     <label style={{ ...S.field, flex: `0 0 ${width}px` }}>
       {t(labelKey)}
-      <input style={S.input} type="number" min={min} max={max} value={value}
+      <input style={S.input} type="number" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(Number(e.target.value))} />
     </label>
   );
@@ -218,6 +255,68 @@ export default function RdsDialog({ onClose }: { onClose: () => void }) {
             <div style={S.row}>{text("rds.stationText", config.station_text, (station_text) => edit({ station_text }), 64)}</div>
             <div style={S.row}>{text("rds.liveText", config.live_text, (live_text) => edit({ live_text }), 64)}</div>
             <div style={S.hint}>{t("rds.textsHint")}</div>
+          </div>
+
+          <div style={S.section}>
+            <div style={S.title}>{t("rds.mpx.title")}</div>
+            <div style={S.row}>
+              <label style={S.check}>
+                <input type="checkbox" checked={config.mpx.enabled}
+                  onChange={(e) => editMpx({ enabled: e.target.checked })} />
+                {t("rds.mpx.enabled")}
+              </label>
+            </div>
+            <div style={S.row}>
+              <label style={S.field}>
+                {t("rds.mpx.device")}
+                <select style={S.input} value={config.mpx.device}
+                  onChange={(e) => editMpx({ device: e.target.value })}>
+                  <option value="">{t("rds.mpx.defaultDevice")}</option>
+                  {(mpxDevices ?? []).map((device) => <option key={device} value={device}>{device}</option>)}
+                  {config.mpx.device !== "" && !(mpxDevices ?? []).includes(config.mpx.device) && (
+                    <option value={config.mpx.device}>{config.mpx.device}</option>
+                  )}
+                </select>
+              </label>
+              <button style={{ ...S.btn, alignSelf: "flex-end" }} onClick={loadDevices}>{t("rds.mpx.refresh")}</button>
+            </div>
+            <div style={S.row}>
+              <label style={{ ...S.field, flex: "0 0 150px" }}>
+                {t("rds.mpx.preEmphasis")}
+                <select style={S.input} value={config.mpx.pre_emphasis}
+                  onChange={(e) => editMpx({ pre_emphasis: e.target.value as PreEmphasis })}>
+                  <option value="off">{t("rds.mpx.preOff")}</option>
+                  <option value="50us">{t("rds.mpx.pre50")}</option>
+                  <option value="75us">{t("rds.mpx.pre75")}</option>
+                </select>
+              </label>
+              {number("rds.mpx.pilot", config.mpx.pilot_percent, (pilot_percent) => editMpx({ pilot_percent }), 6, 12, 90, 0.5)}
+              {number("rds.mpx.rdsLevel", config.mpx.rds_percent, (rds_percent) => editMpx({ rds_percent }), 1, 10, 90, 0.5)}
+              {number("rds.mpx.output", config.mpx.output_db, (output_db) => editMpx({ output_db }), -40, 0, 90, 0.5)}
+            </div>
+            <div style={S.row}>
+              <label style={S.check}>
+                <input type="checkbox" checked={config.mpx.stereo}
+                  onChange={(e) => editMpx({ stereo: e.target.checked })} />
+                {t("rds.mpx.stereo")}
+              </label>
+              <label style={S.check}>
+                <input type="checkbox" checked={config.mpx.rds}
+                  onChange={(e) => editMpx({ rds: e.target.checked })} />
+                {t("rds.mpx.rds")}
+              </label>
+            </div>
+            {config.mpx.enabled && info.status.mpx && (
+              <div style={S.hint}>
+                <span style={{ ...S.dot, background: DOT[info.status.mpx.state] }} />
+                {t(`rds.state.${info.status.mpx.state}`)}
+                {info.status.mpx.device ? ` · ${info.status.mpx.device}` : ""}
+                {info.status.mpx.sample_rate != null ? ` · ${info.status.mpx.sample_rate / 1000} kHz` : ""}
+                {info.status.mpx.underruns > 0 ? ` · ${t("rds.mpx.underruns", { n: info.status.mpx.underruns })}` : ""}
+                {info.status.mpx.last_error && <div style={S.error}>{info.status.mpx.last_error}</div>}
+              </div>
+            )}
+            <div style={S.hint}>{t("rds.mpx.hint")}</div>
           </div>
 
           <div style={S.section}>

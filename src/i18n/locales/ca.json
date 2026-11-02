@@ -186,6 +186,24 @@
       "Error": "Error, reintentant"
     },
     "lastSent": "últim enviament {{time}}",
+    "mpx": {
+      "title": "Codificador estèreo FM (MPX)",
+      "enabled": "Genera el senyal FM en una targeta de so",
+      "device": "Targeta de so (192 kHz)",
+      "defaultDevice": "Targeta predeterminada",
+      "refresh": "Actualitza",
+      "preEmphasis": "Preèmfasi",
+      "preOff": "No (la posa el transmissor)",
+      "pre50": "50 µs (Europa)",
+      "pre75": "75 µs (Amèrica)",
+      "pilot": "Pilot %",
+      "rdsLevel": "RDS %",
+      "output": "Nivell dB",
+      "stereo": "Estèreo",
+      "rds": "RDS al senyal",
+      "underruns": "{{n}} talls a l'àudio",
+      "hint": "Per a un transmissor amb entrada MPX: RIARS genera el senyal estèreo (pilot, 38 kHz) i l'RDS a 57 kHz. La targeta ha de funcionar a 192 kHz (176,4 kHz amb àudio a 44,1 kHz). No cal cap dels codificadors de dalt."
+    },
     "addOutput": "Afegeix un codificador",
     "save": "Desa"
   },
