@@ -4,12 +4,17 @@
 //! besides loading and saving the settings.
 
 pub mod charset;
+#[cfg(test)]
+pub(crate) mod decode;
+pub mod groups;
 
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::audio::mpx::{MpxParams, PreEmphasis};
 use crate::playlist::playlist::ItemKind;
+use groups::RdsFrame;
 
 /// Longest PS, in characters.
 pub const PS_LEN: usize = 8;
@@ -44,6 +49,8 @@ pub struct RdsConfig {
     /// RadioText while the microphone is on air. Empty keeps the song's text.
     pub live_text: String,
     pub outputs: Vec<RdsOutput>,
+    /// The built-in FM stereo encoder, for a transmitter's MPX input.
+    pub mpx: MpxConfig,
 }
 
 impl Default for RdsConfig {
@@ -59,7 +66,124 @@ impl Default for RdsConfig {
             station_text: String::new(),
             live_text: String::new(),
             outputs: Vec::new(),
+            mpx: MpxConfig::default(),
         }
+    }
+}
+
+/// Pre-emphasis of the FM signal; it must match the region's receivers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PreEmphasisSetting {
+    /// For a transmitter that adds its own.
+    Off,
+    /// Europe and most of the world.
+    #[serde(rename = "50us")]
+    Us50,
+    /// The Americas and South Korea.
+    #[serde(rename = "75us")]
+    Us75,
+}
+
+/// The built-in FM stereo encoder: the on-air audio as an MPX signal (stereo pilot,
+/// 38 kHz subcarrier and RDS at 57 kHz) on a sound card running at 192 kHz (or 176.4 kHz
+/// for 44.1 kHz audio). Independent of `RdsConfig::enabled`, which is for external encoders.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MpxConfig {
+    pub enabled: bool,
+    /// Sound card name; empty for the default card.
+    pub device: String,
+    pub pre_emphasis: PreEmphasisSetting,
+    /// Off sends mono (L+R) without a pilot.
+    pub stereo: bool,
+    /// Put the RDS (PS, RadioText, RT+) into the signal.
+    pub rds: bool,
+    /// Pilot level, % of full deviation (8–10 is usual).
+    pub pilot_percent: f32,
+    /// RDS level, % of full deviation (3–5 is usual).
+    pub rds_percent: f32,
+    /// Output level at full deviation, dB below the card's full scale.
+    pub output_db: f32,
+}
+
+impl Default for MpxConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            device: String::new(),
+            pre_emphasis: PreEmphasisSetting::Us50,
+            stereo: true,
+            rds: true,
+            pilot_percent: 9.0,
+            rds_percent: 4.0,
+            output_db: -3.0,
+        }
+    }
+}
+
+impl MpxConfig {
+    fn validate(&self) -> Result<(), String> {
+        if self.device.chars().count() > 256 {
+            return Err("MPX: the sound card name is too long".to_string());
+        }
+        if !(6.0..=12.0).contains(&self.pilot_percent) {
+            return Err("MPX: the pilot level must be between 6 and 12 %".to_string());
+        }
+        if !(1.0..=10.0).contains(&self.rds_percent) {
+            return Err("MPX: the RDS level must be between 1 and 10 %".to_string());
+        }
+        if !(-40.0..=0.0).contains(&self.output_db) {
+            return Err("MPX: the output level must be between -40 and 0 dB".to_string());
+        }
+        Ok(())
+    }
+
+    pub fn params(&self) -> MpxParams {
+        MpxParams {
+            pre_emphasis: match self.pre_emphasis {
+                PreEmphasisSetting::Off => PreEmphasis::Off,
+                PreEmphasisSetting::Us50 => PreEmphasis::Us50,
+                PreEmphasisSetting::Us75 => PreEmphasis::Us75,
+            },
+            stereo: self.stereo,
+            rds: self.rds,
+            pilot: self.pilot_percent / 100.0,
+            rds_level: self.rds_percent / 100.0,
+            gain: 10f32.powf(self.output_db / 20.0),
+        }
+    }
+}
+
+/// What the built-in encoder's groups carry, from the settings and the composed texts.
+/// `ab` is the RadioText A/B flag, which the caller flips when the text changes.
+pub fn rds_frame(config: &RdsConfig, texts: &RdsTexts, ab: bool) -> RdsFrame {
+    let mut ps = [b' '; PS_LEN];
+    for (slot, byte) in ps.iter_mut().zip(charset::encode(&texts.ps)) {
+        *slot = byte;
+    }
+    let mut rt = [b' '; RT_LEN];
+    let encoded = charset::encode(&texts.rt);
+    let rt_len = encoded.len().min(RT_LEN);
+    rt[..rt_len].copy_from_slice(&encoded[..rt_len]);
+    let tag = |t: &RtPlusTag| (t.content_type & 0x3F, t.start.min(63), t.len.clamp(1, 64));
+    let rt_plus = match texts.rt_plus.as_slice() {
+        [] => None,
+        [one] => Some([tag(one), (0, 0, 1)]),
+        [one, two, ..] => Some([tag(one), tag(two)]),
+    };
+    RdsFrame {
+        pi: u16::from_str_radix(&config.pi, 16).unwrap_or(0),
+        pty: config.pty & 0x1F,
+        tp: config.tp,
+        ta: false,
+        music: config.music,
+        stereo: config.mpx.stereo,
+        ps,
+        rt,
+        rt_len: rt_len as u8,
+        ab,
+        rt_plus,
     }
 }
 
@@ -147,7 +271,7 @@ impl RdsConfig {
         for output in &self.outputs {
             output.validate().map_err(|e| format!("Output \"{}\": {e}", output.name))?;
         }
-        Ok(())
+        self.mpx.validate()
     }
 }
 

@@ -186,6 +186,24 @@
       "Error": "Erro, a tentar de novo"
     },
     "lastSent": "último envio {{time}}",
+    "mpx": {
+      "title": "Codificador estéreo FM (MPX)",
+      "enabled": "Gerar o sinal FM numa placa de som",
+      "device": "Placa de som (192 kHz)",
+      "defaultDevice": "Placa predefinida",
+      "refresh": "Atualizar",
+      "preEmphasis": "Pré-ênfase",
+      "preOff": "Não (o transmissor aplica)",
+      "pre50": "50 µs (Europa)",
+      "pre75": "75 µs (Américas)",
+      "pilot": "Piloto %",
+      "rdsLevel": "RDS %",
+      "output": "Nível dB",
+      "stereo": "Estéreo",
+      "rds": "RDS no sinal",
+      "underruns": "{{n}} falhas no áudio",
+      "hint": "Para um transmissor com entrada MPX: o RIARS gera o sinal estéreo (piloto, 38 kHz) e o RDS a 57 kHz. A placa tem de funcionar a 192 kHz (176,4 kHz com áudio a 44,1 kHz). Não precisa de nenhum dos codificadores acima."
+    },
     "addOutput": "Adicionar codificador",
     "save": "Guardar"
   },

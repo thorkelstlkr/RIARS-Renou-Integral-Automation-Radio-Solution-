@@ -1,4 +1,5 @@
-//! RDS for an external encoder: Broadcast ▸ RDS. Everything is in `riars_rds`.
+//! RDS for external encoders and the built-in FM stereo encoder: Broadcast ▸ RDS.
+//! Everything is in `riars_rds`.
 
 use riars_core::rds::RdsConfig;
 use riars_rds::RdsStatus;
@@ -33,4 +34,10 @@ pub fn rds_set_config(config: RdsConfig, state: State<AppState>) -> Result<RdsIn
 pub fn rds_set_text(text: Option<String>, minutes: Option<u32>, state: State<AppState>) -> Result<RdsInfo, String> {
     state.rds.set_text(text.as_deref(), minutes)?;
     Ok(info(&state))
+}
+
+/// Sound cards that can play the FM stereo (MPX) signal. Asking the cards takes a moment.
+#[tauri::command]
+pub async fn rds_mpx_devices(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    Ok(state.rds.mpx_devices())
 }

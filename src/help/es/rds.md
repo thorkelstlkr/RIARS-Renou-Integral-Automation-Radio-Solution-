@@ -3,14 +3,17 @@ id: rds
 title: RDS
 section: onair
 order: 11
-keywords: rds, radiotexto, radiotext, rt, rt+, ps, pi, pty, codificador, encoder, uecp, fm, nombre de la emisora, puerto serie
+keywords: rds, radiotexto, radiotext, rt, rt+, ps, pi, pty, codificador, encoder, uecp, fm, nombre de la emisora, puerto serie, mpx, codificador estéreo, piloto, preénfasis, 192 khz
 ---
 
 # RDS
 
 RIARS manda los textos RDS a tu **codificador RDS**, el aparato que los mete en la señal de FM (o el que lleva dentro el transmisor). Así las radios de los oyentes muestran el nombre de la emisora y la canción que suena.
 
-RIARS no genera la señal de radio: necesitas un codificador que acepte órdenes por red, por puerto serie o desde un archivo de texto.
+Hay dos maneras:
+
+- un **codificador externo** que acepte órdenes por red, por puerto serie o desde un archivo de texto;
+- el **codificador estéreo FM integrado**: RIARS genera toda la señal de FM (estéreo y RDS) en una tarjeta de sonido, para un transmisor con entrada MPX. Se explica más abajo.
 
 ## Qué se envía
 
@@ -45,6 +48,28 @@ RIARS no genera la señal de radio: necesitas un codificador que acepte órdenes
 
 Cada codificador muestra su estado: **Enviando** cuando el último envío ha funcionado y **Error, reintentando** si no. RIARS vuelve a intentarlo solo, cada vez más espaciado, hasta un minuto. Los textos se envían cuando cambia lo que suena, y también cada 30 segundos, para que un codificador que se ha reiniciado los recupere.
 
+## Codificador estéreo FM integrado
+
+Muchos transmisores tienen una entrada **MPX** (múltiplex, señal compuesta). RIARS puede alimentarla directamente: genera la señal estéreo (el piloto de 19 kHz y la subportadora de 38 kHz) y mete el RDS en 57 kHz, así que no hace falta ni codificador estéreo ni codificador RDS.
+
+Necesitas una tarjeta de sonido que funcione a **192 kHz** (176,4 kHz si el audio al aire va a 44,1 kHz), conectada a la entrada MPX del transmisor. Usa una tarjeta con respuesta plana al menos hasta 60 kHz; las salidas integradas de los portátiles suelen filtrar por encima de 20 kHz y se pierden el estéreo y el RDS.
+
+1. Abre **Emisión ▸ RDS…**, apartado **Codificador estéreo FM (MPX)**.
+2. Marca **Generar la señal FM en una tarjeta de sonido** y elige la tarjeta. Solo salen las que pueden funcionar a la frecuencia necesaria; **Actualizar** vuelve a buscarlas.
+3. Elige el **preénfasis**: **50 µs** en Europa y casi todo el mundo, **75 µs** en América y Corea del Sur. Elige **No** si ya lo aplica el transmisor.
+4. Revisa los niveles, en porcentaje de la desviación máxima (±75 kHz):
+   - **Piloto**: lo normal es un 9 % (del 8 al 10 %).
+   - **RDS**: lo normal es un 4 % (del 3 al 5 %).
+   - **Nivel**: la salida de la tarjeta a desviación máxima. Empieza en -3 dB y ajusta la ganancia de la entrada MPX del transmisor hasta llegar a la desviación máxima, midiendo con un monitor de modulación.
+5. Sin **Estéreo** se envía mono, sin piloto. Sin **RDS en la señal** el RDS no va.
+6. Pulsa **Guardar**.
+
+El estado muestra la tarjeta, su frecuencia y los **cortes en el audio**, si los hay: ocurren cuando el audio al aire deja de llegar al codificador un momento. RIARS guarda 100 ms de audio para seguir las pequeñas diferencias de velocidad entre las dos tarjetas.
+
+El codificador integrado envía el mismo PS, radiotexto y RT+ que los codificadores externos, y funciona esté marcado o no **Enviar RDS a los codificadores**.
+
+> Nota: antes de salir al aire, comprueba la desviación y el espectro de la señal con un monitor de modulación. La sobremodulación interfiere a otras emisoras.
+
 ## Un texto propio
 
 En **En antena ahora** puedes escribir un texto que sustituye al de la canción: un teléfono, el próximo programa, un concurso. Elige cuántos minutos dura y pulsa **Mostrar**. **Volver al automático** lo quita antes de tiempo.
@@ -53,8 +78,8 @@ En **En antena ahora** puedes escribir un texto que sustituye al de la canción:
 
 ## Desde la API y los agentes
 
-- La API REST tiene `GET` y `PUT /api/v1/rds` para los ajustes y el estado.
+- La API REST tiene `GET` y `PUT /api/v1/rds` para los ajustes y el estado (la parte `mpx` es el codificador FM integrado), y `GET /api/v1/rds/mpx/devices` lista las tarjetas de sonido que puede usar.
 - `POST /api/v1/rds/text` pone un texto propio, con `{"text": "...", "minutes": 10}`, y `DELETE /api/v1/rds/text` lo quita.
-- Los agentes de IA tienen las herramientas `get_rds`, `set_rds_config`, `set_rds_text` y `clear_rds_text`. Consulta [API y agentes de IA](topic:api-agents).
+- Los agentes de IA tienen las herramientas `get_rds`, `set_rds_config`, `set_rds_text`, `clear_rds_text` y `list_mpx_devices`. Consulta [API y agentes de IA](topic:api-agents).
 
 En el servidor sin interfaz, los ajustes se guardan en `riars_rds.json`, junto a la base de datos de la biblioteca.

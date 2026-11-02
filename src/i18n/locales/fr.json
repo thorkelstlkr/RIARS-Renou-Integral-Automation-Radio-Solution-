@@ -186,6 +186,24 @@
       "Error": "Erreur, nouvel essai"
     },
     "lastSent": "dernier envoi {{time}}",
+    "mpx": {
+      "title": "Codeur stéréo FM (MPX)",
+      "enabled": "Produire le signal FM sur une carte son",
+      "device": "Carte son (192 kHz)",
+      "defaultDevice": "Carte par défaut",
+      "refresh": "Actualiser",
+      "preEmphasis": "Préaccentuation",
+      "preOff": "Non (l'émetteur s'en charge)",
+      "pre50": "50 µs (Europe)",
+      "pre75": "75 µs (Amériques)",
+      "pilot": "Pilote %",
+      "rdsLevel": "RDS %",
+      "output": "Niveau dB",
+      "stereo": "Stéréo",
+      "rds": "RDS dans le signal",
+      "underruns": "{{n}} coupures dans l'audio",
+      "hint": "Pour un émetteur avec entrée MPX : RIARS produit lui-même le signal stéréo (pilote, 38 kHz) et le RDS à 57 kHz. La carte doit fonctionner à 192 kHz (176,4 kHz pour un audio à 44,1 kHz). Aucun des codeurs ci-dessus n'est nécessaire."
+    },
     "addOutput": "Ajouter un codeur",
     "save": "Enregistrer"
   },

@@ -1,5 +1,6 @@
-//! RDS for an external encoder (see `riars_rds`): the settings, what is being sent,
-//! and a RadioText typed by hand that replaces the song's for a while.
+//! RDS (see `riars_rds`): the settings, what is being sent to external encoders and
+//! the built-in FM stereo encoder, and a RadioText typed by hand that replaces the
+//! song's for a while.
 
 use std::sync::Arc;
 
@@ -17,6 +18,7 @@ pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/rds", get(get_rds).put(set_config))
         .route("/rds/text", post(set_text).delete(clear_text))
+        .route("/rds/mpx/devices", get(mpx_devices))
 }
 
 #[derive(Serialize)]
@@ -46,6 +48,13 @@ async fn set_config(State(state): State<Arc<AppState>>, Json(config): Json<RdsCo
     // Saving writes a file: off the async workers.
     tokio::task::spawn_blocking(move || worker.rds.set_config(config)).await.map_err(ApiError::internal)??;
     Ok(response(&state))
+}
+
+/// Sound cards that can play the MPX (at four times the on-air rate).
+async fn mpx_devices(State(state): State<Arc<AppState>>) -> Result<Json<Vec<String>>, ApiError> {
+    let worker = Arc::clone(&state);
+    let devices = tokio::task::spawn_blocking(move || worker.rds.mpx_devices()).await.map_err(ApiError::internal)?;
+    Ok(Json(devices))
 }
 
 async fn set_text(State(state): State<Arc<AppState>>, Json(req): Json<TextRequest>) -> Result<Json<RdsResponse>, ApiError> {

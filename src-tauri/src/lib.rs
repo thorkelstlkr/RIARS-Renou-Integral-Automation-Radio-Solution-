@@ -628,6 +628,9 @@ pub fn run() {
             }
             .expect("Failed to initialize audio engine");
             let stream = engine.take_stream_tap().map(StreamService::new);
+            if let Some(tap) = engine.take_mpx_tap() {
+                rds.set_mpx_tap(tap);
+            }
 
             app.manage(AppState {
                 stream,
@@ -743,6 +746,7 @@ pub fn run() {
             rds_cmds::rds_get,
             rds_cmds::rds_set_config,
             rds_cmds::rds_set_text,
+            rds_cmds::rds_mpx_devices,
             stream_start,
             stream_stop,
             engine_load_track,

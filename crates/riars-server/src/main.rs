@@ -131,6 +131,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("Schedule: {} ({} events)", schedule_path.display(), scheduler.events().len());
     let session_path = std::path::Path::new(&cli.db_path).with_file_name("riars_session.json");
     let rds = riars_rds::RdsService::new(Some(std::path::Path::new(&cli.db_path).with_file_name("riars_rds.json")));
+    if let Some(tap) = engine.take_mpx_tap() {
+        rds.set_mpx_tap(tap);
+    }
     let session = Mutex::new(riars_core::session::SessionSaver::new(session_path.clone()));
 
     // --scan adds a library folder; every library folder is rescanned in the

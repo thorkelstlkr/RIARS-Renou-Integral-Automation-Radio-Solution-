@@ -1,9 +1,11 @@
 //! RDS output: sends the PS, RadioText and RT+ made by `riars_core::rds` to external
 //! encoders, on its own thread, whenever what is on air changes and every 30 s (so an
 //! encoder that restarted gets the texts back). A failed output is retried with
-//! backoff; the others carry on.
+//! backoff; the others carry on. The same thread drives the built-in FM stereo encoder
+//! (`mpx`), which puts the RDS into an MPX signal on a sound card.
 
 pub mod ascii;
+mod mpx;
 mod transport;
 pub mod uecp;
 
@@ -12,9 +14,12 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use riars_core::audio::StreamTap;
 use riars_core::rds::{self, charset, OnAirInfo, RdsConfig, RdsInput, RdsProtocol, RdsTexts, RT_LEN};
 use serde::{Deserialize, Serialize};
 
+use mpx::Mpx;
+pub use mpx::MpxStatus;
 use transport::Link;
 
 /// Texts are sent again this often even when nothing changed.
@@ -53,6 +58,8 @@ pub struct RdsStatus {
     /// Unix time (s) when the manual text ends; `None` keeps it until cleared.
     pub manual_until: Option<u64>,
     pub outputs: Vec<OutputStatus>,
+    /// The built-in FM stereo encoder.
+    pub mpx: MpxStatus,
 }
 
 struct Manual {
@@ -67,6 +74,10 @@ struct Shared {
     on_air: Option<OnAirInfo>,
     mic_on: bool,
     manual: Option<Manual>,
+    /// The copy of the on-air audio for the FM stereo encoder, until the worker takes it.
+    mpx_tap: Option<StreamTap>,
+    /// Its sample rate, kept after the worker took it.
+    mpx_in_rate: Option<u32>,
     /// Something changed since the worker last looked.
     dirty: bool,
     shutdown: bool,
@@ -108,6 +119,7 @@ impl RdsService {
             manual: None,
             manual_until: None,
             outputs: Vec::new(),
+            mpx: MpxStatus::default(),
         };
         let inner = Arc::new(Inner {
             shared: Mutex::new(Shared {
@@ -116,6 +128,8 @@ impl RdsService {
                 on_air: None,
                 mic_on: false,
                 manual: None,
+                mpx_tap: None,
+                mpx_in_rate: None,
                 dirty: true,
                 shutdown: false,
             }),
@@ -178,6 +192,21 @@ impl RdsService {
         });
         self.wake(shared);
         Ok(())
+    }
+
+    /// Hand over the copy of the on-air audio for the FM stereo encoder (from
+    /// `AudioEngine::take_mpx_tap`). A new tap replaces the old one.
+    pub fn set_mpx_tap(&self, tap: StreamTap) {
+        let mut shared = self.lock();
+        shared.mpx_in_rate = Some(tap.sample_rate);
+        shared.mpx_tap = Some(tap);
+        self.wake(shared);
+    }
+
+    /// The sound cards that can play the MPX: they must run at four times the on-air rate.
+    pub fn mpx_devices(&self) -> Vec<String> {
+        let rate = self.lock().mpx_in_rate.unwrap_or(48_000) * 4;
+        riars_core::audio::mpx::devices_supporting(rate)
     }
 
     /// The status as of the worker's last pass, with the texts as they are now.
@@ -249,10 +278,11 @@ impl Sender {
 
 fn run(inner: &Inner) {
     let mut senders: Vec<Sender> = Vec::new();
+    let mut mpx = Mpx::default();
     let mut revision = u64::MAX;
     loop {
         // Copy what is needed and let go of the lock before any I/O.
-        let (config, input, new_revision) = {
+        let (config, input, new_revision, new_tap) = {
             let mut shared = inner.shared.lock().unwrap_or_else(|e| e.into_inner());
             while !shared.dirty && !shared.shutdown {
                 let (guard, wait) = inner.wake.wait_timeout(shared, Duration::from_secs(1)).unwrap_or_else(|e| e.into_inner());
@@ -268,8 +298,12 @@ fn run(inner: &Inner) {
             if shared.manual.as_ref().is_some_and(|m| m.until.is_some_and(|t| SystemTime::now() >= t)) {
                 shared.manual = None;
             }
-            (shared.config.clone(), input(&shared), shared.revision)
+            (shared.config.clone(), input(&shared), shared.revision, shared.mpx_tap.take())
         };
+        // Closing the card can wait for its callback: not while holding the lock.
+        if let Some(tap) = new_tap {
+            mpx.set_tap(tap);
+        }
         if new_revision != revision {
             senders = config.outputs.iter().map(|o| Sender::new(&o.name)).collect();
             revision = new_revision;
@@ -319,8 +353,10 @@ fn run(inner: &Inner) {
                 }
             }
         }
+        mpx.step(&config, &texts);
         if let Ok(mut status) = inner.status.lock() {
             status.outputs = senders.iter().map(|s| s.status.clone()).collect();
+            status.mpx = mpx.status.clone();
         }
     }
 }
