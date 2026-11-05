@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Emisión en directo — Manual de RIARS</title>
+  <meta name="description" content="La pestaña En directo (Ctrl+8) reúne lo que necesita un locutor: el micrófono, el banco de sonidos y el modo en que avanza la lista.">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Emisión en directo — Manual de RIARS">
+  <meta property="og:description" content="La pestaña En directo (Ctrl+8) reúne lo que necesita un locutor: el micrófono, el banco de sonidos y el modo en que avanza la lista.">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/live.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-es.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/live.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/live.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/live.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/live.html">
+  <link rel="icon" type="image/png" href="../img/favicon.png">
+  <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Principal">
+        <a class="nav-link" href="../">Portada</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../#download">Descargar</a>
+        <a class="lang" href="../en/manual/live.html" hreflang="en" lang="en" aria-label="English">EN</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · En antena<a class="to-toc" href="#manual-toc">Índice</a></p>
+        <h1 id="emision-en-directo">Emisión en directo</h1>
+<p>La pestaña <strong>En directo</strong> (<strong>Ctrl+8</strong>) reúne lo que necesita un locutor: el <strong>micrófono</strong>, el <strong>banco de sonidos</strong> y el <strong>modo</strong> en que avanza la lista.</p>
+<h2 id="microfono">Micrófono</h2>
+<ul>
+<li>El botón <strong>MIC</strong> (o <strong>F9</strong> desde cualquier pestaña) lo abre y lo cierra, con un fundido corto para que no se oiga ningún golpe. Mientras está abierto, el botón se pone rojo y aparece <strong>EN EL AIRE</strong>.</li>
+<li>Al abrirlo, la música <strong>baja sola</strong> (12 dB por defecto) y vuelve al cerrarlo. Si prefieres que solo baje mientras hablas, elige <strong>Mientras se habla</strong> en los ajustes.</li>
+<li>El medidor muestra el nivel aunque el micrófono esté cerrado: así compruebas la voz antes de salir al aire. Procura que los picos queden en verde o amarillo.</li>
+<li>Si la tarjeta del micrófono falla o se desenchufa, el micrófono se queda en silencio y aparece el error en rojo. La emisión sigue.</li>
+</ul>
+<p><strong>Reproducción ▸ Micrófono…</strong> (o el botón ⚙):</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Ajuste</th><th>Por defecto</th></tr></thead>
+<tbody>
+<tr><td>Tarjeta de entrada</td><td>La del sistema</td></tr>
+<tr><td>La tarjeta ya saca el micrófono (monitor directo)</td><td>No</td></tr>
+<tr><td>Ganancia</td><td>0 dB</td></tr>
+<tr><td>Filtro de graves (corta golpes y zumbidos por debajo de 80 Hz)</td><td>Sí</td></tr>
+<tr><td>Puerta de ruido (silencia el ruido de la sala entre frases)</td><td>No</td></tr>
+<tr><td>Compresor (iguala la voz fuerte y la suave)</td><td>Sí</td></tr>
+<tr><td>Bajar la música</td><td>12 dB, mientras está abierto</td></tr>
+<tr><td>Permitir abrirlo a la API y a agentes de IA</td><td><strong>No</strong></td></tr>
+</tbody>
+</table></div>
+<p>RIARS no devuelve el micrófono por los auriculares de <a href="sound-cards.html">preescucha</a>: para escucharte, usa la mesa o la escucha directa de tu interfaz de audio.</p>
+<h3 id="si-te-oyes-con-eco">Si te oyes con eco</h3>
+<p>Muchas interfaces de audio (por ejemplo, una Roland UA-4FX) envían la entrada del micrófono directamente a su salida, sin retraso. Si RIARS también lo saca por esa tarjeta, te oyes dos veces: la segunda llega unas décimas tarde y suena a eco. Si la salida de la tarjeta es tu señal al aire, los oyentes también lo oyen.</p>
+<p>Marca <strong>La tarjeta ya saca el micrófono (monitor directo)</strong>. RIARS deja entonces de sacar el micrófono por la tarjeta, que ya lo hace sin retraso, y lo añade solo a la <a href="streaming.html">emisión por Internet</a>. La música sigue bajando al abrir el micrófono y el medidor sigue funcionando. Si tu interfaz no tiene monitor directo, deja la casilla sin marcar: si no, el micrófono no saldría por la tarjeta.</p>
+<h2 id="banco-de-sonidos">Banco de sonidos</h2>
+<p>Una rejilla de <strong>6 × 4 botones</strong> con <strong>8 páginas</strong> para jingles, efectos, cortinillas y camas musicales. Puedes tener varios bancos, por ejemplo uno por programa, y elegir el activo arriba.</p>
+<ul>
+<li><strong>Asignar un sonido:</strong> arrastra una pista de la biblioteca (o un archivo de la pestaña <strong>Carpetas</strong>) hasta un botón, o haz clic en un botón vacío. En el editor, al pulsar <strong>Elegir una pista…</strong> aparece la lista de la biblioteca, que se filtra mientras escribes; con <strong>Elegir archivo…</strong> puedes usar cualquier archivo de audio del disco, aunque no esté en la biblioteca.</li>
+<li><strong>Disparar:</strong> clic en el botón, o las teclas <strong>1–0</strong> y <strong>Q–P</strong> para los veinte primeros botones de la página visible. <strong>Re Pág / Av Pág</strong> cambian de página. <strong>Esc</strong> o <strong>Parar todo</strong> paran todos los sonidos del banco.</li>
+<li>Cada botón muestra el tiempo que le queda mientras suena. Pueden sonar hasta <strong>8</strong> a la vez, encima de la música, y también con la lista parada.</li>
+<li><strong>Clic derecho</strong> sobre un botón: <strong>Editar…</strong> (texto, color, ganancia, modo y si baja la música), <strong>Preescucha</strong> y <strong>Quitar</strong>.</li>
+</ul>
+<div class="table-wrap"><table>
+<thead><tr><th>Modo del botón</th><th>Qué hace</th></tr></thead>
+<tbody>
+<tr><td><strong>Disparar</strong></td><td>Cada pulsación lo empieza desde el principio.</td></tr>
+<tr><td><strong>Disparar/parar</strong></td><td>Una pulsación lo empieza y otra lo para.</td></tr>
+<tr><td><strong>Bucle</strong></td><td>Se repite hasta que lo paras. Útil para camas musicales.</td></tr>
+</tbody>
+</table></div>
+<p>Los sonidos cortos (de menos de 30 s) se cargan en memoria al abrir la página, para que suenen al instante. Todo lo que suena desde el banco queda en el <a href="proof-of-play.html">registro de emisiones</a>.</p>
+<h2 id="modo-de-la-lista">Modo de la lista</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Modo</th><th>Qué hace</th></tr></thead>
+<tbody>
+<tr><td><strong>Automático</strong></td><td>La lista avanza sola y la <a href="automation-overview.html">automatización</a> la rellena.</td></tr>
+<tr><td><strong>Asistido</strong></td><td>La lista avanza sola, pero la automatización <strong>no añade nada ni corta</strong>: suena lo que has preparado.</td></tr>
+<tr><td><strong>Manual</strong></td><td>Al acabar cada elemento, la lista <strong>se para</strong> y espera a que pulses <strong>Reproducir</strong> (F5) o <strong>Siguiente</strong> (F8).</td></tr>
+</tbody>
+</table></div>
+<p>En cualquier modo, <strong>clic derecho ▸ Parar tras esta pista</strong> en la <a href="playlist.html">lista de reproducción</a> hace que la emisión se pare al acabar ese elemento. Útil para entrar a hablar. El elemento muestra ⏹.</p>
+<h2 id="hablar-encima-de-la-intro">Hablar encima de la intro</h2>
+<p>Cuando empieza una canción con <a href="intro-outro.html">marcas de intro</a>, el panel muestra en verde los <strong>segundos que quedan hasta que entra la voz</strong>; los tres últimos, en amarillo. Así puedes presentar la canción y callar justo a tiempo.</p>
+        <nav class="manual-pager" aria-label="Índice del manual">
+          <a class="prev" href="sound-cards.html" rel="prev"><span>Anterior</span>Tarjetas de sonido y preescucha</a>
+          <a class="next" href="metadata.html" rel="next"><span>Siguiente</span>Completar metadatos</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/es/live.md" target="_blank" rel="noopener">Mejorar esta página en GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No hay resultados.">
+          <label class="visually-hidden" for="manual-q">Buscar en el manual</label>
+          <input id="manual-q" type="search" placeholder="Buscar en el manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Índice del manual">
+          <p class="manual-toc-title"><a href="./">Manual de usuario</a></p>
+          <h2>Primeros pasos</h2>
+          <ul>
+            <li><a href="welcome.html">Bienvenida</a></li>
+            <li><a href="first-steps.html">Primeros pasos</a></li>
+            <li><a href="main-window.html">La ventana principal</a></li>
+          </ul>
+          <h2>En antena</h2>
+          <ul>
+            <li><a href="library.html">Biblioteca</a></li>
+            <li><a href="playlist.html">Lista de reproducción</a></li>
+            <li><a href="playback.html">Reproducción</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Detector de silencio</a></li>
+            <li><a href="streaming.html">Emisión por Internet</a></li>
+            <li><a href="normalization.html">Normalización del volumen</a></li>
+            <li><a href="sound-cards.html">Tarjetas de sonido y preescucha</a></li>
+            <li><a href="live.html" aria-current="page">Emisión en directo</a></li>
+            <li><a href="metadata.html">Completar metadatos</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Programación</h2>
+          <ul>
+            <li><a href="events.html">Programación de eventos</a></li>
+          </ul>
+          <h2>Automatización</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automatización: visión general</a></li>
+            <li><a href="categories.html">Categorías</a></li>
+            <li><a href="clocks.html">Relojes</a></li>
+            <li><a href="grid.html">Parrilla</a></li>
+            <li><a href="imaging.html">Imagen de emisora</a></li>
+            <li><a href="station-settings.html">Ajustes de la emisora</a></li>
+            <li><a href="preview.html">Vista previa</a></li>
+            <li><a href="intro-outro.html">Intros, outros y locución sobre la intro</a></li>
+          </ul>
+          <h2>Publicidad</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Anunciantes y campañas</a></li>
+            <li><a href="sponsorships.html">Patrocinios</a></li>
+            <li><a href="delivery.html">Cumplimiento y facturación</a></li>
+          </ul>
+          <h2>Registros</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Registro de emisiones</a></li>
+          </ul>
+          <h2>Control remoto y servidores</h2>
+          <ul>
+            <li><a href="web-panel.html">Panel web</a></li>
+            <li><a href="headless-server.html">Servidor sin pantalla (Raspberry Pi)</a></li>
+            <li><a href="api-agents.html">API y agentes de IA</a></li>
+          </ul>
+          <h2>Referencia</h2>
+          <ul>
+            <li><a href="shortcuts.html">Atajos de teclado</a></li>
+            <li><a href="troubleshooting.html">Solución de problemas</a></li>
+            <li><a href="glossary.html">Glosario</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Software libre con licencia MIT.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Pie de página">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Incidencias</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a>
+        <a href="../code-signing.html">Política de firma de código</a>
+        <a href="../privacy.html">Privacidad</a>
+        <a href="../en/" hreflang="en" lang="en">English</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

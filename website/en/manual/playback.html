@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Playback — RIARS manual</title>
+  <meta name="description" content="Playback controls are in the header and in the Now Playing card. They work the same whether a person or the automation loaded the track.">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Playback — RIARS manual">
+  <meta property="og:description" content="Playback controls are in the header and in the Now Playing card. They work the same whether a person or the automation loaded the track.">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/playback.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-en.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/playback.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/playback.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/playback.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/playback.html">
+  <link rel="icon" type="image/png" href="../../img/favicon.png">
+  <link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../style.css">
+  <script src="../../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../../en/"><img src="../../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Main">
+        <a class="nav-link" href="../../en/">Home</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../../en/#download">Download</a>
+        <a class="lang" href="../../manual/playback.html" hreflang="es" lang="es" aria-label="Español">ES</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · On air<a class="to-toc" href="#manual-toc">Contents</a></p>
+        <h1 id="playback">Playback</h1>
+<p>Playback controls are in the header and in the <strong>Now Playing</strong> card. They work the same whether a person or the automation loaded the track.</p>
+<h2 id="transport">Transport</h2>
+<ul>
+<li><strong>Play</strong> starts or resumes the current item.</li>
+<li><strong>Pause</strong> holds it at the current position; <strong>Play</strong> resumes.</li>
+<li><strong>Stop</strong> stops playback and resets the position.</li>
+<li><strong>Next</strong> jumps to the next item in the playlist.</li>
+</ul>
+<p>The <strong>On air bar</strong> calls the current item <strong>On air</strong>, or <strong>Paused</strong> when paused. The <strong>Now Playing</strong> card shows <strong>ON AIR</strong>, <strong>PAUSED</strong> or <strong>STOPPED</strong>, the track title and a progress bar.</p>
+<h2 id="volume-and-seek">Volume and seek</h2>
+<p>Drag the <strong>Vol</strong> slider to set the output level; the percentage is shown next to it. The setting is saved with the session and restored on the next start unless the server started with <code>--no-resume</code>.</p>
+<p>To seek, click anywhere on the progress bar in <strong>Now Playing</strong>. RIARS moves the playhead to that point and keeps playing. The bar is only active when a track with a known duration is loaded.</p>
+<h2 id="keyboard">Keyboard</h2>
+<p>In the desktop app: <strong>F5</strong> Play, <strong>F6</strong> Pause, <strong>F7</strong> Stop, <strong>F8</strong> Next track. <strong>Ctrl+Q</strong> quits. The full list is in <a href="shortcuts.html">Keyboard shortcuts</a>.</p>
+<h2 id="what-happens-at-the-end-of-a-track">What happens at the end of a track</h2>
+<p>By default the engine plays items in order. At the end of the list it stops, unless the automation is adding more items or you turned on repeat-by-hand. Before an item ends, the next one is prepared so the change is immediate; with crossfade on, the two overlap. Seamless changes are covered in <a href="crossfade.html">Crossfade</a>.</p>
+<div class="callout callout-tip">
+<p><strong>Tip:</strong> if the station falls silent while an item is playing, the <strong>Silence detector</strong> may skip it. See <a href="dead-air.html">Silence detector</a>.</p>
+</div>
+        <nav class="manual-pager" aria-label="Manual contents">
+          <a class="prev" href="playlist.html" rel="prev"><span>Previous</span>Playlist</a>
+          <a class="next" href="crossfade.html" rel="next"><span>Next</span>Crossfade</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/en/playback.md" target="_blank" rel="noopener">Improve this page on GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No results.">
+          <label class="visually-hidden" for="manual-q">Search the manual</label>
+          <input id="manual-q" type="search" placeholder="Search the manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Manual contents">
+          <p class="manual-toc-title"><a href="./">User manual</a></p>
+          <h2>Getting started</h2>
+          <ul>
+            <li><a href="welcome.html">Welcome to RIARS</a></li>
+            <li><a href="first-steps.html">First steps</a></li>
+            <li><a href="main-window.html">The main window</a></li>
+          </ul>
+          <h2>On air</h2>
+          <ul>
+            <li><a href="library.html">Media library</a></li>
+            <li><a href="playlist.html">Playlist</a></li>
+            <li><a href="playback.html" aria-current="page">Playback</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Silence detector</a></li>
+            <li><a href="streaming.html">Streaming</a></li>
+            <li><a href="normalization.html">Loudness normalisation</a></li>
+            <li><a href="sound-cards.html">Sound cards and pre-listening</a></li>
+            <li><a href="live.html">Live broadcasting</a></li>
+            <li><a href="metadata.html">Complete metadata</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Scheduling</h2>
+          <ul>
+            <li><a href="events.html">Scheduled events</a></li>
+          </ul>
+          <h2>Automation</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automation overview</a></li>
+            <li><a href="categories.html">Categories</a></li>
+            <li><a href="clocks.html">Format clocks</a></li>
+            <li><a href="grid.html">The grid</a></li>
+            <li><a href="imaging.html">Station imaging</a></li>
+            <li><a href="station-settings.html">Station settings</a></li>
+            <li><a href="preview.html">Preview</a></li>
+            <li><a href="intro-outro.html">Intros, outros and talking over the intro</a></li>
+          </ul>
+          <h2>Advertising</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Advertisers and campaigns</a></li>
+            <li><a href="sponsorships.html">Sponsorships</a></li>
+            <li><a href="delivery.html">Delivery report</a></li>
+          </ul>
+          <h2>Logs</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Proof of play</a></li>
+          </ul>
+          <h2>Remote control and servers</h2>
+          <ul>
+            <li><a href="web-panel.html">Web panel</a></li>
+            <li><a href="headless-server.html">Headless server</a></li>
+            <li><a href="api-agents.html">API and AI agents</a></li>
+          </ul>
+          <h2>Reference</h2>
+          <ul>
+            <li><a href="shortcuts.html">Keyboard shortcuts</a></li>
+            <li><a href="troubleshooting.html">Troubleshooting</a></li>
+            <li><a href="glossary.html">Glossary</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Free software under the MIT licence.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licence</a>
+        <a href="../../en/code-signing.html">Code signing policy</a>
+        <a href="../../en/privacy.html">Privacy</a>
+        <a href="../../" hreflang="es" lang="es">Español</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

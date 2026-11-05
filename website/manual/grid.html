@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Parrilla — Manual de RIARS</title>
+  <meta name="description" content="La parrilla dice qué reloj, o qué playlist, suena en cada momento. Está hecha de reglas. En cada hora gana la regla que encaja con mayor prioridad; si…">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Parrilla — Manual de RIARS">
+  <meta property="og:description" content="La parrilla dice qué reloj, o qué playlist, suena en cada momento. Está hecha de reglas. En cada hora gana la regla que encaja con mayor prioridad; si…">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/grid.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-es.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/grid.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/grid.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/grid.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/grid.html">
+  <link rel="icon" type="image/png" href="../img/favicon.png">
+  <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Principal">
+        <a class="nav-link" href="../">Portada</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../#download">Descargar</a>
+        <a class="lang" href="../en/manual/grid.html" hreflang="en" lang="en" aria-label="English">EN</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · Automatización<a class="to-toc" href="#manual-toc">Índice</a></p>
+        <h1 id="parrilla">Parrilla</h1>
+<p>La parrilla dice <strong>qué reloj, o qué playlist, suena en cada momento</strong>. Está hecha de <strong>reglas</strong>. En cada hora gana la regla que encaja con mayor <strong>prioridad</strong>; si empatan, la más concreta (la que cubre menos tiempo).</p>
+<h2 id="una-regla">Una regla</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Campo</th><th>Significado</th></tr></thead>
+<tbody>
+<tr><td><strong>Suena</strong></td><td>Un <a href="clocks.html">reloj</a> o una playlist guardada. Una playlist se reproduce en orden y sigue donde se quedó la vez anterior.</td></tr>
+<tr><td><strong>Inicio</strong> y <strong>Fin</strong></td><td>La franja del día. Si son iguales, es todo el día. Si el fin es anterior al inicio, pasa de medianoche: una franja de viernes de 22:00 a 02:00 incluye la madrugada del sábado.</td></tr>
+<tr><td><strong>Días</strong></td><td>Los días de la semana.</td></tr>
+<tr><td><strong>Meses</strong></td><td>Por ejemplo, solo de junio a agosto.</td></tr>
+<tr><td><strong>Semanas del mes</strong></td><td>De la 1.ª a la 5.ª, y <strong>Última</strong>: por ejemplo, el último domingo de cada mes.</td></tr>
+<tr><td><strong>Desde</strong> / <strong>Hasta</strong></td><td>Fechas concretas, para temporadas y excepciones.</td></tr>
+<tr><td><strong>Prioridad</strong></td><td>Un número más alto gana.</td></tr>
+<tr><td><strong>Activa</strong></td><td>Para desactivar una regla sin borrarla.</td></tr>
+</tbody>
+</table></div>
+<h2 id="ejemplo-de-parrilla">Ejemplo de parrilla</h2>
+<ol>
+<li><em>Base</em>: todo el día, todos los días → reloj <em>Tarde</em> (prioridad 0).</li>
+<li><em>Mañanas</em>: de lunes a viernes, de 07:00 a 10:00 → reloj <em>Despertador</em> (prioridad 0, gana por ser más concreta).</li>
+<li><em>Noches de rock</em>: viernes de 22:00 a 02:00 → reloj <em>Rock</em>.</li>
+<li><em>Navidad</em>: del 25-12 al 25-12, todo el día → reloj <em>Navidad</em> (prioridad 10).</li>
+</ol>
+<p>Las horas que no cubre ninguna regla usan el <strong>Reloj por defecto</strong> de <a href="station-settings.html">Ajustes de la emisora</a>.</p>
+<h2 id="la-vista-semanal">La vista semanal</h2>
+<p>Arriba ves la semana en 7 × 24 casillas, cada una con el color y el nombre de la regla que gana. Con las flechas y la fecha puedes ver otras semanas, por ejemplo la de Navidad, para comprobar las excepciones. Haz clic en una casilla para editar su regla.</p>
+<div class="callout">
+<p>Nota: la regla se decide al empezar cada periodo del reloj (normalmente, cada hora). Un cambio en la parrilla se nota a partir de lo próximo que se genere.</p>
+</div>
+        <nav class="manual-pager" aria-label="Índice del manual">
+          <a class="prev" href="clocks.html" rel="prev"><span>Anterior</span>Relojes</a>
+          <a class="next" href="imaging.html" rel="next"><span>Siguiente</span>Imagen de emisora</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/es/grid.md" target="_blank" rel="noopener">Mejorar esta página en GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No hay resultados.">
+          <label class="visually-hidden" for="manual-q">Buscar en el manual</label>
+          <input id="manual-q" type="search" placeholder="Buscar en el manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Índice del manual">
+          <p class="manual-toc-title"><a href="./">Manual de usuario</a></p>
+          <h2>Primeros pasos</h2>
+          <ul>
+            <li><a href="welcome.html">Bienvenida</a></li>
+            <li><a href="first-steps.html">Primeros pasos</a></li>
+            <li><a href="main-window.html">La ventana principal</a></li>
+          </ul>
+          <h2>En antena</h2>
+          <ul>
+            <li><a href="library.html">Biblioteca</a></li>
+            <li><a href="playlist.html">Lista de reproducción</a></li>
+            <li><a href="playback.html">Reproducción</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Detector de silencio</a></li>
+            <li><a href="streaming.html">Emisión por Internet</a></li>
+            <li><a href="normalization.html">Normalización del volumen</a></li>
+            <li><a href="sound-cards.html">Tarjetas de sonido y preescucha</a></li>
+            <li><a href="live.html">Emisión en directo</a></li>
+            <li><a href="metadata.html">Completar metadatos</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Programación</h2>
+          <ul>
+            <li><a href="events.html">Programación de eventos</a></li>
+          </ul>
+          <h2>Automatización</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automatización: visión general</a></li>
+            <li><a href="categories.html">Categorías</a></li>
+            <li><a href="clocks.html">Relojes</a></li>
+            <li><a href="grid.html" aria-current="page">Parrilla</a></li>
+            <li><a href="imaging.html">Imagen de emisora</a></li>
+            <li><a href="station-settings.html">Ajustes de la emisora</a></li>
+            <li><a href="preview.html">Vista previa</a></li>
+            <li><a href="intro-outro.html">Intros, outros y locución sobre la intro</a></li>
+          </ul>
+          <h2>Publicidad</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Anunciantes y campañas</a></li>
+            <li><a href="sponsorships.html">Patrocinios</a></li>
+            <li><a href="delivery.html">Cumplimiento y facturación</a></li>
+          </ul>
+          <h2>Registros</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Registro de emisiones</a></li>
+          </ul>
+          <h2>Control remoto y servidores</h2>
+          <ul>
+            <li><a href="web-panel.html">Panel web</a></li>
+            <li><a href="headless-server.html">Servidor sin pantalla (Raspberry Pi)</a></li>
+            <li><a href="api-agents.html">API y agentes de IA</a></li>
+          </ul>
+          <h2>Referencia</h2>
+          <ul>
+            <li><a href="shortcuts.html">Atajos de teclado</a></li>
+            <li><a href="troubleshooting.html">Solución de problemas</a></li>
+            <li><a href="glossary.html">Glosario</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Software libre con licencia MIT.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Pie de página">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Incidencias</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a>
+        <a href="../code-signing.html">Política de firma de código</a>
+        <a href="../privacy.html">Privacidad</a>
+        <a href="../en/" hreflang="en" lang="en">English</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

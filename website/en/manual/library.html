@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Media library — RIARS manual</title>
+  <meta name="description" content="The Library is the list of audio files RIARS knows about. The Library tab shows them in one searchable list; the Folders tab is a folder tree for choosing…">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Media library — RIARS manual">
+  <meta property="og:description" content="The Library is the list of audio files RIARS knows about. The Library tab shows them in one searchable list; the Folders tab is a folder tree for choosing…">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/library.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-en.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/library.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/library.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/library.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/library.html">
+  <link rel="icon" type="image/png" href="../../img/favicon.png">
+  <link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../style.css">
+  <script src="../../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../../en/"><img src="../../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Main">
+        <a class="nav-link" href="../../en/">Home</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../../en/#download">Download</a>
+        <a class="lang" href="../../manual/library.html" hreflang="es" lang="es" aria-label="Español">ES</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · On air<a class="to-toc" href="#manual-toc">Contents</a></p>
+        <h1 id="media-library">Media library</h1>
+<p>The <strong>Library</strong> is the list of audio files RIARS knows about. The <strong>Library</strong> tab shows them in one searchable list; the <strong>Folders</strong> tab is a folder tree for choosing which folders the library is built from and for browsing their files.</p>
+<h2 id="add-music">Add music</h2>
+<p>The library is built from <strong>library folders</strong>. RIARS remembers them and rescans them every time it starts, so new music you copy into them shows up by itself.</p>
+<p>There are three ways to add folders:</p>
+<ul>
+<li><strong>Folders tab</strong>: a tree of the computer that opens with ▸. Tick the box of each folder you want in the library; you can tick several in a row.</li>
+<li><strong>Add folder</strong>, above the library, or <strong>File ▸ Add folder to the library…</strong> (<strong>Ctrl+Shift+A</strong>): the chooser lets you pick several folders at once.</li>
+<li><strong>Add…</strong> in the Folders tab does the same.</li>
+</ul>
+<p>RIARS scans in the background, subfolders included, and the notice line says which folder it is reading and how many new tracks it found. You can keep working meanwhile. Rescanning only adds what is new: tracks already in the library are not duplicated and their tags are not read again.</p>
+<p>It reads <strong>MP3, FLAC, WAV, OGG, AAC and M4A</strong> files, taking title, artist, album, genre and duration from their tags; a file without tags uses its file name as the title. What is missing can be <a href="metadata.html">completed from MusicBrainz</a>.</p>
+<p>On the <a href="headless-server.html">headless server</a>, <code>--scan</code> adds a library folder at startup, and the REST API and MCP server can list, add, remove and rescan library folders.</p>
+<h2 id="the-folders-tab">The Folders tab</h2>
+<p>At the top is the list of <strong>Library folders</strong>, with how many tracks each holds, and <strong>Rescan</strong> to look for new music without restarting.</p>
+<p>Below it is the tree of the computer:</p>
+<ul>
+<li>A <strong>ticked</strong> box is a library folder. A ticked but greyed box means the folder is already included through a folder higher up.</li>
+<li>When you <strong>untick</strong> a folder, or press ✕ in the list, RIARS asks whether to remove only the folder (its tracks stay) or its tracks too. Files are <strong>never deleted</strong> from disk.</li>
+<li>Clicking a folder's <strong>name</strong> lists its audio files underneath; <strong>double-clicking</strong> it also opens or closes it, like ▸. Files not yet in the library are dimmed, but you can still use them. Opening the <strong>Marks…</strong> of one of them from the playlist adds it to the library there and then, since marks are kept with the track.</li>
+</ul>
+<p>Files in that list work like library tracks: <strong>double-click</strong> or <strong>Enter</strong> adds them to the playlist, you can <strong>drag</strong> them onto the <a href="playlist.html">playlist</a> or a <a href="live.html">sound bank</a> button, and they have a right-click menu.</p>
+<h2 id="search">Search</h2>
+<p>Type in the <strong>Search...</strong> box. RIARS searches the library in the background shortly after you stop typing, matching title, artist, album and genre; every word must match, and case and accents are ignored. Clear the box to see the whole library again. <strong>Ctrl+L</strong> puts the cursor in the search box.</p>
+<p>The counter under the search box shows the number of matching tracks. The list loads in pages as you scroll, so a very large library does not have to load all at once.</p>
+<h2 id="add-a-track-to-the-playlist">Add a track to the playlist</h2>
+<p><strong>Double-click</strong> a track, or press <strong>Enter</strong>, to add it to the <strong>Playlist</strong>. It goes at the end of the current list. You can then start it from the playlist, or let it wait its turn.</p>
+<p>You can select several tracks: <strong>Ctrl+click</strong> adds or removes one, <strong>Shift+click</strong> selects a range and <strong>Ctrl+A</strong> selects all.</p>
+<h2 id="right-click-menu">Right-click menu</h2>
+<p>Right-click a track, or the selection:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Option</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><strong>Add to playlist</strong></td><td>At the end of the playlist.</td></tr>
+<tr><td><strong>Play next</strong></td><td>Right after what is playing now.</td></tr>
+<tr><td><strong>Pre-listen</strong></td><td>On the <a href="sound-cards.html">pre-listen card</a>, not on air.</td></tr>
+<tr><td><strong>Marks…</strong></td><td>Opens the <a href="intro-outro.html">intro and outro</a> editor.</td></tr>
+<tr><td><strong>Detect marks</strong></td><td>Analyses the chosen tracks; hand-set marks are kept.</td></tr>
+<tr><td><strong>Complete metadata…</strong></td><td>Looks up the missing artist, album, year, genre and cover in MusicBrainz. See <a href="metadata.html">Complete metadata</a>.</td></tr>
+<tr><td><strong>Show in folder</strong></td><td>Shows the file in the file manager.</td></tr>
+<tr><td><strong>Copy path</strong></td><td>Copies the file path.</td></tr>
+<tr><td><strong>Remove from library…</strong></td><td>Asks first. The file <strong>stays on disk</strong>, but the track leaves its categories. <strong>Delete</strong> does the same.</td></tr>
+</tbody>
+</table></div>
+<div class="callout callout-tip">
+<p><strong>Tip:</strong> the library list is for choosing music. For the order of the show, use the <a href="playlist.html">Playlist</a> tab.</p>
+</div>
+<p>If a track will not play, RIARS reports <strong>Cannot play this file</strong> with the reason; check that the file still exists and that its format is supported. See <a href="first-steps.html">First steps</a> for a quick start.</p>
+        <nav class="manual-pager" aria-label="Manual contents">
+          <a class="prev" href="main-window.html" rel="prev"><span>Previous</span>The main window</a>
+          <a class="next" href="playlist.html" rel="next"><span>Next</span>Playlist</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/en/library.md" target="_blank" rel="noopener">Improve this page on GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No results.">
+          <label class="visually-hidden" for="manual-q">Search the manual</label>
+          <input id="manual-q" type="search" placeholder="Search the manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Manual contents">
+          <p class="manual-toc-title"><a href="./">User manual</a></p>
+          <h2>Getting started</h2>
+          <ul>
+            <li><a href="welcome.html">Welcome to RIARS</a></li>
+            <li><a href="first-steps.html">First steps</a></li>
+            <li><a href="main-window.html">The main window</a></li>
+          </ul>
+          <h2>On air</h2>
+          <ul>
+            <li><a href="library.html" aria-current="page">Media library</a></li>
+            <li><a href="playlist.html">Playlist</a></li>
+            <li><a href="playback.html">Playback</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Silence detector</a></li>
+            <li><a href="streaming.html">Streaming</a></li>
+            <li><a href="normalization.html">Loudness normalisation</a></li>
+            <li><a href="sound-cards.html">Sound cards and pre-listening</a></li>
+            <li><a href="live.html">Live broadcasting</a></li>
+            <li><a href="metadata.html">Complete metadata</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Scheduling</h2>
+          <ul>
+            <li><a href="events.html">Scheduled events</a></li>
+          </ul>
+          <h2>Automation</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automation overview</a></li>
+            <li><a href="categories.html">Categories</a></li>
+            <li><a href="clocks.html">Format clocks</a></li>
+            <li><a href="grid.html">The grid</a></li>
+            <li><a href="imaging.html">Station imaging</a></li>
+            <li><a href="station-settings.html">Station settings</a></li>
+            <li><a href="preview.html">Preview</a></li>
+            <li><a href="intro-outro.html">Intros, outros and talking over the intro</a></li>
+          </ul>
+          <h2>Advertising</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Advertisers and campaigns</a></li>
+            <li><a href="sponsorships.html">Sponsorships</a></li>
+            <li><a href="delivery.html">Delivery report</a></li>
+          </ul>
+          <h2>Logs</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Proof of play</a></li>
+          </ul>
+          <h2>Remote control and servers</h2>
+          <ul>
+            <li><a href="web-panel.html">Web panel</a></li>
+            <li><a href="headless-server.html">Headless server</a></li>
+            <li><a href="api-agents.html">API and AI agents</a></li>
+          </ul>
+          <h2>Reference</h2>
+          <ul>
+            <li><a href="shortcuts.html">Keyboard shortcuts</a></li>
+            <li><a href="troubleshooting.html">Troubleshooting</a></li>
+            <li><a href="glossary.html">Glossary</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Free software under the MIT licence.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licence</a>
+        <a href="../../en/code-signing.html">Code signing policy</a>
+        <a href="../../en/privacy.html">Privacy</a>
+        <a href="../../" hreflang="es" lang="es">Español</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

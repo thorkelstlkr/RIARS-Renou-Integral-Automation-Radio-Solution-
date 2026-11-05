@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Automation overview — RIARS manual</title>
+  <meta name="description" content="Long-term automation lets RIARS program the station for days or weeks without an operator. It has four parts that fit together:">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Automation overview — RIARS manual">
+  <meta property="og:description" content="Long-term automation lets RIARS program the station for days or weeks without an operator. It has four parts that fit together:">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/automation-overview.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-en.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/automation-overview.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/automation-overview.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/automation-overview.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/automation-overview.html">
+  <link rel="icon" type="image/png" href="../../img/favicon.png">
+  <link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../style.css">
+  <script src="../../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../../en/"><img src="../../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Main">
+        <a class="nav-link" href="../../en/">Home</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../../en/#download">Download</a>
+        <a class="lang" href="../../manual/automation-overview.html" hreflang="es" lang="es" aria-label="Español">ES</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · Automation<a class="to-toc" href="#manual-toc">Contents</a></p>
+        <h1 id="automation-overview">Automation overview</h1>
+<p>Long-term automation lets RIARS program the station for days or weeks without an operator. It has four parts that fit together:</p>
+<ol>
+<li><strong>Categories</strong> group the music and other audio the generator may choose.</li>
+<li><strong>Format clocks</strong> describe what one hour sounds like: songs, jingles, station IDs and ad breaks.</li>
+<li><strong>The grid</strong> decides which clock or saved playlist plays in each hour of the week, with exceptions by date.</li>
+<li><strong>The generator</strong> picks the actual items and adds them to the end of the on-air playlist.</li>
+</ol>
+<p>All of this is stored in the library database. The schedule of events is separate and lives in <code>riars_schedule.json</code>; see <a href="events.html">Scheduled events</a>.</p>
+<h2 id="turning-it-on">Turning it on</h2>
+<p>In the desktop app, click the <strong>Automation</strong> card toggle so it reads <strong>ON</strong>, use <strong>Automation › Automation on/off</strong>, or press <strong>Ctrl+E</strong>. In the browser panel, use the automation toggle. Turning automation on or off does not cut what is playing: the generator starts adding items behind the current one. Turning it off leaves the current playlist alone.</p>
+<p>The card shows the <strong>Clock</strong> or <strong>Playlist</strong> being prepared, the <strong>Generating</strong> period (<code>HH:MM–HH:MM</code>) and the <strong>Grid rule</strong>. Warnings appear in yellow and in the <strong>Log</strong> pane.</p>
+<h2 id="generating-ahead">Generating ahead</h2>
+<p>The generator works ahead of the air, so there is always something ready to play. By default it keeps at least <strong>3 items</strong> and <strong>15 minutes</strong> of audio in front of the current item (adjustable in <strong>Station settings</strong>). It runs when the current track changes or when the amount ahead falls below that horizon. It does not rewrite items already in the playlist; changes to categories, clocks, the grid or campaigns apply from the next generated item.</p>
+<p>If a category is empty it uses the <strong>Fallback category</strong>. If there is still nothing, it warns rather than leaving the station silent.</p>
+<h2 id="the-pieces">The pieces</h2>
+<ul>
+<li><a href="categories.html">Categories</a>: kinds, subcategories, smart filters, weights, separation.</li>
+<li><a href="clocks.html">Format clocks</a>: slots and anchors.</li>
+<li><a href="grid.html">The grid</a>: days, hours and exceptions.</li>
+<li><a href="preview.html">Preview</a>: what would air.</li>
+<li><a href="station-settings.html">Station settings</a>: defaults for the whole station.</li>
+</ul>
+        <nav class="manual-pager" aria-label="Manual contents">
+          <a class="prev" href="events.html" rel="prev"><span>Previous</span>Scheduled events</a>
+          <a class="next" href="categories.html" rel="next"><span>Next</span>Categories</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/en/automation-overview.md" target="_blank" rel="noopener">Improve this page on GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No results.">
+          <label class="visually-hidden" for="manual-q">Search the manual</label>
+          <input id="manual-q" type="search" placeholder="Search the manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Manual contents">
+          <p class="manual-toc-title"><a href="./">User manual</a></p>
+          <h2>Getting started</h2>
+          <ul>
+            <li><a href="welcome.html">Welcome to RIARS</a></li>
+            <li><a href="first-steps.html">First steps</a></li>
+            <li><a href="main-window.html">The main window</a></li>
+          </ul>
+          <h2>On air</h2>
+          <ul>
+            <li><a href="library.html">Media library</a></li>
+            <li><a href="playlist.html">Playlist</a></li>
+            <li><a href="playback.html">Playback</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Silence detector</a></li>
+            <li><a href="streaming.html">Streaming</a></li>
+            <li><a href="normalization.html">Loudness normalisation</a></li>
+            <li><a href="sound-cards.html">Sound cards and pre-listening</a></li>
+            <li><a href="live.html">Live broadcasting</a></li>
+            <li><a href="metadata.html">Complete metadata</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Scheduling</h2>
+          <ul>
+            <li><a href="events.html">Scheduled events</a></li>
+          </ul>
+          <h2>Automation</h2>
+          <ul>
+            <li><a href="automation-overview.html" aria-current="page">Automation overview</a></li>
+            <li><a href="categories.html">Categories</a></li>
+            <li><a href="clocks.html">Format clocks</a></li>
+            <li><a href="grid.html">The grid</a></li>
+            <li><a href="imaging.html">Station imaging</a></li>
+            <li><a href="station-settings.html">Station settings</a></li>
+            <li><a href="preview.html">Preview</a></li>
+            <li><a href="intro-outro.html">Intros, outros and talking over the intro</a></li>
+          </ul>
+          <h2>Advertising</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Advertisers and campaigns</a></li>
+            <li><a href="sponsorships.html">Sponsorships</a></li>
+            <li><a href="delivery.html">Delivery report</a></li>
+          </ul>
+          <h2>Logs</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Proof of play</a></li>
+          </ul>
+          <h2>Remote control and servers</h2>
+          <ul>
+            <li><a href="web-panel.html">Web panel</a></li>
+            <li><a href="headless-server.html">Headless server</a></li>
+            <li><a href="api-agents.html">API and AI agents</a></li>
+          </ul>
+          <h2>Reference</h2>
+          <ul>
+            <li><a href="shortcuts.html">Keyboard shortcuts</a></li>
+            <li><a href="troubleshooting.html">Troubleshooting</a></li>
+            <li><a href="glossary.html">Glossary</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Free software under the MIT licence.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licence</a>
+        <a href="../../en/code-signing.html">Code signing policy</a>
+        <a href="../../en/privacy.html">Privacy</a>
+        <a href="../../" hreflang="es" lang="es">Español</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

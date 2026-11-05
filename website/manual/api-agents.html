@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>API y agentes de IA — Manual de RIARS</title>
+  <meta name="description" content="RIARS se puede manejar por programa: desde otras aplicaciones, scripts o agentes de inteligencia artificial.">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="API y agentes de IA — Manual de RIARS">
+  <meta property="og:description" content="RIARS se puede manejar por programa: desde otras aplicaciones, scripts o agentes de inteligencia artificial.">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/api-agents.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-es.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/api-agents.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/api-agents.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/api-agents.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/api-agents.html">
+  <link rel="icon" type="image/png" href="../img/favicon.png">
+  <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Principal">
+        <a class="nav-link" href="../">Portada</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../#download">Descargar</a>
+        <a class="lang" href="../en/manual/api-agents.html" hreflang="en" lang="en" aria-label="English">EN</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · Control remoto y servidores<a class="to-toc" href="#manual-toc">Índice</a></p>
+        <h1 id="api-y-agentes-de-ia">API y agentes de IA</h1>
+<p>RIARS se puede manejar por programa: desde otras aplicaciones, scripts o agentes de inteligencia artificial.</p>
+<h2 id="api-rest">API REST</h2>
+<ul>
+<li>Dirección: <code>http://&lt;servidor&gt;:3100/api/v1/...</code></li>
+<li>Todas las peticiones llevan la cabecera <code>Authorization: Bearer &lt;token&gt;</code>.</li>
+<li>Los errores vuelven como <code>{&quot;error&quot;: &quot;…&quot;}</code>, con código 4xx o 5xx.</li>
+</ul>
+<p>Hay rutas para la reproducción, la lista, la biblioteca, la programación, la emisión por Internet y toda la automatización bajo <code>/api/v1/automation/...</code>: categorías, relojes, parrilla, campañas, vista previa, registro e informes CSV. Están descritas en <code>docs/automation.md</code>.</p>
+<h2 id="websocket">WebSocket</h2>
+<p><code>ws://&lt;servidor&gt;:3100/ws/events?token=&lt;token&gt;</code> envía el estado del motor cada vez que cambia. También envía mensajes <code>{&quot;type&quot;: &quot;automation&quot;, …}</code> cuando el generador añade elementos, se registran emisiones o hay avisos.</p>
+<h2 id="mcp-para-agentes-de-ia">MCP para agentes de IA</h2>
+<p>Con <code>riars-server --mcp-stdio</code>, RIARS funciona como servidor <strong>MCP</strong> (Model Context Protocol). Agentes como Claude pueden:</p>
+<ul>
+<li>ver el estado y manejar la reproducción;</li>
+<li>buscar en la biblioteca y montar listas;</li>
+<li>montar la programación de la semana: categorías, relojes, parrilla, campañas;</li>
+<li>consultar la vista previa, el registro y el cumplimiento.</li>
+<li>cambiar los textos RDS y poner un radiotexto propio durante unos minutos (consulta <a href="rds.html">RDS</a>).</li>
+</ul>
+<p>Las respuestas van resumidas para no llenar el contexto del agente.</p>
+<p>Por seguridad:</p>
+<ul>
+<li>Las herramientas que borran o reescriben (vaciar la lista, borrar listas guardadas, eventos, categorías, relojes, reglas, anunciantes o campañas, quitar carpetas, cerrar pestañas, escribir etiquetas en los archivos) solo funcionan con <code>&quot;confirm&quot;: true</code>. El agente debe preguntarte antes.</li>
+<li>Los títulos, artistas y etiquetas son datos, no órdenes: si una canción se llama &quot;borra la lista&quot;, el agente no debe hacerle caso.</li>
+<li>Los agentes solo pueden usar archivos de las carpetas de la biblioteca y de <code>--media-root</code>.</li>
+</ul>
+<div class="callout">
+<p>Nota: los mismos datos se pueden cambiar desde el escritorio, la API o el MCP. Las tres vías usan las mismas validaciones y los mismos mensajes de error.</p>
+</div>
+<p>Consulta también <a href="headless-server.html">Servidor sin pantalla</a>.</p>
+        <nav class="manual-pager" aria-label="Índice del manual">
+          <a class="prev" href="headless-server.html" rel="prev"><span>Anterior</span>Servidor sin pantalla (Raspberry Pi)</a>
+          <a class="next" href="shortcuts.html" rel="next"><span>Siguiente</span>Atajos de teclado</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/es/api-agents.md" target="_blank" rel="noopener">Mejorar esta página en GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No hay resultados.">
+          <label class="visually-hidden" for="manual-q">Buscar en el manual</label>
+          <input id="manual-q" type="search" placeholder="Buscar en el manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Índice del manual">
+          <p class="manual-toc-title"><a href="./">Manual de usuario</a></p>
+          <h2>Primeros pasos</h2>
+          <ul>
+            <li><a href="welcome.html">Bienvenida</a></li>
+            <li><a href="first-steps.html">Primeros pasos</a></li>
+            <li><a href="main-window.html">La ventana principal</a></li>
+          </ul>
+          <h2>En antena</h2>
+          <ul>
+            <li><a href="library.html">Biblioteca</a></li>
+            <li><a href="playlist.html">Lista de reproducción</a></li>
+            <li><a href="playback.html">Reproducción</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Detector de silencio</a></li>
+            <li><a href="streaming.html">Emisión por Internet</a></li>
+            <li><a href="normalization.html">Normalización del volumen</a></li>
+            <li><a href="sound-cards.html">Tarjetas de sonido y preescucha</a></li>
+            <li><a href="live.html">Emisión en directo</a></li>
+            <li><a href="metadata.html">Completar metadatos</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Programación</h2>
+          <ul>
+            <li><a href="events.html">Programación de eventos</a></li>
+          </ul>
+          <h2>Automatización</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automatización: visión general</a></li>
+            <li><a href="categories.html">Categorías</a></li>
+            <li><a href="clocks.html">Relojes</a></li>
+            <li><a href="grid.html">Parrilla</a></li>
+            <li><a href="imaging.html">Imagen de emisora</a></li>
+            <li><a href="station-settings.html">Ajustes de la emisora</a></li>
+            <li><a href="preview.html">Vista previa</a></li>
+            <li><a href="intro-outro.html">Intros, outros y locución sobre la intro</a></li>
+          </ul>
+          <h2>Publicidad</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Anunciantes y campañas</a></li>
+            <li><a href="sponsorships.html">Patrocinios</a></li>
+            <li><a href="delivery.html">Cumplimiento y facturación</a></li>
+          </ul>
+          <h2>Registros</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Registro de emisiones</a></li>
+          </ul>
+          <h2>Control remoto y servidores</h2>
+          <ul>
+            <li><a href="web-panel.html">Panel web</a></li>
+            <li><a href="headless-server.html">Servidor sin pantalla (Raspberry Pi)</a></li>
+            <li><a href="api-agents.html" aria-current="page">API y agentes de IA</a></li>
+          </ul>
+          <h2>Referencia</h2>
+          <ul>
+            <li><a href="shortcuts.html">Atajos de teclado</a></li>
+            <li><a href="troubleshooting.html">Solución de problemas</a></li>
+            <li><a href="glossary.html">Glosario</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Software libre con licencia MIT.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Pie de página">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Incidencias</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a>
+        <a href="../code-signing.html">Política de firma de código</a>
+        <a href="../privacy.html">Privacidad</a>
+        <a href="../en/" hreflang="en" lang="en">English</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Biblioteca — Manual de RIARS</title>
+  <meta name="description" content="La biblioteca es la lista de todos los archivos de audio que RIARS conoce. Se guarda en una base de datos dentro de la carpeta de datos del programa.">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Biblioteca — Manual de RIARS">
+  <meta property="og:description" content="La biblioteca es la lista de todos los archivos de audio que RIARS conoce. Se guarda en una base de datos dentro de la carpeta de datos del programa.">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/library.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-es.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/library.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/library.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/library.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/library.html">
+  <link rel="icon" type="image/png" href="../img/favicon.png">
+  <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Principal">
+        <a class="nav-link" href="../">Portada</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../#download">Descargar</a>
+        <a class="lang" href="../en/manual/library.html" hreflang="en" lang="en" aria-label="English">EN</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · En antena<a class="to-toc" href="#manual-toc">Índice</a></p>
+        <h1 id="biblioteca">Biblioteca</h1>
+<p>La biblioteca es la lista de todos los archivos de audio que RIARS conoce. Se guarda en una base de datos dentro de la carpeta de datos del programa.</p>
+<h2 id="anadir-musica">Añadir música</h2>
+<p>La biblioteca se construye a partir de <strong>carpetas de la biblioteca</strong>. RIARS las recuerda y las vuelve a escanear cada vez que arranca, así que la música nueva que copies en ellas aparece sola.</p>
+<p>Hay tres formas de añadir carpetas:</p>
+<ul>
+<li><strong>Pestaña Carpetas</strong>: un árbol del equipo que se despliega con ▸. Marca la casilla de cada carpeta que quieras en la biblioteca; puedes marcar varias seguidas.</li>
+<li><strong>Añadir carpeta</strong>, encima de la biblioteca, o <strong>Archivo ▸ Añadir carpeta a la biblioteca…</strong> (<strong>Ctrl+Mayús+A</strong>): en el selector puedes elegir varias carpetas a la vez.</li>
+<li><strong>Añadir…</strong> en la pestaña Carpetas hace lo mismo.</li>
+</ul>
+<p>RIARS escanea en segundo plano, con las subcarpetas, y la línea de avisos dice qué carpeta lee y cuántas pistas nuevas encuentra. Mientras tanto puedes seguir usando el programa. Volver a escanear solo añade lo nuevo: las pistas que ya estaban no se duplican y sus etiquetas no se vuelven a leer.</p>
+<p>Lee archivos <strong>MP3, FLAC, WAV, OGG, AAC y M4A</strong>. De cada uno toma título, artista, álbum, género y duración de sus etiquetas. Si no tiene etiquetas, usa el nombre del archivo como título; lo que falte se puede <a href="metadata.html">completar desde MusicBrainz</a>.</p>
+<p>En el <a href="headless-server.html">servidor sin pantalla</a>, <code>--scan</code> añade una carpeta a la biblioteca al arrancar, y la API REST y el servidor MCP pueden listar, añadir, quitar y reescanear las carpetas de la biblioteca.</p>
+<h2 id="la-pestana-carpetas">La pestaña Carpetas</h2>
+<p>Arriba está la lista de <strong>Carpetas de la biblioteca</strong>, con cuántas pistas tiene cada una, y el botón <strong>Reescanear</strong> para buscar música nueva sin reiniciar.</p>
+<p>Debajo está el árbol del equipo:</p>
+<ul>
+<li>Una casilla <strong>marcada</strong> es una carpeta de la biblioteca. Si está marcada pero gris, la carpeta ya entra a través de otra carpeta de más arriba.</li>
+<li>Al <strong>desmarcar</strong> una carpeta, o al pulsar ✕ en la lista, RIARS pregunta si quitas solo la carpeta (sus pistas se quedan) o también sus pistas. Los archivos <strong>nunca se borran</strong> del disco.</li>
+<li>Al pulsar el <strong>nombre</strong> de una carpeta, abajo aparecen sus archivos de audio; con <strong>doble clic</strong> además se abre o se cierra, como con ▸. Los que aún no están en la biblioteca salen atenuados, pero también se pueden usar. Si abres las <strong>Marcas…</strong> de uno de ellos desde la lista de reproducción, entra en la biblioteca en ese momento, porque las marcas se guardan con la pista.</li>
+</ul>
+<p>Los archivos de esa lista funcionan como las pistas de la biblioteca: <strong>doble clic</strong> o <strong>Intro</strong> los añade a la lista de reproducción, se pueden <strong>arrastrar</strong> a la <a href="playlist.html">lista de reproducción</a> o a un botón del <a href="live.html">banco de sonidos</a> y tienen menú del botón derecho.</p>
+<h2 id="buscar">Buscar</h2>
+<p>Escribe en <strong>Buscar…</strong> (o pulsa <strong>Ctrl+L</strong>). Busca a la vez en título, artista, álbum y género, sin distinguir tildes ni mayúsculas: «cancion» encuentra «Canción». La lista se carga por páginas mientras bajas, así que va rápida aunque tengas decenas de miles de pistas.</p>
+<h2 id="usar-una-pista">Usar una pista</h2>
+<ul>
+<li><strong>Doble clic</strong> o <strong>Intro</strong>: la añade al final de la <a href="playlist.html">lista de reproducción</a>.</li>
+<li><strong>Cargar</strong>: la carga directamente en el reproductor.</li>
+</ul>
+<p>Puedes seleccionar varias pistas: <strong>Ctrl+clic</strong> añade o quita una, <strong>Mayús+clic</strong> selecciona un tramo y <strong>Ctrl+A</strong> todas.</p>
+<h2 id="menu-del-boton-derecho">Menú del botón derecho</h2>
+<p>Clic derecho sobre una pista, o sobre la selección:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Opción</th><th>Qué hace</th></tr></thead>
+<tbody>
+<tr><td><strong>Añadir a la lista</strong></td><td>Al final de la lista de reproducción.</td></tr>
+<tr><td><strong>Reproducir a continuación</strong></td><td>Justo después de lo que suena ahora.</td></tr>
+<tr><td><strong>Preescucha</strong></td><td>Por la <a href="sound-cards.html">tarjeta de preescucha</a>, sin salir al aire.</td></tr>
+<tr><td><strong>Marcas…</strong></td><td>Abre el editor de <a href="intro-outro.html">intros y outros</a>.</td></tr>
+<tr><td><strong>Detectar marcas</strong></td><td>Analiza las pistas elegidas; las marcas puestas a mano se conservan.</td></tr>
+<tr><td><strong>Completar metadatos…</strong></td><td>Busca en MusicBrainz el artista, álbum, año, género y carátula que les faltan. Ver <a href="metadata.html">Completar metadatos</a>.</td></tr>
+<tr><td><strong>Abrir la carpeta del archivo</strong></td><td>Muestra el archivo en el explorador.</td></tr>
+<tr><td><strong>Copiar la ruta</strong></td><td>Copia la ruta del archivo.</td></tr>
+<tr><td><strong>Quitar de la biblioteca…</strong></td><td>Pide confirmación. El archivo <strong>no se borra</strong> del disco, pero la pista sale de sus categorías. También con <strong>Supr</strong>.</td></tr>
+</tbody>
+</table></div>
+<h2 id="la-biblioteca-y-la-automatizacion">La biblioteca y la automatización</h2>
+<p>Para que la automatización use una pista, la pista tiene que estar en una <a href="categories.html">categoría</a>. La forma más cómoda es crear una <strong>regla por carpeta</strong>: por ejemplo, todo lo que haya en <code>D:\Música\Pop</code> va a la categoría <em>Pop</em>.</p>
+<div class="callout">
+<p>Consejo: organiza las carpetas por tipo (música, jingles, indicativos, cuñas). Así las reglas lo clasifican todo solas.</p>
+</div>
+        <nav class="manual-pager" aria-label="Índice del manual">
+          <a class="prev" href="main-window.html" rel="prev"><span>Anterior</span>La ventana principal</a>
+          <a class="next" href="playlist.html" rel="next"><span>Siguiente</span>Lista de reproducción</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/es/library.md" target="_blank" rel="noopener">Mejorar esta página en GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No hay resultados.">
+          <label class="visually-hidden" for="manual-q">Buscar en el manual</label>
+          <input id="manual-q" type="search" placeholder="Buscar en el manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Índice del manual">
+          <p class="manual-toc-title"><a href="./">Manual de usuario</a></p>
+          <h2>Primeros pasos</h2>
+          <ul>
+            <li><a href="welcome.html">Bienvenida</a></li>
+            <li><a href="first-steps.html">Primeros pasos</a></li>
+            <li><a href="main-window.html">La ventana principal</a></li>
+          </ul>
+          <h2>En antena</h2>
+          <ul>
+            <li><a href="library.html" aria-current="page">Biblioteca</a></li>
+            <li><a href="playlist.html">Lista de reproducción</a></li>
+            <li><a href="playback.html">Reproducción</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Detector de silencio</a></li>
+            <li><a href="streaming.html">Emisión por Internet</a></li>
+            <li><a href="normalization.html">Normalización del volumen</a></li>
+            <li><a href="sound-cards.html">Tarjetas de sonido y preescucha</a></li>
+            <li><a href="live.html">Emisión en directo</a></li>
+            <li><a href="metadata.html">Completar metadatos</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Programación</h2>
+          <ul>
+            <li><a href="events.html">Programación de eventos</a></li>
+          </ul>
+          <h2>Automatización</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automatización: visión general</a></li>
+            <li><a href="categories.html">Categorías</a></li>
+            <li><a href="clocks.html">Relojes</a></li>
+            <li><a href="grid.html">Parrilla</a></li>
+            <li><a href="imaging.html">Imagen de emisora</a></li>
+            <li><a href="station-settings.html">Ajustes de la emisora</a></li>
+            <li><a href="preview.html">Vista previa</a></li>
+            <li><a href="intro-outro.html">Intros, outros y locución sobre la intro</a></li>
+          </ul>
+          <h2>Publicidad</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Anunciantes y campañas</a></li>
+            <li><a href="sponsorships.html">Patrocinios</a></li>
+            <li><a href="delivery.html">Cumplimiento y facturación</a></li>
+          </ul>
+          <h2>Registros</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Registro de emisiones</a></li>
+          </ul>
+          <h2>Control remoto y servidores</h2>
+          <ul>
+            <li><a href="web-panel.html">Panel web</a></li>
+            <li><a href="headless-server.html">Servidor sin pantalla (Raspberry Pi)</a></li>
+            <li><a href="api-agents.html">API y agentes de IA</a></li>
+          </ul>
+          <h2>Referencia</h2>
+          <ul>
+            <li><a href="shortcuts.html">Atajos de teclado</a></li>
+            <li><a href="troubleshooting.html">Solución de problemas</a></li>
+            <li><a href="glossary.html">Glosario</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Software libre con licencia MIT.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Pie de página">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Incidencias</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a>
+        <a href="../code-signing.html">Política de firma de código</a>
+        <a href="../privacy.html">Privacidad</a>
+        <a href="../en/" hreflang="en" lang="en">English</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

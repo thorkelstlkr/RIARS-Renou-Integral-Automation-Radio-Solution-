@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Web panel — RIARS manual</title>
+  <meta name="description" content="riars-server serves a small control panel in the browser. Start the server with --bind 0.0.0.0 (without it, it only accepts connections from the same…">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Web panel — RIARS manual">
+  <meta property="og:description" content="riars-server serves a small control panel in the browser. Start the server with --bind 0.0.0.0 (without it, it only accepts connections from the same…">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/web-panel.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-en.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/web-panel.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/web-panel.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/web-panel.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/web-panel.html">
+  <link rel="icon" type="image/png" href="../../img/favicon.png">
+  <link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../style.css">
+  <script src="../../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../../en/"><img src="../../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Main">
+        <a class="nav-link" href="../../en/">Home</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../../en/#download">Download</a>
+        <a class="lang" href="../../manual/web-panel.html" hreflang="es" lang="es" aria-label="Español">ES</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · Remote control and servers<a class="to-toc" href="#manual-toc">Contents</a></p>
+        <h1 id="web-panel">Web panel</h1>
+<p><code>riars-server</code> serves a small control panel in the browser. Start the server with <code>--bind 0.0.0.0</code> (without it, it only accepts connections from the same machine), then open <code>http://YOUR-SERVER:3100/</code>, replacing <code>YOUR-SERVER</code> with the machine's name or IP address. It is designed to work on a phone as well as on a computer. The desktop app does not serve this panel.</p>
+<h2 id="signing-in">Signing in</h2>
+<p>The panel asks for the API token. Use the token given with <code>--api-token</code>, the value of <code>RIARS_API_TOKEN</code>, or the token the server generated and saved in the <code>riars_api_token</code> file, next to the database. The browser remembers it on that device; use the token only on trusted devices. A wrong token shows <strong>Wrong token</strong>.</p>
+<h2 id="what-you-can-do">What you can do</h2>
+<p>The panel has these cards:</p>
+<ul>
+<li><strong>Player:</strong> the current track, a progress bar you can click to seek, <strong>Play</strong>, <strong>Pause</strong>, <strong>Stop</strong>, <strong>Next</strong> and a volume slider.</li>
+<li><strong>Playlist:</strong> the current list with the item on air marked.</li>
+<li><strong>Library:</strong> a search box and a <strong>+</strong> button to add a track to the playlist.</li>
+<li><strong>Automation:</strong> the <strong>ON</strong>/<strong>OFF</strong> toggle, the <strong>Clock</strong> or <strong>Playlist</strong> and <strong>Period</strong> being prepared, the <strong>Rule</strong>, recent <strong>Warnings</strong>, and <strong>Coming up</strong> for the next hour.</li>
+<li><strong>Today's advertising:</strong> <strong>Advertiser</strong>, <strong>Campaign</strong>, <strong>Target</strong>, <strong>Aired</strong> and <strong>Missed</strong>, with missed figures in red.</li>
+<li><strong>Downloads:</strong> <strong>Play log (CSV)</strong>, <strong>Delivery (CSV)</strong> and <strong>Spot log (CSV)</strong>.</li>
+</ul>
+<p>The header shows the streaming state and a <strong>SILENCE</strong> badge when the dead-air detector is active. If the connection drops, the panel says <strong>Connection lost, retrying…</strong> and reconnects by itself.</p>
+<div class="callout callout-note">
+<p><strong>Note:</strong> <strong>Coming up</strong> is a preview. It says so: <strong>Preview only. The Playlist card shows what is really on air.</strong></p>
+</div>
+<p>The panel is for control and monitoring; full editing of clocks, the grid, campaigns and settings is in the desktop app and the API. See <a href="headless-server.html">Headless server</a>, <a href="api-agents.html">API and AI agents</a> and <a href="streaming.html">Streaming</a>.</p>
+        <nav class="manual-pager" aria-label="Manual contents">
+          <a class="prev" href="proof-of-play.html" rel="prev"><span>Previous</span>Proof of play</a>
+          <a class="next" href="headless-server.html" rel="next"><span>Next</span>Headless server</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/en/web-panel.md" target="_blank" rel="noopener">Improve this page on GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No results.">
+          <label class="visually-hidden" for="manual-q">Search the manual</label>
+          <input id="manual-q" type="search" placeholder="Search the manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Manual contents">
+          <p class="manual-toc-title"><a href="./">User manual</a></p>
+          <h2>Getting started</h2>
+          <ul>
+            <li><a href="welcome.html">Welcome to RIARS</a></li>
+            <li><a href="first-steps.html">First steps</a></li>
+            <li><a href="main-window.html">The main window</a></li>
+          </ul>
+          <h2>On air</h2>
+          <ul>
+            <li><a href="library.html">Media library</a></li>
+            <li><a href="playlist.html">Playlist</a></li>
+            <li><a href="playback.html">Playback</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Silence detector</a></li>
+            <li><a href="streaming.html">Streaming</a></li>
+            <li><a href="normalization.html">Loudness normalisation</a></li>
+            <li><a href="sound-cards.html">Sound cards and pre-listening</a></li>
+            <li><a href="live.html">Live broadcasting</a></li>
+            <li><a href="metadata.html">Complete metadata</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Scheduling</h2>
+          <ul>
+            <li><a href="events.html">Scheduled events</a></li>
+          </ul>
+          <h2>Automation</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automation overview</a></li>
+            <li><a href="categories.html">Categories</a></li>
+            <li><a href="clocks.html">Format clocks</a></li>
+            <li><a href="grid.html">The grid</a></li>
+            <li><a href="imaging.html">Station imaging</a></li>
+            <li><a href="station-settings.html">Station settings</a></li>
+            <li><a href="preview.html">Preview</a></li>
+            <li><a href="intro-outro.html">Intros, outros and talking over the intro</a></li>
+          </ul>
+          <h2>Advertising</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Advertisers and campaigns</a></li>
+            <li><a href="sponsorships.html">Sponsorships</a></li>
+            <li><a href="delivery.html">Delivery report</a></li>
+          </ul>
+          <h2>Logs</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Proof of play</a></li>
+          </ul>
+          <h2>Remote control and servers</h2>
+          <ul>
+            <li><a href="web-panel.html" aria-current="page">Web panel</a></li>
+            <li><a href="headless-server.html">Headless server</a></li>
+            <li><a href="api-agents.html">API and AI agents</a></li>
+          </ul>
+          <h2>Reference</h2>
+          <ul>
+            <li><a href="shortcuts.html">Keyboard shortcuts</a></li>
+            <li><a href="troubleshooting.html">Troubleshooting</a></li>
+            <li><a href="glossary.html">Glossary</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Free software under the MIT licence.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licence</a>
+        <a href="../../en/code-signing.html">Code signing policy</a>
+        <a href="../../en/privacy.html">Privacy</a>
+        <a href="../../" hreflang="es" lang="es">Español</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

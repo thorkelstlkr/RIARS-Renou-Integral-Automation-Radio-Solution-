@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Categorías — Manual de RIARS</title>
+  <meta name="description" content="Una categoría es un grupo de pistas del que tiran los relojes: un estilo de música, los jingles, los indicativos, las cuñas…">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Categorías — Manual de RIARS">
+  <meta property="og:description" content="Una categoría es un grupo de pistas del que tiran los relojes: un estilo de música, los jingles, los indicativos, las cuñas…">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/categories.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-es.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/categories.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/categories.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/categories.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/categories.html">
+  <link rel="icon" type="image/png" href="../img/favicon.png">
+  <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Principal">
+        <a class="nav-link" href="../">Portada</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../#download">Descargar</a>
+        <a class="lang" href="../en/manual/categories.html" hreflang="en" lang="en" aria-label="English">EN</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · Automatización<a class="to-toc" href="#manual-toc">Índice</a></p>
+        <h1 id="categorias">Categorías</h1>
+<p>Una categoría es un grupo de pistas del que tiran los <a href="clocks.html">relojes</a>: un estilo de música, los jingles, los indicativos, las cuñas…</p>
+<h2 id="crear-una-categoria">Crear una categoría</h2>
+<ol>
+<li>En la pestaña <strong>Categorías</strong>, pulsa <strong>Nueva</strong>.</li>
+<li>Ponle un <strong>Nombre</strong>, un <strong>Color</strong> y un <strong>Tipo</strong>: Música, Jingle, Bumper, Indicativo, Sweeper, Promo, Cuña, Programa, Cama musical u Otro. El tipo decide el color en la lista de reproducción y cómo se trata el elemento. Por ejemplo, las cuñas no se funden.</li>
+<li>Opcional: elige una <strong>Categoría madre</strong>. Las subcategorías también cuentan cuando un reloj pide la madre: si un reloj pide <em>Pop</em>, también puede salir <em>Pop 80</em>.</li>
+<li>Pulsa <strong>Guardar</strong>.</li>
+</ol>
+<h2 id="meter-pistas">Meter pistas</h2>
+<p>Hay tres formas:</p>
+<ul>
+<li><strong>A mano</strong>: en <em>Pistas</em>, busca con el selector, marca las pistas y añádelas. Puedes darles un <strong>peso</strong>: con peso 3, una pista sale unas tres veces más que con peso 1.</li>
+<li><strong>Reglas de asignación automática</strong>: por <strong>Género</strong>, <strong>Artista</strong> o <strong>Carpeta</strong>. Por ejemplo, Carpeta = <code>D:\Música\Pop</code>. Pulsa <strong>Aplicar reglas ahora</strong>.</li>
+<li><strong>Categoría inteligente</strong>: en vez de pistas asignadas, un filtro (género, artista, carpeta, año, energía, duración) que se evalúa cada vez.</li>
+</ul>
+<p>La tabla <strong>Pistas</strong> muestra las pistas de la categoría por páginas. Puedes marcar varias y pulsar <strong>Quitar las seleccionadas</strong>.</p>
+<h2 id="separacion-propia">Separación propia</h2>
+<p>Marca <strong>Reglas de separación propias</strong> para que esta categoría no use las de la emisora:</p>
+<ul>
+<li><strong>Misma canción (minutos)</strong> y <strong>Mismo artista (minutos)</strong>.</li>
+<li><strong>Mismo álbum (minutos)</strong>.</li>
+<li><strong>Separación horizontal</strong>: evita que una canción suene a la misma hora que ayer.</li>
+<li><strong>Otros elementos de imagen entre repeticiones</strong>: para jingles e indicativos, cuántos distintos deben sonar antes de repetir.</li>
+</ul>
+<h2 id="codigos">Códigos</h2>
+<p>Los códigos son etiquetas libres por pista, como <code>lenta</code>, <code>navidad</code> o <code>explícita</code>. Un hueco de reloj puede pedir pistas <strong>con</strong> o <strong>sin</strong> ciertos códigos. Por ejemplo, <em>Pop</em> sin <code>explícita</code> por la mañana.</p>
+<div class="callout">
+<p>Consejo: los ajustes generales de la automatización están al final de esta pestaña, en <strong>Ajustes de la emisora</strong>. Consulta <a href="station-settings.html">Ajustes de la emisora</a>.</p>
+</div>
+        <nav class="manual-pager" aria-label="Índice del manual">
+          <a class="prev" href="automation-overview.html" rel="prev"><span>Anterior</span>Automatización: visión general</a>
+          <a class="next" href="clocks.html" rel="next"><span>Siguiente</span>Relojes</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/es/categories.md" target="_blank" rel="noopener">Mejorar esta página en GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No hay resultados.">
+          <label class="visually-hidden" for="manual-q">Buscar en el manual</label>
+          <input id="manual-q" type="search" placeholder="Buscar en el manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Índice del manual">
+          <p class="manual-toc-title"><a href="./">Manual de usuario</a></p>
+          <h2>Primeros pasos</h2>
+          <ul>
+            <li><a href="welcome.html">Bienvenida</a></li>
+            <li><a href="first-steps.html">Primeros pasos</a></li>
+            <li><a href="main-window.html">La ventana principal</a></li>
+          </ul>
+          <h2>En antena</h2>
+          <ul>
+            <li><a href="library.html">Biblioteca</a></li>
+            <li><a href="playlist.html">Lista de reproducción</a></li>
+            <li><a href="playback.html">Reproducción</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Detector de silencio</a></li>
+            <li><a href="streaming.html">Emisión por Internet</a></li>
+            <li><a href="normalization.html">Normalización del volumen</a></li>
+            <li><a href="sound-cards.html">Tarjetas de sonido y preescucha</a></li>
+            <li><a href="live.html">Emisión en directo</a></li>
+            <li><a href="metadata.html">Completar metadatos</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Programación</h2>
+          <ul>
+            <li><a href="events.html">Programación de eventos</a></li>
+          </ul>
+          <h2>Automatización</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automatización: visión general</a></li>
+            <li><a href="categories.html" aria-current="page">Categorías</a></li>
+            <li><a href="clocks.html">Relojes</a></li>
+            <li><a href="grid.html">Parrilla</a></li>
+            <li><a href="imaging.html">Imagen de emisora</a></li>
+            <li><a href="station-settings.html">Ajustes de la emisora</a></li>
+            <li><a href="preview.html">Vista previa</a></li>
+            <li><a href="intro-outro.html">Intros, outros y locución sobre la intro</a></li>
+          </ul>
+          <h2>Publicidad</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Anunciantes y campañas</a></li>
+            <li><a href="sponsorships.html">Patrocinios</a></li>
+            <li><a href="delivery.html">Cumplimiento y facturación</a></li>
+          </ul>
+          <h2>Registros</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Registro de emisiones</a></li>
+          </ul>
+          <h2>Control remoto y servidores</h2>
+          <ul>
+            <li><a href="web-panel.html">Panel web</a></li>
+            <li><a href="headless-server.html">Servidor sin pantalla (Raspberry Pi)</a></li>
+            <li><a href="api-agents.html">API y agentes de IA</a></li>
+          </ul>
+          <h2>Referencia</h2>
+          <ul>
+            <li><a href="shortcuts.html">Atajos de teclado</a></li>
+            <li><a href="troubleshooting.html">Solución de problemas</a></li>
+            <li><a href="glossary.html">Glosario</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Software libre con licencia MIT.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Pie de página">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Incidencias</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a>
+        <a href="../code-signing.html">Política de firma de código</a>
+        <a href="../privacy.html">Privacidad</a>
+        <a href="../en/" hreflang="en" lang="en">English</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

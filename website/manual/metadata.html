@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Completar metadatos — Manual de RIARS</title>
+  <meta name="description" content="RIARS puede buscar en catálogos abiertos los datos que les faltan a las pistas de la biblioteca: título, artista, álbum, año, género y carátula. Buscar no…">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Completar metadatos — Manual de RIARS">
+  <meta property="og:description" content="RIARS puede buscar en catálogos abiertos los datos que les faltan a las pistas de la biblioteca: título, artista, álbum, año, género y carátula. Buscar no…">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/metadata.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-es.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/metadata.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/metadata.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/metadata.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/metadata.html">
+  <link rel="icon" type="image/png" href="../img/favicon.png">
+  <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Principal">
+        <a class="nav-link" href="../">Portada</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../#download">Descargar</a>
+        <a class="lang" href="../en/manual/metadata.html" hreflang="en" lang="en" aria-label="English">EN</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · En antena<a class="to-toc" href="#manual-toc">Índice</a></p>
+        <h1 id="completar-metadatos">Completar metadatos</h1>
+<p>RIARS puede buscar en catálogos abiertos los datos que les faltan a las pistas de la <a href="library.html">biblioteca</a>: <strong>título, artista, álbum, año, género y carátula</strong>. Buscar no cambia nada. Ves lo que se ha encontrado al lado de lo que tiene cada pista, y solo se aplica lo que marques.</p>
+<p>Rellenar el año y el género sirve también para la automatización: las <a href="categories.html">categorías</a> inteligentes pueden filtrar por ellos.</p>
+<h2 id="abrirlo">Abrirlo</h2>
+<p>Hay dos formas de abrirlo. Ninguna empieza a buscar sola: arriba del diálogo pone qué se va a buscar, y la búsqueda empieza al pulsar <strong>Buscar</strong>.</p>
+<ul>
+<li><strong>Clic derecho ▸ Completar metadatos…</strong> en la biblioteca: busca las pistas seleccionadas, aunque ya tengan todos los datos. Sirve para revisar una pista concreta.</li>
+<li><strong>Edición ▸ Completar metadatos de la biblioteca…</strong>: busca las pistas de un minuto o más que tienen algún hueco (sin artista, álbum, género o año). Las más cortas, como cuñas y caretas, se saltan porque no están en ningún catálogo; el diálogo dice cuántas. Si quieres buscar alguna, selecciónala y usa el clic derecho.</li>
+</ul>
+<p>Cuando <strong>Buscar</strong> no se puede pulsar, al lado pone por qué:</p>
+<ul>
+<li><strong>No hay nada que buscar</strong>: a ninguna pista le falta nada.</li>
+<li><strong>Hay una búsqueda en marcha</strong>: solo puede haber una a la vez. Espera a que termine o pulsa <strong>Detener</strong>.</li>
+</ul>
+<p>La búsqueda va en segundo plano. Puedes cerrar el diálogo y volver a abrirlo para ver cómo va. <strong>Detener</strong> la para tras la pista actual y conserva lo encontrado.</p>
+<h2 id="de-donde-salen-los-datos">De dónde salen los datos</h2>
+<ul>
+<li><strong><a href="https://musicbrainz.org" target="_blank" rel="noopener">MusicBrainz</a></strong>: enciclopedia musical abierta, con datos de dominio público (CC0). RIARS busca la grabación por <strong>título y artista</strong> de las etiquetas y compara la duración. Si la pista no tiene etiquetas pero el archivo se llama «Artista - Título», busca por el nombre.</li>
+<li><strong><a href="https://acoustid.org" target="_blank" rel="noopener">AcoustID</a></strong>, opcional: reconoce la canción por <strong>cómo suena</strong> (su huella de audio), aunque el archivo no tenga ninguna etiqueta. Necesita una clave de aplicación, que se escribe arriba en el diálogo y se guarda con la biblioteca.
+<ul>
+<li>Es gratis para uso no comercial: regístrala en acoustid.org/new-application.</li>
+<li>Una emisora comercial necesita su propia clave de acoustid.biz.</li>
+</ul></li>
+<li><strong><a href="https://coverartarchive.org" target="_blank" rel="noopener">Cover Art Archive</a></strong>: la carátula del álbum.</li>
+</ul>
+<p>MusicBrainz admite una petición por segundo, así que cada pista tarda de 2 a 4 segundos: unas 500 pistas son unos 20 minutos.</p>
+<p>Cuando la misma canción aparece en varios discos (el original, un directo, un recopilatorio), RIARS prefiere el álbum que ya tiene la pista. Si no tiene ninguno, se queda con el álbum de estudio más antiguo.</p>
+<h2 id="revisar-y-aplicar">Revisar y aplicar</h2>
+<p>Cada pista encontrada muestra la carátula, cómo se encontró (por etiquetas, por nombre de archivo o por huella) y el grado de confianza. Debajo aparece cada campo que cambiaría, con el valor actual → el nuevo.</p>
+<ul>
+<li>Vienen marcados <strong>solo los huecos</strong>: campos vacíos, o un título que es el nombre del archivo. Lo que la pista ya tiene nunca se marca solo; si quieres cambiarlo, márcalo tú.</li>
+<li><strong>Aplicar</strong> guarda lo marcado en la biblioteca. Cada pista recuerda de dónde vino el dato (<code>musicbrainz:</code> y el identificador de la grabación).</li>
+<li><strong>Escribir también las etiquetas en los archivos de audio</strong>, desactivado por defecto, guarda además los valores y la carátula dentro del archivo. Así los ven otros programas. Pide confirmación. RIARS escribe una copia, comprueba que se lee bien y solo entonces sustituye el original. Si el archivo está sonando, puede que no se pueda sustituir, y entonces lo dice.</li>
+<li>Las carátulas se guardan en la carpeta <code>riars_covers</code>, junto a la base de datos de la biblioteca.</li>
+</ul>
+<p>Las pistas sin coincidencia aparecen al final, plegadas, con el motivo si hubo un error (por ejemplo, sin conexión).</p>
+<h2 id="para-agentes-y-la-api">Para agentes y la API</h2>
+<p>La API REST tiene <code>POST /api/v1/library/metadata/lookup</code> para empezar, <code>GET</code> en la misma ruta para el estado y las propuestas, <code>POST /library/metadata/apply</code> y <code>/library/metadata/settings</code> para la clave. El servidor MCP ofrece <code>lookup_track_metadata</code>, <code>metadata_lookup_status</code>, <code>apply_track_metadata</code>, <code>get_track_metadata</code> y <code>set_acoustid_key</code>. Ver <a href="api-agents.html">API y agentes</a>.</p>
+        <nav class="manual-pager" aria-label="Índice del manual">
+          <a class="prev" href="live.html" rel="prev"><span>Anterior</span>Emisión en directo</a>
+          <a class="next" href="rds.html" rel="next"><span>Siguiente</span>RDS</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/es/metadata.md" target="_blank" rel="noopener">Mejorar esta página en GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No hay resultados.">
+          <label class="visually-hidden" for="manual-q">Buscar en el manual</label>
+          <input id="manual-q" type="search" placeholder="Buscar en el manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Índice del manual">
+          <p class="manual-toc-title"><a href="./">Manual de usuario</a></p>
+          <h2>Primeros pasos</h2>
+          <ul>
+            <li><a href="welcome.html">Bienvenida</a></li>
+            <li><a href="first-steps.html">Primeros pasos</a></li>
+            <li><a href="main-window.html">La ventana principal</a></li>
+          </ul>
+          <h2>En antena</h2>
+          <ul>
+            <li><a href="library.html">Biblioteca</a></li>
+            <li><a href="playlist.html">Lista de reproducción</a></li>
+            <li><a href="playback.html">Reproducción</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Detector de silencio</a></li>
+            <li><a href="streaming.html">Emisión por Internet</a></li>
+            <li><a href="normalization.html">Normalización del volumen</a></li>
+            <li><a href="sound-cards.html">Tarjetas de sonido y preescucha</a></li>
+            <li><a href="live.html">Emisión en directo</a></li>
+            <li><a href="metadata.html" aria-current="page">Completar metadatos</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Programación</h2>
+          <ul>
+            <li><a href="events.html">Programación de eventos</a></li>
+          </ul>
+          <h2>Automatización</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automatización: visión general</a></li>
+            <li><a href="categories.html">Categorías</a></li>
+            <li><a href="clocks.html">Relojes</a></li>
+            <li><a href="grid.html">Parrilla</a></li>
+            <li><a href="imaging.html">Imagen de emisora</a></li>
+            <li><a href="station-settings.html">Ajustes de la emisora</a></li>
+            <li><a href="preview.html">Vista previa</a></li>
+            <li><a href="intro-outro.html">Intros, outros y locución sobre la intro</a></li>
+          </ul>
+          <h2>Publicidad</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Anunciantes y campañas</a></li>
+            <li><a href="sponsorships.html">Patrocinios</a></li>
+            <li><a href="delivery.html">Cumplimiento y facturación</a></li>
+          </ul>
+          <h2>Registros</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Registro de emisiones</a></li>
+          </ul>
+          <h2>Control remoto y servidores</h2>
+          <ul>
+            <li><a href="web-panel.html">Panel web</a></li>
+            <li><a href="headless-server.html">Servidor sin pantalla (Raspberry Pi)</a></li>
+            <li><a href="api-agents.html">API y agentes de IA</a></li>
+          </ul>
+          <h2>Referencia</h2>
+          <ul>
+            <li><a href="shortcuts.html">Atajos de teclado</a></li>
+            <li><a href="troubleshooting.html">Solución de problemas</a></li>
+            <li><a href="glossary.html">Glosario</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Software libre con licencia MIT.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Pie de página">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Incidencias</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a>
+        <a href="../code-signing.html">Política de firma de código</a>
+        <a href="../privacy.html">Privacidad</a>
+        <a href="../en/" hreflang="en" lang="en">English</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

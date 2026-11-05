@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Intros, outros y locución sobre la intro — Manual de RIARS</title>
+  <meta name="description" content="En radio es habitual pisar la intro: el jingle o el indicativo suenan encima de la parte instrumental del principio de una canción y acaban justo antes de…">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Intros, outros y locución sobre la intro — Manual de RIARS">
+  <meta property="og:description" content="En radio es habitual pisar la intro: el jingle o el indicativo suenan encima de la parte instrumental del principio de una canción y acaban justo antes de…">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/intro-outro.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-es.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/intro-outro.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/intro-outro.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/intro-outro.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/intro-outro.html">
+  <link rel="icon" type="image/png" href="../img/favicon.png">
+  <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Principal">
+        <a class="nav-link" href="../">Portada</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../#download">Descargar</a>
+        <a class="lang" href="../en/manual/intro-outro.html" hreflang="en" lang="en" aria-label="English">EN</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · Automatización<a class="to-toc" href="#manual-toc">Índice</a></p>
+        <h1 id="intros-outros-y-locucion-sobre-la-intro">Intros, outros y locución sobre la intro</h1>
+<p>En radio es habitual <strong>pisar la intro</strong>: el jingle o el indicativo suenan encima de la parte instrumental del principio de una canción y acaban justo antes de que entre la voz. RIARS lo hace solo, <strong>y nunca encima de la voz</strong>.</p>
+<h2 id="las-marcas-de-cada-cancion">Las marcas de cada canción</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Marca</th><th>Significado</th></tr></thead>
+<tbody>
+<tr><td><strong>Inicio</strong></td><td>Primer momento con sonido (sin el silencio inicial).</td></tr>
+<tr><td><strong>Entra la voz</strong></td><td>Fin de la intro instrumental.</td></tr>
+<tr><td><strong>Acaba la voz</strong></td><td>Inicio de la outro instrumental.</td></tr>
+<tr><td><strong>Final</strong></td><td>Último momento con sonido.</td></tr>
+</tbody>
+</table></div>
+<p>Las columnas <strong>Intro</strong> y <strong>Outro</strong> de la <a href="playlist.html">lista de reproducción</a> muestran cuántos segundos se pueden pisar al principio y al final.</p>
+<h2 id="detectarlas">Detectarlas</h2>
+<ul>
+<li><strong>Una canción</strong>: botón <strong>✎</strong> en la biblioteca, o clic derecho ▸ <strong>Marcas…</strong>. Se abre el editor con la forma de onda.</li>
+<li><strong>Toda la biblioteca o una categoría</strong>: en <strong>Categorías</strong>, recuadro <strong>Análisis</strong>, botón <strong>Analizar biblioteca</strong> o <strong>Analizar esta categoría</strong>. Se hace en segundo plano, una canción tras otra y con pausas, para no quitarle CPU a la emisión. Cada canción se analiza una sola vez.</li>
+</ul>
+<p>La detección busca dónde aparece la voz por su energía en la banda vocal, el ritmo de las sílabas y su timbre. <strong>Es aproximada</strong>: propone, y tú confirmas o corriges. Cada marca automática lleva un índice de <strong>confianza</strong>; por debajo del mínimo (0,35 por defecto) no se usa para pisar.</p>
+<h2 id="corregirlas-a-mano">Corregirlas a mano</h2>
+<p>En el editor:</p>
+<ol>
+<li>Arrastra las marcas sobre la forma de onda o escribe los tiempos. Con las flechas se mueven 0,1 s; con Mayús + flechas, 1 s.</li>
+<li>La franja de colores de debajo indica, segundo a segundo, cuánto se parece a una voz.</li>
+<li>Escucha por la <a href="sound-cards.html">tarjeta de preescucha</a>: <strong>▶ Últimos 5 s de intro</strong> comprueba que la marca cae justo antes de la voz.</li>
+<li>Pulsa <strong>Guardar</strong>. Las marcas manuales <strong>nunca</strong> se pisan con un análisis posterior.</li>
+</ol>
+<p>Si la canción no tiene intro, marca <strong>Sin intro</strong>.</p>
+<h2 id="deteccion-con-un-agente-de-ia">Detección con un agente de IA</h2>
+<p>En el recuadro <strong>Análisis</strong> puedes elegir otro detector:</p>
+<ul>
+<li><strong>Programa externo</strong>: un programa que separa la voz con inteligencia artificial (por ejemplo, Demucs o Spleeter con un pequeño script). RIARS le pasa cada archivo y lee el resultado. Es más preciso, pero gasta más ordenador. Si tarda más de dos minutos con un archivo, se detiene. Por seguridad, solo se puede elegir desde la app de escritorio: la API lo rechaza.</li>
+<li><strong>Agente por MCP</strong>: un agente como Claude puede revisar las canciones dudosas con <code>list_tracks_needing_review</code>, leer la línea de voz de cada una con <code>analyze_track</code> y fijar las marcas con <code>set_track_cues</code>. Quedan con origen <em>Agente</em>. Un agente no puede cambiar las marcas que has puesto a mano. Consulta <a href="api-agents.html">API y agentes de IA</a>.</li>
+</ul>
+<h2 id="como-pisa-la-automatizacion">Cómo pisa la automatización</h2>
+<p>En <strong>Ajustes de la emisora ▸ Locución sobre intros y outros</strong>:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Ajuste</th><th>Por defecto</th></tr></thead>
+<tbody>
+<tr><td>Activar, sobre la intro, sobre la outro</td><td>Sí</td></tr>
+<tr><td>Margen antes de la voz</td><td>500 ms</td></tr>
+<tr><td>Bajar la canción (<em>ducking</em>)</td><td>6 dB</td></tr>
+<tr><td>Confianza mínima de las marcas automáticas</td><td>0,35</td></tr>
+<tr><td>Tipos que pueden pisar</td><td>Jingle, indicativo, sweeper, bumper</td></tr>
+</tbody>
+</table></div>
+<p>Cuando toca un jingle, RIARS mira la canción siguiente. Si el jingle cabe entero en la intro con el margen, suena encima, colocado para <strong>acabar justo antes de la voz</strong>. Mientras suena, la canción baja unos dB: rápido al entrar y suave al salir. Si no cabe, prueba con la outro de la canción anterior. Si tampoco cabe, suena antes, como siempre.</p>
+<p>Las cuñas nunca pisan, y las horas fijas duras tampoco. Lo pisado queda en el <a href="proof-of-play.html">registro de emisiones</a> con su hora real.</p>
+        <nav class="manual-pager" aria-label="Índice del manual">
+          <a class="prev" href="preview.html" rel="prev"><span>Anterior</span>Vista previa</a>
+          <a class="next" href="advertisers-campaigns.html" rel="next"><span>Siguiente</span>Anunciantes y campañas</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/es/intro-outro.md" target="_blank" rel="noopener">Mejorar esta página en GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No hay resultados.">
+          <label class="visually-hidden" for="manual-q">Buscar en el manual</label>
+          <input id="manual-q" type="search" placeholder="Buscar en el manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Índice del manual">
+          <p class="manual-toc-title"><a href="./">Manual de usuario</a></p>
+          <h2>Primeros pasos</h2>
+          <ul>
+            <li><a href="welcome.html">Bienvenida</a></li>
+            <li><a href="first-steps.html">Primeros pasos</a></li>
+            <li><a href="main-window.html">La ventana principal</a></li>
+          </ul>
+          <h2>En antena</h2>
+          <ul>
+            <li><a href="library.html">Biblioteca</a></li>
+            <li><a href="playlist.html">Lista de reproducción</a></li>
+            <li><a href="playback.html">Reproducción</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Detector de silencio</a></li>
+            <li><a href="streaming.html">Emisión por Internet</a></li>
+            <li><a href="normalization.html">Normalización del volumen</a></li>
+            <li><a href="sound-cards.html">Tarjetas de sonido y preescucha</a></li>
+            <li><a href="live.html">Emisión en directo</a></li>
+            <li><a href="metadata.html">Completar metadatos</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Programación</h2>
+          <ul>
+            <li><a href="events.html">Programación de eventos</a></li>
+          </ul>
+          <h2>Automatización</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automatización: visión general</a></li>
+            <li><a href="categories.html">Categorías</a></li>
+            <li><a href="clocks.html">Relojes</a></li>
+            <li><a href="grid.html">Parrilla</a></li>
+            <li><a href="imaging.html">Imagen de emisora</a></li>
+            <li><a href="station-settings.html">Ajustes de la emisora</a></li>
+            <li><a href="preview.html">Vista previa</a></li>
+            <li><a href="intro-outro.html" aria-current="page">Intros, outros y locución sobre la intro</a></li>
+          </ul>
+          <h2>Publicidad</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Anunciantes y campañas</a></li>
+            <li><a href="sponsorships.html">Patrocinios</a></li>
+            <li><a href="delivery.html">Cumplimiento y facturación</a></li>
+          </ul>
+          <h2>Registros</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Registro de emisiones</a></li>
+          </ul>
+          <h2>Control remoto y servidores</h2>
+          <ul>
+            <li><a href="web-panel.html">Panel web</a></li>
+            <li><a href="headless-server.html">Servidor sin pantalla (Raspberry Pi)</a></li>
+            <li><a href="api-agents.html">API y agentes de IA</a></li>
+          </ul>
+          <h2>Referencia</h2>
+          <ul>
+            <li><a href="shortcuts.html">Atajos de teclado</a></li>
+            <li><a href="troubleshooting.html">Solución de problemas</a></li>
+            <li><a href="glossary.html">Glosario</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Software libre con licencia MIT.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Pie de página">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Incidencias</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a>
+        <a href="../code-signing.html">Política de firma de código</a>
+        <a href="../privacy.html">Privacidad</a>
+        <a href="../en/" hreflang="en" lang="en">English</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>
