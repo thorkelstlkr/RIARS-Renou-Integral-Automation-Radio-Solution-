@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Advertisers and campaigns — RIARS manual</title>
+  <meta name="description" content="The Advertising tab has three sub-tabs: Advertisers, Campaigns and Delivery. An advertiser is the company that buys airtime; a campaign is one agreement…">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Advertisers and campaigns — RIARS manual">
+  <meta property="og:description" content="The Advertising tab has three sub-tabs: Advertisers, Campaigns and Delivery. An advertiser is the company that buys airtime; a campaign is one agreement…">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/advertisers-campaigns.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-en.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/advertisers-campaigns.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/advertisers-campaigns.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/advertisers-campaigns.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/advertisers-campaigns.html">
+  <link rel="icon" type="image/png" href="../../img/favicon.png">
+  <link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../style.css">
+  <script src="../../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../../en/"><img src="../../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Main">
+        <a class="nav-link" href="../../en/">Home</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../../en/#download">Download</a>
+        <a class="lang" href="../../manual/advertisers-campaigns.html" hreflang="es" lang="es" aria-label="Español">ES</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · Advertising<a class="to-toc" href="#manual-toc">Contents</a></p>
+        <h1 id="advertisers-and-campaigns">Advertisers and campaigns</h1>
+<p>The <strong>Advertising</strong> tab has three sub-tabs: <strong>Advertisers</strong>, <strong>Campaigns</strong> and <strong>Delivery</strong>. An advertiser is the company that buys airtime; a campaign is one agreement with dates, a daily target, allowed times and a set of spots.</p>
+<h2 id="advertisers">Advertisers</h2>
+<p>Click <strong>New</strong>, fill in <strong>Name</strong>, <strong>Contact</strong> and <strong>Notes</strong>, and click <strong>Save</strong>. <strong>Delete</strong> removes the advertiser. You need at least one advertiser before you can create a campaign.</p>
+<h2 id="campaigns">Campaigns</h2>
+<p>Choose an advertiser filter or <strong>All advertisers</strong>, then click <strong>New</strong>. In the <strong>Campaign</strong> editor:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><strong>Advertiser</strong></td><td>Who the campaign belongs to</td></tr>
+<tr><td><strong>Name</strong></td><td>Campaign name</td></tr>
+<tr><td><strong>From</strong> and <strong>To</strong></td><td>First and last day it may air</td></tr>
+<tr><td><strong>Spots per day</strong></td><td>Daily target; 0 means a pure sponsorship</td></tr>
+<tr><td><strong>Max per hour (0 = no limit)</strong></td><td>Ceiling inside one clock hour</td></tr>
+<tr><td><strong>Priority</strong></td><td>Higher goes first when a break is full</td></tr>
+<tr><td><strong>On</strong></td><td>Enables or disables the campaign</td></tr>
+</tbody>
+</table></div>
+<p>Under <strong>Dayparts</strong>, add the times when the campaign may air. Each daypart has <strong>Days</strong>, <strong>Start</strong> and <strong>End</strong>. <strong>No dayparts means any time.</strong> Use <strong>Add daypart</strong> and <strong>Remove daypart</strong> to build the allowed windows.</p>
+<p>Under <strong>Spots</strong>, use the track picker to add the audio. The table shows <strong>Title</strong>, <strong>Length</strong> and <strong>Weight</strong>; the weight controls how often each spot of the campaign is used. <strong>Save</strong> stores the campaign and <strong>Delete</strong> removes it.</p>
+<h2 id="how-spots-are-spread">How spots are spread</h2>
+<p>The traffic system divides the day into five-minute slices and compares what each campaign has aired with an even pace inside its dayparts. A campaign that is behind gets into the next suitable ad break, first by priority and then by how far behind it is. It may run at most about half a spot ahead of pace. Two spots from the same advertiser do not share a break, and the break's maximum length is respected. Spots never crossfade by default.</p>
+<p>See <a href="sponsorships.html">Sponsorships</a> and <a href="delivery.html">Delivery report</a>.</p>
+        <nav class="manual-pager" aria-label="Manual contents">
+          <a class="prev" href="intro-outro.html" rel="prev"><span>Previous</span>Intros, outros and talking over the intro</a>
+          <a class="next" href="sponsorships.html" rel="next"><span>Next</span>Sponsorships</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/en/advertisers-campaigns.md" target="_blank" rel="noopener">Improve this page on GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No results.">
+          <label class="visually-hidden" for="manual-q">Search the manual</label>
+          <input id="manual-q" type="search" placeholder="Search the manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Manual contents">
+          <p class="manual-toc-title"><a href="./">User manual</a></p>
+          <h2>Getting started</h2>
+          <ul>
+            <li><a href="welcome.html">Welcome to RIARS</a></li>
+            <li><a href="first-steps.html">First steps</a></li>
+            <li><a href="main-window.html">The main window</a></li>
+          </ul>
+          <h2>On air</h2>
+          <ul>
+            <li><a href="library.html">Media library</a></li>
+            <li><a href="playlist.html">Playlist</a></li>
+            <li><a href="playback.html">Playback</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Silence detector</a></li>
+            <li><a href="streaming.html">Streaming</a></li>
+            <li><a href="normalization.html">Loudness normalisation</a></li>
+            <li><a href="sound-cards.html">Sound cards and pre-listening</a></li>
+            <li><a href="live.html">Live broadcasting</a></li>
+            <li><a href="metadata.html">Complete metadata</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Scheduling</h2>
+          <ul>
+            <li><a href="events.html">Scheduled events</a></li>
+          </ul>
+          <h2>Automation</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automation overview</a></li>
+            <li><a href="categories.html">Categories</a></li>
+            <li><a href="clocks.html">Format clocks</a></li>
+            <li><a href="grid.html">The grid</a></li>
+            <li><a href="imaging.html">Station imaging</a></li>
+            <li><a href="station-settings.html">Station settings</a></li>
+            <li><a href="preview.html">Preview</a></li>
+            <li><a href="intro-outro.html">Intros, outros and talking over the intro</a></li>
+          </ul>
+          <h2>Advertising</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html" aria-current="page">Advertisers and campaigns</a></li>
+            <li><a href="sponsorships.html">Sponsorships</a></li>
+            <li><a href="delivery.html">Delivery report</a></li>
+          </ul>
+          <h2>Logs</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Proof of play</a></li>
+          </ul>
+          <h2>Remote control and servers</h2>
+          <ul>
+            <li><a href="web-panel.html">Web panel</a></li>
+            <li><a href="headless-server.html">Headless server</a></li>
+            <li><a href="api-agents.html">API and AI agents</a></li>
+          </ul>
+          <h2>Reference</h2>
+          <ul>
+            <li><a href="shortcuts.html">Keyboard shortcuts</a></li>
+            <li><a href="troubleshooting.html">Troubleshooting</a></li>
+            <li><a href="glossary.html">Glossary</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Free software under the MIT licence.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licence</a>
+        <a href="../../en/code-signing.html">Code signing policy</a>
+        <a href="../../en/privacy.html">Privacy</a>
+        <a href="../../" hreflang="es" lang="es">Español</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

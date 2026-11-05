@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Format clocks — RIARS manual</title>
+  <meta name="description" content="A Format clock describes what a period sounds like: one hour by default, or another Length (min) from 5 to 1440. It is a list of slots, some at fixed…">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Format clocks — RIARS manual">
+  <meta property="og:description" content="A Format clock describes what a period sounds like: one hour by default, or another Length (min) from 5 to 1440. It is a list of slots, some at fixed…">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/clocks.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-en.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/clocks.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/clocks.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/clocks.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/clocks.html">
+  <link rel="icon" type="image/png" href="../../img/favicon.png">
+  <link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../style.css">
+  <script src="../../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../../en/"><img src="../../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Main">
+        <a class="nav-link" href="../../en/">Home</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../../en/#download">Download</a>
+        <a class="lang" href="../../manual/clocks.html" hreflang="es" lang="es" aria-label="Español">ES</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · Automation<a class="to-toc" href="#manual-toc">Contents</a></p>
+        <h1 id="format-clocks">Format clocks</h1>
+<p>A <strong>Format clock</strong> describes what a period sounds like: one hour by default, or another <strong>Length (min)</strong> from 5 to 1440. It is a list of slots, some at fixed times (anchors) and some that simply follow the previous one.</p>
+<h2 id="the-clocks-tab">The Clocks tab</h2>
+<p>On the left is the list of clocks with their colour and length; use <strong>New</strong> and <strong>Delete</strong>. The editor has <strong>Name</strong>, <strong>Colour</strong>, <strong>Length (min)</strong> and <strong>Fill category</strong>, then the <strong>Slots</strong> table with <strong>Time</strong>, <strong>Type</strong>, <strong>Details</strong> and <strong>Actions</strong>. Click <strong>Add slot</strong> to add one, <strong>Save</strong> to keep the clock and <strong>Discard</strong> to undo unsaved changes. The pie on the right shows how the period is divided.</p>
+<h2 id="slot-types">Slot types</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Type</th><th>Use</th></tr></thead>
+<tbody>
+<tr><td><strong>Category</strong></td><td>A number of tracks from a category; set <strong>Count</strong> and optionally <strong>Require codes</strong> / <strong>Exclude codes</strong></td></tr>
+<tr><td><strong>Imaging</strong></td><td>One jingle, sweeper, bumper or station ID from an imaging category</td></tr>
+<tr><td><strong>Ad break</strong></td><td>A block filled with spots; set its <strong>Name</strong>, <strong>Max seconds</strong>, <strong>Intro category</strong> and <strong>Outro category</strong></td></tr>
+<tr><td><strong>Playlist</strong></td><td>A saved playlist, whole or the next <strong>Count</strong> items; blank means <strong>All</strong></td></tr>
+<tr><td><strong>Track</strong></td><td>A fixed file, for example a programme theme</td></tr>
+<tr><td><strong>Fill</strong></td><td>Music from a category until the next anchor or the end of the clock</td></tr>
+</tbody>
+</table></div>
+<h2 id="anchors">Anchors</h2>
+<p>Put a time in the <strong>Time</strong> column as <code>mm:ss</code> to make a slot an anchor: for example <code>15:00</code> for the ad break at a quarter past, or <code>00:00</code> for a station ID at the top of the hour. Leave it empty for a slot that follows the previous one.</p>
+<p>Anchors are <strong>soft</strong> by default: the block starts when the song playing at that time ends, so music is never cut. <strong>Max wait (s)</strong> limits how late a soft anchor may run. Tick <strong>Hard</strong> to cut in at the exact time; use it when you must join a network news bulletin. Hard anchors more than a minute late are dropped, for example after the machine has slept.</p>
+<h2 id="fixing-the-length">Fixing the length</h2>
+<p>Between anchors the generator places the unordered slots and uses <strong>Fill</strong> to reach the next anchor or the end. The <strong>Fill category</strong> on the clock is a second-level fallback when the slots run out. Use a <strong>Fill</strong> slot for music that must stop at the next fixed point, and the clock-level <strong>Fill category</strong> as a safety net.</p>
+<h2 id="the-hour-pie">The hour pie</h2>
+<p>The pie is a quick visual check: each slot gets a colour, and its size follows the planned duration. Gaps or an over-full hour show up immediately.</p>
+<p>See <a href="grid.html">The grid</a> to decide when this clock plays, and <a href="imaging.html">Station imaging</a> for the jingles and IDs inside it.</p>
+        <nav class="manual-pager" aria-label="Manual contents">
+          <a class="prev" href="categories.html" rel="prev"><span>Previous</span>Categories</a>
+          <a class="next" href="grid.html" rel="next"><span>Next</span>The grid</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/en/clocks.md" target="_blank" rel="noopener">Improve this page on GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No results.">
+          <label class="visually-hidden" for="manual-q">Search the manual</label>
+          <input id="manual-q" type="search" placeholder="Search the manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Manual contents">
+          <p class="manual-toc-title"><a href="./">User manual</a></p>
+          <h2>Getting started</h2>
+          <ul>
+            <li><a href="welcome.html">Welcome to RIARS</a></li>
+            <li><a href="first-steps.html">First steps</a></li>
+            <li><a href="main-window.html">The main window</a></li>
+          </ul>
+          <h2>On air</h2>
+          <ul>
+            <li><a href="library.html">Media library</a></li>
+            <li><a href="playlist.html">Playlist</a></li>
+            <li><a href="playback.html">Playback</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Silence detector</a></li>
+            <li><a href="streaming.html">Streaming</a></li>
+            <li><a href="normalization.html">Loudness normalisation</a></li>
+            <li><a href="sound-cards.html">Sound cards and pre-listening</a></li>
+            <li><a href="live.html">Live broadcasting</a></li>
+            <li><a href="metadata.html">Complete metadata</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Scheduling</h2>
+          <ul>
+            <li><a href="events.html">Scheduled events</a></li>
+          </ul>
+          <h2>Automation</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automation overview</a></li>
+            <li><a href="categories.html">Categories</a></li>
+            <li><a href="clocks.html" aria-current="page">Format clocks</a></li>
+            <li><a href="grid.html">The grid</a></li>
+            <li><a href="imaging.html">Station imaging</a></li>
+            <li><a href="station-settings.html">Station settings</a></li>
+            <li><a href="preview.html">Preview</a></li>
+            <li><a href="intro-outro.html">Intros, outros and talking over the intro</a></li>
+          </ul>
+          <h2>Advertising</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Advertisers and campaigns</a></li>
+            <li><a href="sponsorships.html">Sponsorships</a></li>
+            <li><a href="delivery.html">Delivery report</a></li>
+          </ul>
+          <h2>Logs</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Proof of play</a></li>
+          </ul>
+          <h2>Remote control and servers</h2>
+          <ul>
+            <li><a href="web-panel.html">Web panel</a></li>
+            <li><a href="headless-server.html">Headless server</a></li>
+            <li><a href="api-agents.html">API and AI agents</a></li>
+          </ul>
+          <h2>Reference</h2>
+          <ul>
+            <li><a href="shortcuts.html">Keyboard shortcuts</a></li>
+            <li><a href="troubleshooting.html">Troubleshooting</a></li>
+            <li><a href="glossary.html">Glossary</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Free software under the MIT licence.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licence</a>
+        <a href="../../en/code-signing.html">Code signing policy</a>
+        <a href="../../en/privacy.html">Privacy</a>
+        <a href="../../" hreflang="es" lang="es">Español</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

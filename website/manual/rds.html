@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RDS — Manual de RIARS</title>
+  <meta name="description" content="RIARS manda los textos RDS a tu codificador RDS, el aparato que los mete en la señal de FM (o el que lleva dentro el transmisor). Así las radios de los…">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="RDS — Manual de RIARS">
+  <meta property="og:description" content="RIARS manda los textos RDS a tu codificador RDS, el aparato que los mete en la señal de FM (o el que lleva dentro el transmisor). Así las radios de los…">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/rds.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-es.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/rds.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/rds.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/rds.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/rds.html">
+  <link rel="icon" type="image/png" href="../img/favicon.png">
+  <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Principal">
+        <a class="nav-link" href="../">Portada</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../#download">Descargar</a>
+        <a class="lang" href="../en/manual/rds.html" hreflang="en" lang="en" aria-label="English">EN</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · En antena<a class="to-toc" href="#manual-toc">Índice</a></p>
+        <h1 id="rds">RDS</h1>
+<p>RIARS manda los textos RDS a tu <strong>codificador RDS</strong>, el aparato que los mete en la señal de FM (o el que lleva dentro el transmisor). Así las radios de los oyentes muestran el nombre de la emisora y la canción que suena.</p>
+<p>Hay dos maneras:</p>
+<ul>
+<li>un <strong>codificador externo</strong> que acepte órdenes por red, por puerto serie o desde un archivo de texto;</li>
+<li>el <strong>codificador estéreo FM integrado</strong>: RIARS genera toda la señal de FM (estéreo y RDS) en una tarjeta de sonido, para un transmisor con entrada MPX. Se explica más abajo.</li>
+</ul>
+<h2 id="que-se-envia">Qué se envía</h2>
+<ul>
+<li><strong>PI</strong>: el código de la emisora, 4 dígitos hexadecimales (por ejemplo <code>E2A1</code>). Figura en la licencia.</li>
+<li><strong>PS</strong>: el nombre que muestran las radios, 8 caracteres como máximo. Es fijo: en muchos países no está permitido un PS que vaya cambiando.</li>
+<li><strong>PTY</strong>: el tipo de programa, de 0 a 31 (por ejemplo, 10 es Pop en Europa). <strong>TP</strong> indica que la emisora da información de tráfico.</li>
+<li><strong>Música</strong>: el indicador música/palabra.</li>
+<li><strong>Radiotexto (RT)</strong>: hasta 64 caracteres. Con las canciones se forma con la plantilla, por ejemplo <code>{artist} - {title}</code>. El artista y el título también van como etiquetas <strong>RT+</strong>, que algunas radios usan para mostrarlos por separado.</li>
+</ul>
+<h2 id="configurar">Configurar</h2>
+<ol>
+<li>Abre <strong>Emisión ▸ RDS…</strong></li>
+<li>En <strong>Emisora</strong>, pon el PI, el PS y el PTY.</li>
+<li>En <strong>Radiotexto</strong>, revisa los textos:
+<ul>
+<li><strong>Texto de las canciones</strong>: la plantilla para las canciones.</li>
+<li><strong>Texto de la emisora</strong>: lo que se ve con los jingles, las cuñas y los demás elementos que no son canciones, y cuando no suena nada. Si lo dejas vacío, se envía el PS.</li>
+<li><strong>Texto con el micrófono abierto</strong>: por ejemplo, «En directo con Ana». Si lo dejas vacío, se queda el de la canción.</li>
+</ul></li>
+<li>En <strong>Codificadores</strong>, pulsa <strong>Añadir codificador</strong> y elige cómo se conecta:
+<ul>
+<li><strong>TCP</strong> o <strong>UDP</strong>: la dirección IP del codificador y su puerto.</li>
+<li><strong>Puerto serie</strong>: <code>COM3</code> en Windows, <code>/dev/ttyUSB0</code> en Linux, con la velocidad del codificador (normalmente 9600 baudios).</li>
+<li><strong>Archivo de texto</strong>: una ruta completa que acabe en <code>.txt</code>. RIARS reescribe el archivo en cada cambio, para codificadores o programas que lo lean.</li>
+</ul></li>
+<li>Elige el <strong>protocolo</strong>:
+<ul>
+<li><strong>UECP</strong>: el estándar europeo (SPB 490), que entienden la mayoría de codificadores profesionales. <strong>Sitio</strong> y <strong>Codificador</strong> a 0 llegan a todos los codificadores de la línea.</li>
+<li><strong>Comandos de texto</strong>: para codificadores con órdenes propias. Escribe las órdenes que indique su manual, con estos huecos:
+<ul>
+<li><code>{ps}</code> (8 caracteres) y <code>{ps_trim}</code> (sin espacios al final);</li>
+<li><code>{rt}</code>, <code>{pi}</code>, <code>{pty}</code>, <code>{tp}</code> y <code>{ms}</code>;</li>
+<li>para RT+: <code>{rtp_title_start}</code>, <code>{rtp_title_len}</code>, <code>{rtp_artist_start}</code> y <code>{rtp_artist_len}</code>.</li>
+</ul>
+<p><code>\r</code> y <code>\n</code> son el retorno de carro y el salto de línea. La plantilla inicial, <code>PS={ps}\r\nRT={rt}\r\n</code>, sirve para muchos codificadores.</p></li>
+<li><strong>Caracteres</strong>: <strong>RDS</strong> envía la tabla de caracteres de las radios (con eñes y acentos), <strong>ASCII</strong> quita los acentos y <strong>UTF-8</strong> es para archivos y programas.</li>
+</ul></li>
+<li>Marca <strong>Enviar RDS a los codificadores</strong> y pulsa <strong>Guardar</strong>.</li>
+</ol>
+<p>Cada codificador muestra su estado: <strong>Enviando</strong> cuando el último envío ha funcionado y <strong>Error, reintentando</strong> si no. RIARS vuelve a intentarlo solo, cada vez más espaciado, hasta un minuto. Los textos se envían cuando cambia lo que suena, y también cada 30 segundos, para que un codificador que se ha reiniciado los recupere.</p>
+<h2 id="codificador-estereo-fm-integrado">Codificador estéreo FM integrado</h2>
+<p>Muchos transmisores tienen una entrada <strong>MPX</strong> (múltiplex, señal compuesta). RIARS puede alimentarla directamente: genera la señal estéreo (el piloto de 19 kHz y la subportadora de 38 kHz) y mete el RDS en 57 kHz, así que no hace falta ni codificador estéreo ni codificador RDS.</p>
+<p>Necesitas una tarjeta de sonido que funcione a <strong>192 kHz</strong> (176,4 kHz si el audio al aire va a 44,1 kHz), conectada a la entrada MPX del transmisor. Usa una tarjeta con respuesta plana al menos hasta 60 kHz; las salidas integradas de los portátiles suelen filtrar por encima de 20 kHz y se pierden el estéreo y el RDS.</p>
+<ol>
+<li>Abre <strong>Emisión ▸ RDS…</strong>, apartado <strong>Codificador estéreo FM (MPX)</strong>.</li>
+<li>Marca <strong>Generar la señal FM en una tarjeta de sonido</strong> y elige la tarjeta. Solo salen las que pueden funcionar a la frecuencia necesaria; <strong>Actualizar</strong> vuelve a buscarlas.</li>
+<li>Elige el <strong>preénfasis</strong>: <strong>50 µs</strong> en Europa y casi todo el mundo, <strong>75 µs</strong> en América y Corea del Sur. Elige <strong>No</strong> si ya lo aplica el transmisor.</li>
+<li>Revisa los niveles, en porcentaje de la desviación máxima (±75 kHz):
+<ul>
+<li><strong>Piloto</strong>: lo normal es un 9 % (del 8 al 10 %).</li>
+<li><strong>RDS</strong>: lo normal es un 4 % (del 3 al 5 %).</li>
+<li><strong>Nivel</strong>: la salida de la tarjeta a desviación máxima. Empieza en -3 dB y ajusta la ganancia de la entrada MPX del transmisor hasta llegar a la desviación máxima, midiendo con un monitor de modulación.</li>
+</ul></li>
+<li>Sin <strong>Estéreo</strong> se envía mono, sin piloto. Sin <strong>RDS en la señal</strong> el RDS no va.</li>
+<li>Pulsa <strong>Guardar</strong>.</li>
+</ol>
+<p>El estado muestra la tarjeta, su frecuencia y los <strong>cortes en el audio</strong>, si los hay: ocurren cuando el audio al aire deja de llegar al codificador un momento. RIARS guarda 100 ms de audio para seguir las pequeñas diferencias de velocidad entre las dos tarjetas.</p>
+<p>El codificador integrado envía el mismo PS, radiotexto y RT+ que los codificadores externos, y funciona esté marcado o no <strong>Enviar RDS a los codificadores</strong>.</p>
+<div class="callout">
+<p>Nota: antes de salir al aire, comprueba la desviación y el espectro de la señal con un monitor de modulación. La sobremodulación interfiere a otras emisoras.</p>
+</div>
+<h2 id="un-texto-propio">Un texto propio</h2>
+<p>En <strong>En antena ahora</strong> puedes escribir un texto que sustituye al de la canción: un teléfono, el próximo programa, un concurso. Elige cuántos minutos dura y pulsa <strong>Mostrar</strong>. <strong>Volver al automático</strong> lo quita antes de tiempo.</p>
+<div class="callout">
+<p>Nota: el radiotexto tiene 64 caracteres como máximo; los textos más largos se cortan. Los caracteres que las radios no tienen (emojis, otros alfabetos) salen como <code>?</code>.</p>
+</div>
+<h2 id="desde-la-api-y-los-agentes">Desde la API y los agentes</h2>
+<ul>
+<li>La API REST tiene <code>GET</code> y <code>PUT /api/v1/rds</code> para los ajustes y el estado (la parte <code>mpx</code> es el codificador FM integrado), y <code>GET /api/v1/rds/mpx/devices</code> lista las tarjetas de sonido que puede usar.</li>
+<li><code>POST /api/v1/rds/text</code> pone un texto propio, con <code>{&quot;text&quot;: &quot;...&quot;, &quot;minutes&quot;: 10}</code>, y <code>DELETE /api/v1/rds/text</code> lo quita.</li>
+<li>Los agentes de IA tienen las herramientas <code>get_rds</code>, <code>set_rds_config</code>, <code>set_rds_text</code>, <code>clear_rds_text</code> y <code>list_mpx_devices</code>. Consulta <a href="api-agents.html">API y agentes de IA</a>.</li>
+</ul>
+<p>En el servidor sin interfaz, los ajustes se guardan en <code>riars_rds.json</code>, junto a la base de datos de la biblioteca.</p>
+        <nav class="manual-pager" aria-label="Índice del manual">
+          <a class="prev" href="metadata.html" rel="prev"><span>Anterior</span>Completar metadatos</a>
+          <a class="next" href="events.html" rel="next"><span>Siguiente</span>Programación de eventos</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/es/rds.md" target="_blank" rel="noopener">Mejorar esta página en GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No hay resultados.">
+          <label class="visually-hidden" for="manual-q">Buscar en el manual</label>
+          <input id="manual-q" type="search" placeholder="Buscar en el manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Índice del manual">
+          <p class="manual-toc-title"><a href="./">Manual de usuario</a></p>
+          <h2>Primeros pasos</h2>
+          <ul>
+            <li><a href="welcome.html">Bienvenida</a></li>
+            <li><a href="first-steps.html">Primeros pasos</a></li>
+            <li><a href="main-window.html">La ventana principal</a></li>
+          </ul>
+          <h2>En antena</h2>
+          <ul>
+            <li><a href="library.html">Biblioteca</a></li>
+            <li><a href="playlist.html">Lista de reproducción</a></li>
+            <li><a href="playback.html">Reproducción</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Detector de silencio</a></li>
+            <li><a href="streaming.html">Emisión por Internet</a></li>
+            <li><a href="normalization.html">Normalización del volumen</a></li>
+            <li><a href="sound-cards.html">Tarjetas de sonido y preescucha</a></li>
+            <li><a href="live.html">Emisión en directo</a></li>
+            <li><a href="metadata.html">Completar metadatos</a></li>
+            <li><a href="rds.html" aria-current="page">RDS</a></li>
+          </ul>
+          <h2>Programación</h2>
+          <ul>
+            <li><a href="events.html">Programación de eventos</a></li>
+          </ul>
+          <h2>Automatización</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automatización: visión general</a></li>
+            <li><a href="categories.html">Categorías</a></li>
+            <li><a href="clocks.html">Relojes</a></li>
+            <li><a href="grid.html">Parrilla</a></li>
+            <li><a href="imaging.html">Imagen de emisora</a></li>
+            <li><a href="station-settings.html">Ajustes de la emisora</a></li>
+            <li><a href="preview.html">Vista previa</a></li>
+            <li><a href="intro-outro.html">Intros, outros y locución sobre la intro</a></li>
+          </ul>
+          <h2>Publicidad</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Anunciantes y campañas</a></li>
+            <li><a href="sponsorships.html">Patrocinios</a></li>
+            <li><a href="delivery.html">Cumplimiento y facturación</a></li>
+          </ul>
+          <h2>Registros</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Registro de emisiones</a></li>
+          </ul>
+          <h2>Control remoto y servidores</h2>
+          <ul>
+            <li><a href="web-panel.html">Panel web</a></li>
+            <li><a href="headless-server.html">Servidor sin pantalla (Raspberry Pi)</a></li>
+            <li><a href="api-agents.html">API y agentes de IA</a></li>
+          </ul>
+          <h2>Referencia</h2>
+          <ul>
+            <li><a href="shortcuts.html">Atajos de teclado</a></li>
+            <li><a href="troubleshooting.html">Solución de problemas</a></li>
+            <li><a href="glossary.html">Glosario</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Software libre con licencia MIT.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Pie de página">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Incidencias</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a>
+        <a href="../code-signing.html">Política de firma de código</a>
+        <a href="../privacy.html">Privacidad</a>
+        <a href="../en/" hreflang="en" lang="en">English</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

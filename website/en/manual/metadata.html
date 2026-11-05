@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Complete metadata — RIARS manual</title>
+  <meta name="description" content="RIARS can look up what your library tracks are missing in open catalogues: title, artist, album, year, genre and cover. Looking up changes nothing. You…">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Complete metadata — RIARS manual">
+  <meta property="og:description" content="RIARS can look up what your library tracks are missing in open catalogues: title, artist, album, year, genre and cover. Looking up changes nothing. You…">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/metadata.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-en.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/metadata.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/metadata.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/metadata.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/metadata.html">
+  <link rel="icon" type="image/png" href="../../img/favicon.png">
+  <link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../style.css">
+  <script src="../../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../../en/"><img src="../../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Main">
+        <a class="nav-link" href="../../en/">Home</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../../en/#download">Download</a>
+        <a class="lang" href="../../manual/metadata.html" hreflang="es" lang="es" aria-label="Español">ES</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · On air<a class="to-toc" href="#manual-toc">Contents</a></p>
+        <h1 id="complete-metadata">Complete metadata</h1>
+<p>RIARS can look up what your <a href="library.html">library</a> tracks are missing in open catalogues: <strong>title, artist, album, year, genre and cover</strong>. Looking up changes nothing. You see what was found next to what each track has, and only what you tick is applied.</p>
+<p>Filling in year and genre also helps automation: smart <a href="categories.html">categories</a> can filter by them.</p>
+<h2 id="opening-it">Opening it</h2>
+<p>There are two ways to open it. Neither starts on its own: the top of the dialog says what will be looked up, and the lookup starts when you press <strong>Look up</strong>.</p>
+<ul>
+<li><strong>Right-click ▸ Complete metadata…</strong> in the library looks up the selected tracks, even if they already have every field. Use it to check a particular track.</li>
+<li><strong>Edit ▸ Complete library metadata…</strong> looks up the tracks of a minute or longer that have a gap (no artist, album, genre or year). Shorter ones, such as jingles and station IDs, are skipped because no catalogue lists them; the dialog says how many. To look one of them up, select it and use the right-click menu.</li>
+</ul>
+<p>When <strong>Look up</strong> can't be pressed, the reason is shown next to it:</p>
+<ul>
+<li><strong>There is nothing to look up</strong>: no track is missing anything.</li>
+<li><strong>A lookup is running</strong>: only one can run at a time. Wait for it to finish or press <strong>Stop</strong>.</li>
+</ul>
+<p>The lookup runs in the background. You can close the dialog and open it again to see how it is going. <strong>Stop</strong> ends it after the current track and keeps what was found.</p>
+<h2 id="where-the-data-comes-from">Where the data comes from</h2>
+<ul>
+<li><strong><a href="https://musicbrainz.org" target="_blank" rel="noopener">MusicBrainz</a></strong> is an open music encyclopedia whose data is public domain (CC0). RIARS searches for the recording by the <strong>title and artist</strong> in the tags and compares the length. If a track has no tags but the file is named &quot;Artist - Title&quot;, it searches by the name.</li>
+<li><strong><a href="https://acoustid.org" target="_blank" rel="noopener">AcoustID</a></strong> is optional. It recognises a song by <strong>how it sounds</strong> (its audio fingerprint), even when the file has no tags at all. It needs an application key, entered at the top of the dialog and kept with the library.
+<ul>
+<li>It is free for non-commercial use: register one at acoustid.org/new-application.</li>
+<li>A commercial station needs its own key from acoustid.biz.</li>
+</ul></li>
+<li><strong><a href="https://coverartarchive.org" target="_blank" rel="noopener">Cover Art Archive</a></strong> supplies the album cover.</li>
+</ul>
+<p>MusicBrainz allows one request per second, so each track takes 2 to 4 seconds: about 500 tracks take about 20 minutes.</p>
+<p>When the same song is on several releases (the original, a live album, a compilation), RIARS prefers the album the track already names. Otherwise it takes the earliest studio album.</p>
+<h2 id="review-and-apply">Review and apply</h2>
+<p>Each track found shows the cover, how it was found (by tags, by file name or by fingerprint) and the confidence. Below that is every field that would change, with the current value → the new one.</p>
+<ul>
+<li><strong>Only the gaps</strong> start ticked: empty fields, or a title that is just the file name. What a track already has is never ticked for you; tick it yourself to change it.</li>
+<li><strong>Apply</strong> stores what is ticked in the library. Each track records where its data came from (<code>musicbrainz:</code> and the recording's identifier).</li>
+<li><strong>Also write the tags into the audio files</strong> is off by default. It also saves the values and the cover inside the file, so other programs see them, and asks first. RIARS writes a copy, checks that it reads back, and only then replaces the original. A file that is playing may not be replaceable, and RIARS says so.</li>
+<li>Covers are kept in the <code>riars_covers</code> folder next to the library database.</li>
+</ul>
+<p>Tracks with no match are listed at the end, folded, with the reason when there was an error (for example, no connection).</p>
+<h2 id="for-agents-and-the-api">For agents and the API</h2>
+<p>The REST API has <code>POST /api/v1/library/metadata/lookup</code> to start, <code>GET</code> on the same path for the status and proposals, <code>POST /library/metadata/apply</code>, and <code>/library/metadata/settings</code> for the key. The MCP server offers <code>lookup_track_metadata</code>, <code>metadata_lookup_status</code>, <code>apply_track_metadata</code>, <code>get_track_metadata</code> and <code>set_acoustid_key</code>. See <a href="api-agents.html">API and agents</a>.</p>
+        <nav class="manual-pager" aria-label="Manual contents">
+          <a class="prev" href="live.html" rel="prev"><span>Previous</span>Live broadcasting</a>
+          <a class="next" href="rds.html" rel="next"><span>Next</span>RDS</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/en/metadata.md" target="_blank" rel="noopener">Improve this page on GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No results.">
+          <label class="visually-hidden" for="manual-q">Search the manual</label>
+          <input id="manual-q" type="search" placeholder="Search the manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Manual contents">
+          <p class="manual-toc-title"><a href="./">User manual</a></p>
+          <h2>Getting started</h2>
+          <ul>
+            <li><a href="welcome.html">Welcome to RIARS</a></li>
+            <li><a href="first-steps.html">First steps</a></li>
+            <li><a href="main-window.html">The main window</a></li>
+          </ul>
+          <h2>On air</h2>
+          <ul>
+            <li><a href="library.html">Media library</a></li>
+            <li><a href="playlist.html">Playlist</a></li>
+            <li><a href="playback.html">Playback</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Silence detector</a></li>
+            <li><a href="streaming.html">Streaming</a></li>
+            <li><a href="normalization.html">Loudness normalisation</a></li>
+            <li><a href="sound-cards.html">Sound cards and pre-listening</a></li>
+            <li><a href="live.html">Live broadcasting</a></li>
+            <li><a href="metadata.html" aria-current="page">Complete metadata</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Scheduling</h2>
+          <ul>
+            <li><a href="events.html">Scheduled events</a></li>
+          </ul>
+          <h2>Automation</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automation overview</a></li>
+            <li><a href="categories.html">Categories</a></li>
+            <li><a href="clocks.html">Format clocks</a></li>
+            <li><a href="grid.html">The grid</a></li>
+            <li><a href="imaging.html">Station imaging</a></li>
+            <li><a href="station-settings.html">Station settings</a></li>
+            <li><a href="preview.html">Preview</a></li>
+            <li><a href="intro-outro.html">Intros, outros and talking over the intro</a></li>
+          </ul>
+          <h2>Advertising</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Advertisers and campaigns</a></li>
+            <li><a href="sponsorships.html">Sponsorships</a></li>
+            <li><a href="delivery.html">Delivery report</a></li>
+          </ul>
+          <h2>Logs</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Proof of play</a></li>
+          </ul>
+          <h2>Remote control and servers</h2>
+          <ul>
+            <li><a href="web-panel.html">Web panel</a></li>
+            <li><a href="headless-server.html">Headless server</a></li>
+            <li><a href="api-agents.html">API and AI agents</a></li>
+          </ul>
+          <h2>Reference</h2>
+          <ul>
+            <li><a href="shortcuts.html">Keyboard shortcuts</a></li>
+            <li><a href="troubleshooting.html">Troubleshooting</a></li>
+            <li><a href="glossary.html">Glossary</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Free software under the MIT licence.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licence</a>
+        <a href="../../en/code-signing.html">Code signing policy</a>
+        <a href="../../en/privacy.html">Privacy</a>
+        <a href="../../" hreflang="es" lang="es">Español</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

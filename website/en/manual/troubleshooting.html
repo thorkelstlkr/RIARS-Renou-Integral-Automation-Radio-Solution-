@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Troubleshooting — RIARS manual</title>
+  <meta name="description" content="Check the Vol slider and the Now Playing state. If it says STOPPED, click Play. If a track is loaded but the meter stays still, the file may be empty or…">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Troubleshooting — RIARS manual">
+  <meta property="og:description" content="Check the Vol slider and the Now Playing state. If it says STOPPED, click Play. If a track is loaded but the meter stays still, the file may be empty or…">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/troubleshooting.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-en.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/troubleshooting.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/troubleshooting.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/troubleshooting.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/troubleshooting.html">
+  <link rel="icon" type="image/png" href="../../img/favicon.png">
+  <link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../style.css">
+  <script src="../../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../../en/"><img src="../../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Main">
+        <a class="nav-link" href="../../en/">Home</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../../en/#download">Download</a>
+        <a class="lang" href="../../manual/troubleshooting.html" hreflang="es" lang="es" aria-label="Español">ES</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · Reference<a class="to-toc" href="#manual-toc">Contents</a></p>
+        <h1 id="troubleshooting">Troubleshooting</h1>
+<h2 id="no-sound">No sound</h2>
+<p>Check the <strong>Vol</strong> slider and the <strong>Now Playing</strong> state. If it says <strong>STOPPED</strong>, click <strong>Play</strong>. If a track is loaded but the meter stays still, the file may be empty or corrupt: the silence detector will eventually skip it. On a server, the machine may have no sound card; <code>--no-sound-card</code> is for streaming only, and the stream requires a working audio output or the internal clock setup described in <a href="headless-server.html">Headless server</a>.</p>
+<h2 id="silence-alarms">Silence alarms</h2>
+<p>A red <strong>SILENCE</strong> badge or <strong>SILENCE ON AIR</strong> means the output stayed below the threshold for longer than the limit. The default is -50 dBFS for 10 seconds. If quiet material triggers false alarms, lower the threshold or increase the time; if a bad file causes them, the <strong>Skip</strong> action is doing its job. See <a href="dead-air.html">Silence detector</a>.</p>
+<h2 id="the-stream-will-not-connect">The stream will not connect</h2>
+<p>Check <strong>Server</strong>, <strong>Port</strong>, <strong>Mount point</strong>, <strong>User</strong> and <strong>Password</strong>. A mount point can have only one source: if another encoder is connected, Icecast refuses it. <strong>STREAM ERROR</strong> shows the server's message. <strong>NO AUDIO</strong> means RIARS has no audio output to stream. After changing settings, disconnect and connect again. See <a href="streaming.html">Streaming</a>.</p>
+<h2 id="automation-adds-nothing">Automation adds nothing</h2>
+<p>Work through these in order:</p>
+<ol>
+<li>Is the <strong>Automation</strong> card <strong>ON</strong>?</li>
+<li>Do the <a href="categories.html">categories</a> contain playable tracks, or does a smart filter match any?</li>
+<li>Does the <a href="clocks.html">clock</a> have slots, and do they reference existing categories?</li>
+<li>Does a <a href="grid.html">grid</a> rule cover this hour, or is a <strong>Default clock</strong> set in <a href="station-settings.html">Station settings</a>?</li>
+<li>Look at the <strong>Warnings</strong> on the <strong>Automation</strong> card and in the <strong>Log</strong> pane. They name the category or clock that has nothing to play.</li>
+<li>Is the <strong>Fallback category</strong> set? Without it, an empty category means the generator warns and adds nothing.</li>
+</ol>
+<p>Remember that changes apply from the next generated item; what is already in the playlist is not rewritten. To see what should happen, use <a href="preview.html">Preview</a>.</p>
+<h2 id="the-playlist-stops">The playlist stops</h2>
+<p>If the automation is off and the list ends, playback stops. Turn automation on, add more items, or load a saved playlist. If the automation is on but the list still stops, the generator is probably warning about an empty category or a missing clock: check the warnings as above. A hard anchor may also cut in earlier than expected. See <a href="playlist.html">Playlist</a> and <a href="automation-overview.html">Automation overview</a>.</p>
+        <nav class="manual-pager" aria-label="Manual contents">
+          <a class="prev" href="shortcuts.html" rel="prev"><span>Previous</span>Keyboard shortcuts</a>
+          <a class="next" href="glossary.html" rel="next"><span>Next</span>Glossary</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/en/troubleshooting.md" target="_blank" rel="noopener">Improve this page on GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No results.">
+          <label class="visually-hidden" for="manual-q">Search the manual</label>
+          <input id="manual-q" type="search" placeholder="Search the manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Manual contents">
+          <p class="manual-toc-title"><a href="./">User manual</a></p>
+          <h2>Getting started</h2>
+          <ul>
+            <li><a href="welcome.html">Welcome to RIARS</a></li>
+            <li><a href="first-steps.html">First steps</a></li>
+            <li><a href="main-window.html">The main window</a></li>
+          </ul>
+          <h2>On air</h2>
+          <ul>
+            <li><a href="library.html">Media library</a></li>
+            <li><a href="playlist.html">Playlist</a></li>
+            <li><a href="playback.html">Playback</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Silence detector</a></li>
+            <li><a href="streaming.html">Streaming</a></li>
+            <li><a href="normalization.html">Loudness normalisation</a></li>
+            <li><a href="sound-cards.html">Sound cards and pre-listening</a></li>
+            <li><a href="live.html">Live broadcasting</a></li>
+            <li><a href="metadata.html">Complete metadata</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Scheduling</h2>
+          <ul>
+            <li><a href="events.html">Scheduled events</a></li>
+          </ul>
+          <h2>Automation</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automation overview</a></li>
+            <li><a href="categories.html">Categories</a></li>
+            <li><a href="clocks.html">Format clocks</a></li>
+            <li><a href="grid.html">The grid</a></li>
+            <li><a href="imaging.html">Station imaging</a></li>
+            <li><a href="station-settings.html">Station settings</a></li>
+            <li><a href="preview.html">Preview</a></li>
+            <li><a href="intro-outro.html">Intros, outros and talking over the intro</a></li>
+          </ul>
+          <h2>Advertising</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Advertisers and campaigns</a></li>
+            <li><a href="sponsorships.html">Sponsorships</a></li>
+            <li><a href="delivery.html">Delivery report</a></li>
+          </ul>
+          <h2>Logs</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Proof of play</a></li>
+          </ul>
+          <h2>Remote control and servers</h2>
+          <ul>
+            <li><a href="web-panel.html">Web panel</a></li>
+            <li><a href="headless-server.html">Headless server</a></li>
+            <li><a href="api-agents.html">API and AI agents</a></li>
+          </ul>
+          <h2>Reference</h2>
+          <ul>
+            <li><a href="shortcuts.html">Keyboard shortcuts</a></li>
+            <li><a href="troubleshooting.html" aria-current="page">Troubleshooting</a></li>
+            <li><a href="glossary.html">Glossary</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Free software under the MIT licence.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licence</a>
+        <a href="../../en/code-signing.html">Code signing policy</a>
+        <a href="../../en/privacy.html">Privacy</a>
+        <a href="../../" hreflang="es" lang="es">Español</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

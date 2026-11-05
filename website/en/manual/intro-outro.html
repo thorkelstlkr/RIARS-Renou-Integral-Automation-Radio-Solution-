@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Intros, outros and talking over the intro — RIARS manual</title>
+  <meta name="description" content="Radio stations often talk over the intro: a jingle or station ID plays over the instrumental start of a song and ends just before the singing begins…">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Intros, outros and talking over the intro — RIARS manual">
+  <meta property="og:description" content="Radio stations often talk over the intro: a jingle or station ID plays over the instrumental start of a song and ends just before the singing begins…">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/intro-outro.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-en.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/intro-outro.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/intro-outro.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/intro-outro.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/intro-outro.html">
+  <link rel="icon" type="image/png" href="../../img/favicon.png">
+  <link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../style.css">
+  <script src="../../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../../en/"><img src="../../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Main">
+        <a class="nav-link" href="../../en/">Home</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../../en/#download">Download</a>
+        <a class="lang" href="../../manual/intro-outro.html" hreflang="es" lang="es" aria-label="Español">ES</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · Automation<a class="to-toc" href="#manual-toc">Contents</a></p>
+        <h1 id="intros-outros-and-talking-over-the-intro">Intros, outros and talking over the intro</h1>
+<p>Radio stations often <strong>talk over the intro</strong>: a jingle or station ID plays over the instrumental start of a song and ends just before the singing begins. RIARS does this on its own, <strong>and never over the voice</strong>.</p>
+<h2 id="the-marks-of-each-song">The marks of each song</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Mark</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><strong>Cue in</strong></td><td>First moment with sound (leading silence skipped).</td></tr>
+<tr><td><strong>Voice starts</strong></td><td>End of the instrumental intro.</td></tr>
+<tr><td><strong>Voice ends</strong></td><td>Start of the instrumental outro.</td></tr>
+<tr><td><strong>Cue out</strong></td><td>Last moment with sound.</td></tr>
+</tbody>
+</table></div>
+<p>The <strong>Intro</strong> and <strong>Outro</strong> columns of the <a href="playlist.html">playlist</a> show how many seconds can be talked over at the start and at the end.</p>
+<h2 id="detecting-them">Detecting them</h2>
+<ul>
+<li><strong>One song</strong>: the <strong>✎</strong> button in the library, or right-click ▸ <strong>Marks…</strong>. The editor opens with the waveform.</li>
+<li><strong>The whole library or a category</strong>: in <strong>Categories</strong>, the <strong>Track analysis</strong> box, button <strong>Analyse library</strong> or <strong>Analyse this category</strong>. It runs in the background, one song after another with pauses, so on-air playback keeps its CPU. Each song is analysed only once.</li>
+</ul>
+<p>Detection looks for the voice by its energy in the vocal band, the rhythm of syllables and its tone. <strong>It is approximate</strong>: it suggests, and you confirm or correct. Each automatic mark has a <strong>confidence</strong> value; below the minimum (0.35 by default) it is not used for talking over.</p>
+<h2 id="correcting-them-by-hand">Correcting them by hand</h2>
+<p>In the editor:</p>
+<ol>
+<li>Drag the marks on the waveform or type the times. The arrow keys move a mark 0.1 s; Shift + arrows, 1 s.</li>
+<li>The coloured strip below shows, second by second, how much it sounds like a voice.</li>
+<li>Listen on the <a href="sound-cards.html">pre-listen card</a>: <strong>▶ Last 5 s of intro</strong> checks that the mark falls just before the voice.</li>
+<li>Press <strong>Save</strong>. Hand-set marks are <strong>never</strong> replaced by a later analysis.</li>
+</ol>
+<p>If the song has no intro, tick <strong>No intro</strong>.</p>
+<h2 id="detection-with-an-ai-agent">Detection with an AI agent</h2>
+<p>In the <strong>Track analysis</strong> box you can choose another detector:</p>
+<ul>
+<li><strong>External program</strong>: a program that separates the voice with AI (for example Demucs or Spleeter with a small script). RIARS passes it each file and reads the result. It is more accurate but uses more computer power. A program that takes longer than two minutes on one file is stopped. For safety it can only be chosen in the desktop app; the API refuses it.</li>
+<li><strong>Agent over MCP</strong>: an agent such as Claude can review the doubtful songs with <code>list_tracks_needing_review</code>, read the voice line of each one with <code>analyze_track</code> and set the marks with <code>set_track_cues</code>. They are saved with source <em>Agent</em>. An agent cannot replace marks you set by hand. See <a href="api-agents.html">API and AI agents</a>.</li>
+</ul>
+<h2 id="how-the-automation-talks-over">How the automation talks over</h2>
+<p>In <strong>Station settings ▸ Talk over intros and outros</strong>:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Setting</th><th>Default</th></tr></thead>
+<tbody>
+<tr><td>Enabled, over intros, over outros</td><td>Yes</td></tr>
+<tr><td>Margin before the voice</td><td>500 ms</td></tr>
+<tr><td>Lower the song (<em>ducking</em>)</td><td>6 dB</td></tr>
+<tr><td>Minimum confidence of automatic marks</td><td>0.35</td></tr>
+<tr><td>Kinds that may talk over</td><td>Jingle, station ID, sweeper, bumper</td></tr>
+</tbody>
+</table></div>
+<p>When a jingle is due, RIARS looks at the next song. If the whole jingle fits in the intro with the margin, it plays over it, placed to <strong>end just before the voice</strong>. While it plays, the song is lowered a few dB: quickly on the way in and gently on the way out. If it does not fit, it tries the outro of the previous song. If that does not fit either, it plays before the song, as usual.</p>
+<p>Spots never talk over, and neither do hard fixed times. What was played over is in the <a href="proof-of-play.html">proof-of-play log</a> with its real time.</p>
+        <nav class="manual-pager" aria-label="Manual contents">
+          <a class="prev" href="preview.html" rel="prev"><span>Previous</span>Preview</a>
+          <a class="next" href="advertisers-campaigns.html" rel="next"><span>Next</span>Advertisers and campaigns</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/en/intro-outro.md" target="_blank" rel="noopener">Improve this page on GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No results.">
+          <label class="visually-hidden" for="manual-q">Search the manual</label>
+          <input id="manual-q" type="search" placeholder="Search the manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Manual contents">
+          <p class="manual-toc-title"><a href="./">User manual</a></p>
+          <h2>Getting started</h2>
+          <ul>
+            <li><a href="welcome.html">Welcome to RIARS</a></li>
+            <li><a href="first-steps.html">First steps</a></li>
+            <li><a href="main-window.html">The main window</a></li>
+          </ul>
+          <h2>On air</h2>
+          <ul>
+            <li><a href="library.html">Media library</a></li>
+            <li><a href="playlist.html">Playlist</a></li>
+            <li><a href="playback.html">Playback</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Silence detector</a></li>
+            <li><a href="streaming.html">Streaming</a></li>
+            <li><a href="normalization.html">Loudness normalisation</a></li>
+            <li><a href="sound-cards.html">Sound cards and pre-listening</a></li>
+            <li><a href="live.html">Live broadcasting</a></li>
+            <li><a href="metadata.html">Complete metadata</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Scheduling</h2>
+          <ul>
+            <li><a href="events.html">Scheduled events</a></li>
+          </ul>
+          <h2>Automation</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automation overview</a></li>
+            <li><a href="categories.html">Categories</a></li>
+            <li><a href="clocks.html">Format clocks</a></li>
+            <li><a href="grid.html">The grid</a></li>
+            <li><a href="imaging.html">Station imaging</a></li>
+            <li><a href="station-settings.html">Station settings</a></li>
+            <li><a href="preview.html">Preview</a></li>
+            <li><a href="intro-outro.html" aria-current="page">Intros, outros and talking over the intro</a></li>
+          </ul>
+          <h2>Advertising</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Advertisers and campaigns</a></li>
+            <li><a href="sponsorships.html">Sponsorships</a></li>
+            <li><a href="delivery.html">Delivery report</a></li>
+          </ul>
+          <h2>Logs</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Proof of play</a></li>
+          </ul>
+          <h2>Remote control and servers</h2>
+          <ul>
+            <li><a href="web-panel.html">Web panel</a></li>
+            <li><a href="headless-server.html">Headless server</a></li>
+            <li><a href="api-agents.html">API and AI agents</a></li>
+          </ul>
+          <h2>Reference</h2>
+          <ul>
+            <li><a href="shortcuts.html">Keyboard shortcuts</a></li>
+            <li><a href="troubleshooting.html">Troubleshooting</a></li>
+            <li><a href="glossary.html">Glossary</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Free software under the MIT licence.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licence</a>
+        <a href="../../en/code-signing.html">Code signing policy</a>
+        <a href="../../en/privacy.html">Privacy</a>
+        <a href="../../" hreflang="es" lang="es">Español</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

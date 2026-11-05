@@ -41,6 +41,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsc --noEmit
+      # The online manual (website/manual/, website/en/manual/) is generated from src/help/.
+      - run: node scripts/build-manual.mjs --check
 
   raspberry-pi:
     name: Server for Raspberry Pi (${{ matrix.target }})

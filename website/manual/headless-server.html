@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Servidor sin pantalla (Raspberry Pi) — Manual de RIARS</title>
+  <meta name="description" content="riars-server es RIARS sin ventana: reproduce, automatiza y emite por Internet, y se maneja desde el panel web, la API o agentes de IA. Funciona en Linux…">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Servidor sin pantalla (Raspberry Pi) — Manual de RIARS">
+  <meta property="og:description" content="riars-server es RIARS sin ventana: reproduce, automatiza y emite por Internet, y se maneja desde el panel web, la API o agentes de IA. Funciona en Linux…">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/headless-server.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-es.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/headless-server.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/headless-server.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/headless-server.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/headless-server.html">
+  <link rel="icon" type="image/png" href="../img/favicon.png">
+  <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Principal">
+        <a class="nav-link" href="../">Portada</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../#download">Descargar</a>
+        <a class="lang" href="../en/manual/headless-server.html" hreflang="en" lang="en" aria-label="English">EN</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · Control remoto y servidores<a class="to-toc" href="#manual-toc">Índice</a></p>
+        <h1 id="servidor-sin-pantalla-raspberry-pi">Servidor sin pantalla (Raspberry Pi)</h1>
+<p><code>riars-server</code> es RIARS sin ventana: reproduce, automatiza y emite por Internet, y se maneja desde el <a href="web-panel.html">panel web</a>, la <a href="api-agents.html">API</a> o agentes de IA. Funciona en Linux, en Windows y en una <strong>Raspberry Pi</strong> (64 y 32 bits).</p>
+<h2 id="arrancarlo">Arrancarlo</h2>
+<pre><code>riars-server --api-token MI_TOKEN --scan /home/pi/musica --bind 0.0.0.0</code></pre>
+<p>Sin <code>--bind</code>, el servidor solo acepta conexiones del propio equipo. Para usar el <a href="web-panel.html">panel web</a> desde el móvil u otro ordenador, pon <code>--bind 0.0.0.0</code>.</p>
+<h2 id="opciones">Opciones</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Opción</th><th>Para qué</th><th>Por defecto</th></tr></thead>
+<tbody>
+<tr><td><code>--port &lt;n&gt;</code></td><td>Puerto de la API y del panel web.</td><td>3100</td></tr>
+<tr><td><code>--bind &lt;dirección&gt;</code></td><td>Dirección en la que escucha la API. <code>0.0.0.0</code> abre el servidor a toda la red.</td><td><code>127.0.0.1</code> (solo este equipo)</td></tr>
+<tr><td><code>--api-token &lt;t&gt;</code></td><td>Token de acceso. También vale la variable <code>RIARS_API_TOKEN</code>. Sin él, se genera uno la primera vez y se guarda en <code>riars_api_token</code>, junto a la base de datos.</td><td>—</td></tr>
+<tr><td><code>--media-root &lt;carpeta&gt;</code></td><td>Carpeta de la que la API y los agentes pueden reproducir, añadir, escanear y etiquetar archivos. Se puede repetir. Las carpetas de la biblioteca siempre cuentan.</td><td>solo las carpetas de la biblioteca</td></tr>
+<tr><td><code>--stream-host &lt;servidor&gt;</code></td><td>Servidor Icecast al que se puede emitir, como <code>servidor</code> o <code>servidor:puerto</code>. Se puede repetir.</td><td>cualquiera</td></tr>
+<tr><td><code>--cors-origin &lt;origen&gt;</code></td><td>Web de otro dominio que puede usar la API desde el navegador, por ejemplo <code>https://panel.ejemplo.com</code>. Se puede repetir. El panel incluido no lo necesita.</td><td>ninguna</td></tr>
+<tr><td><code>--db-path &lt;ruta&gt;</code></td><td>Base de datos de la biblioteca.</td><td><code>riars_library.db</code></td></tr>
+<tr><td><code>--scan &lt;carpeta&gt;</code></td><td>Añadir una carpeta a la biblioteca. Todas las carpetas de la biblioteca se reescanean en segundo plano al arrancar.</td><td>—</td></tr>
+<tr><td><code>--no-sound-card</code></td><td>No usar tarjeta de sonido; reproduce con un reloj interno, para servidores que solo emiten por Internet.</td><td>—</td></tr>
+<tr><td><code>--device &lt;nombre&gt;</code></td><td>Tarjeta de sonido de antena, por su nombre. Si no está, se usa la del sistema.</td><td>la del sistema</td></tr>
+<tr><td><code>--list-devices</code></td><td>Mostrar las tarjetas de sonido y salir.</td><td>—</td></tr>
+<tr><td><code>--no-resume</code></td><td>Empezar de cero en vez de seguir donde se quedó.</td><td>—</td></tr>
+<tr><td><code>--lang &lt;idioma&gt;</code></td><td>Idioma de los mensajes: en, es, fr, de, pt, ca.</td><td>en</td></tr>
+<tr><td><code>--mcp-stdio</code></td><td>Funcionar como servidor MCP por la entrada estándar, para agentes de IA.</td><td>—</td></tr>
+</tbody>
+</table></div>
+<h2 id="archivos">Archivos</h2>
+<p>Junto a la base de datos se guardan la programación de eventos (<code>riars_schedule.json</code>), la sesión (<code>riars_session.json</code>) y el token generado (<code>riars_api_token</code>). En Linux, la sesión y el token solo los puede leer el usuario del servidor: la sesión guarda la contraseña de Icecast. Al reiniciar, el servidor sigue con la misma lista, en la misma posición, con el mismo volumen y la emisión conectada si lo estaba.</p>
+<h2 id="seguridad">Seguridad</h2>
+<ul>
+<li>La API va por HTTP sin cifrar. Para manejar la emisora desde fuera de la red local, pon delante un proxy con HTTPS (por ejemplo Caddy o nginx) o usa una VPN.</li>
+<li>Quien tenga el token controla la emisora: guárdalo como una contraseña.</li>
+<li>La API y los agentes solo pueden usar archivos de las carpetas de la biblioteca y de las que indiques con <code>--media-root</code>. Las rutas de fuera se rechazan.</li>
+<li>Un detector de intros con programa externo solo se puede elegir en la app de escritorio, nunca por la API.</li>
+</ul>
+<h2 id="cuidar-la-tarjeta-sd">Cuidar la tarjeta SD</h2>
+<p>RIARS está pensado para equipos modestos:</p>
+<ul>
+<li>La base de datos escribe poco: una línea por elemento emitido.</li>
+<li>La sesión solo se guarda cuando algo cambia, y la posición cada 30 segundos.</li>
+<li>Lo que añade la automatización no provoca escrituras extra.</li>
+</ul>
+<div class="callout">
+<p>Consejo: para que arranque solo con la Raspberry Pi, crea un servicio de systemd que ejecute <code>riars-server</code> con tus opciones.</p>
+</div>
+        <nav class="manual-pager" aria-label="Índice del manual">
+          <a class="prev" href="web-panel.html" rel="prev"><span>Anterior</span>Panel web</a>
+          <a class="next" href="api-agents.html" rel="next"><span>Siguiente</span>API y agentes de IA</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/es/headless-server.md" target="_blank" rel="noopener">Mejorar esta página en GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No hay resultados.">
+          <label class="visually-hidden" for="manual-q">Buscar en el manual</label>
+          <input id="manual-q" type="search" placeholder="Buscar en el manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Índice del manual">
+          <p class="manual-toc-title"><a href="./">Manual de usuario</a></p>
+          <h2>Primeros pasos</h2>
+          <ul>
+            <li><a href="welcome.html">Bienvenida</a></li>
+            <li><a href="first-steps.html">Primeros pasos</a></li>
+            <li><a href="main-window.html">La ventana principal</a></li>
+          </ul>
+          <h2>En antena</h2>
+          <ul>
+            <li><a href="library.html">Biblioteca</a></li>
+            <li><a href="playlist.html">Lista de reproducción</a></li>
+            <li><a href="playback.html">Reproducción</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Detector de silencio</a></li>
+            <li><a href="streaming.html">Emisión por Internet</a></li>
+            <li><a href="normalization.html">Normalización del volumen</a></li>
+            <li><a href="sound-cards.html">Tarjetas de sonido y preescucha</a></li>
+            <li><a href="live.html">Emisión en directo</a></li>
+            <li><a href="metadata.html">Completar metadatos</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Programación</h2>
+          <ul>
+            <li><a href="events.html">Programación de eventos</a></li>
+          </ul>
+          <h2>Automatización</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automatización: visión general</a></li>
+            <li><a href="categories.html">Categorías</a></li>
+            <li><a href="clocks.html">Relojes</a></li>
+            <li><a href="grid.html">Parrilla</a></li>
+            <li><a href="imaging.html">Imagen de emisora</a></li>
+            <li><a href="station-settings.html">Ajustes de la emisora</a></li>
+            <li><a href="preview.html">Vista previa</a></li>
+            <li><a href="intro-outro.html">Intros, outros y locución sobre la intro</a></li>
+          </ul>
+          <h2>Publicidad</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Anunciantes y campañas</a></li>
+            <li><a href="sponsorships.html">Patrocinios</a></li>
+            <li><a href="delivery.html">Cumplimiento y facturación</a></li>
+          </ul>
+          <h2>Registros</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Registro de emisiones</a></li>
+          </ul>
+          <h2>Control remoto y servidores</h2>
+          <ul>
+            <li><a href="web-panel.html">Panel web</a></li>
+            <li><a href="headless-server.html" aria-current="page">Servidor sin pantalla (Raspberry Pi)</a></li>
+            <li><a href="api-agents.html">API y agentes de IA</a></li>
+          </ul>
+          <h2>Referencia</h2>
+          <ul>
+            <li><a href="shortcuts.html">Atajos de teclado</a></li>
+            <li><a href="troubleshooting.html">Solución de problemas</a></li>
+            <li><a href="glossary.html">Glosario</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Software libre con licencia MIT.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Pie de página">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Incidencias</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licencia</a>
+        <a href="../code-signing.html">Política de firma de código</a>
+        <a href="../privacy.html">Privacidad</a>
+        <a href="../en/" hreflang="en" lang="en">English</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

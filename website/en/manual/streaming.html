@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Streaming — RIARS manual</title>
+  <meta name="description" content="RIARS can send the output of the station to an Icecast server as an MP3 stream. Listeners then connect to the Icecast server, not to RIARS directly. The…">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Streaming — RIARS manual">
+  <meta property="og:description" content="RIARS can send the output of the station to an Icecast server as an MP3 stream. Listeners then connect to the Icecast server, not to RIARS directly. The…">
+  <meta property="og:url" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/streaming.html">
+  <meta property="og:site_name" content="RIARS">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:image" content="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/img/og-en.jpg">
+  <link rel="canonical" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/streaming.html">
+  <link rel="alternate" hreflang="es" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/streaming.html">
+  <link rel="alternate" hreflang="en" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/en/manual/streaming.html">
+  <link rel="alternate" hreflang="x-default" href="https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Solution-/manual/streaming.html">
+  <link rel="icon" type="image/png" href="../../img/favicon.png">
+  <link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../style.css">
+  <script src="../../manual.js" defer></script>
+</head>
+<body class="manual-page">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../../en/"><img src="../../img/logo-horizontal.png" alt="RIARS" width="143" height="34" loading="eager"></a>
+      <nav class="site-nav" aria-label="Main">
+        <a class="nav-link" href="../../en/">Home</a>
+        <a class="nav-link manual-link" href="./">Manual</a>
+        <a class="nav-link" href="../../en/#download">Download</a>
+        <a class="lang" href="../../manual/streaming.html" hreflang="es" lang="es" aria-label="Español">ES</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="manual">
+    <div class="wrap manual-layout">
+      <article class="manual-body">
+        <p class="kicker"><a href="./">Manual</a> · On air<a class="to-toc" href="#manual-toc">Contents</a></p>
+        <h1 id="streaming">Streaming</h1>
+<p>RIARS can send the output of the station to an <strong>Icecast</strong> server as an MP3 stream. Listeners then connect to the Icecast server, not to RIARS directly. The desktop app needs an audio output device. The headless server can run on its internal clock with <code>--no-sound-card</code>, and streaming still works because RIARS encodes the mixed output; see <a href="headless-server.html">Headless server</a>.</p>
+<h2 id="configure-and-connect">Configure and connect</h2>
+<p>In the desktop app, click the streaming badge or use <strong>Broadcast › Streaming settings…</strong>. In the browser panel of <code>riars-server</code>, use the stream badge. Fill in:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><strong>Server</strong></td><td>Icecast host name or IP address</td></tr>
+<tr><td><strong>Port</strong></td><td>Icecast port, usually 8000</td></tr>
+<tr><td><strong>Mount point</strong></td><td>Stream path, for example <code>/stream</code></td></tr>
+<tr><td><strong>Bitrate</strong></td><td>64, 96, 128, 160, 192, 256 or 320 kbps</td></tr>
+<tr><td><strong>User</strong> and <strong>Password</strong></td><td>Icecast source credentials</td></tr>
+<tr><td><strong>Station name</strong> and <strong>Genre</strong></td><td>Information sent to the server</td></tr>
+</tbody>
+</table></div>
+<p>The defaults are <code>localhost</code>, port <code>8000</code>, mount <code>/stream</code>, user <code>source</code>, 128 kbps and station name <strong>RIARS</strong>. The format is MP3. Click <strong>Connect</strong> to start; the badge shows <strong>CONNECTING</strong>, then <strong>STREAMING</strong>. <strong>Disconnect</strong> stops the stream.</p>
+<h2 id="status-and-metadata">Status and metadata</h2>
+<p>The badge can also show <strong>OFFLINE</strong>, <strong>STREAM ERROR</strong> or <strong>NO AUDIO</strong>. When connected, the panel shows the URL and the amount of data sent. The current song title is sent to Icecast automatically as <strong>Artist - Title</strong> when the track changes, and is sent again after a reconnection. The password is not saved between sessions; the other settings are remembered.</p>
+<h2 id="notes">Notes</h2>
+<ul>
+<li>RIARS reconnects on its own if the connection drops.</li>
+<li>A mount point can only have one source at a time. If Icecast refuses the mount, another encoder may be using it.</li>
+<li>On the server, streaming settings can be resumed from the saved session unless it started with <code>--no-resume</code>.</li>
+</ul>
+<p>See <a href="web-panel.html">Web panel</a> for remote control and <a href="troubleshooting.html">Troubleshooting</a> if the stream will not connect.</p>
+        <nav class="manual-pager" aria-label="Manual contents">
+          <a class="prev" href="dead-air.html" rel="prev"><span>Previous</span>Silence detector</a>
+          <a class="next" href="normalization.html" rel="next"><span>Next</span>Loudness normalisation</a>
+        </nav>
+        <p class="manual-edit"><a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/src/help/en/streaming.md" target="_blank" rel="noopener">Improve this page on GitHub</a></p>
+      </article>
+      <aside class="manual-toc" id="manual-toc">
+        <div class="manual-search" data-no-results="No results.">
+          <label class="visually-hidden" for="manual-q">Search the manual</label>
+          <input id="manual-q" type="search" placeholder="Search the manual" autocomplete="off" spellcheck="false">
+          <ol class="manual-results" hidden></ol>
+        </div>
+        <nav aria-label="Manual contents">
+          <p class="manual-toc-title"><a href="./">User manual</a></p>
+          <h2>Getting started</h2>
+          <ul>
+            <li><a href="welcome.html">Welcome to RIARS</a></li>
+            <li><a href="first-steps.html">First steps</a></li>
+            <li><a href="main-window.html">The main window</a></li>
+          </ul>
+          <h2>On air</h2>
+          <ul>
+            <li><a href="library.html">Media library</a></li>
+            <li><a href="playlist.html">Playlist</a></li>
+            <li><a href="playback.html">Playback</a></li>
+            <li><a href="crossfade.html">Crossfade</a></li>
+            <li><a href="dead-air.html">Silence detector</a></li>
+            <li><a href="streaming.html" aria-current="page">Streaming</a></li>
+            <li><a href="normalization.html">Loudness normalisation</a></li>
+            <li><a href="sound-cards.html">Sound cards and pre-listening</a></li>
+            <li><a href="live.html">Live broadcasting</a></li>
+            <li><a href="metadata.html">Complete metadata</a></li>
+            <li><a href="rds.html">RDS</a></li>
+          </ul>
+          <h2>Scheduling</h2>
+          <ul>
+            <li><a href="events.html">Scheduled events</a></li>
+          </ul>
+          <h2>Automation</h2>
+          <ul>
+            <li><a href="automation-overview.html">Automation overview</a></li>
+            <li><a href="categories.html">Categories</a></li>
+            <li><a href="clocks.html">Format clocks</a></li>
+            <li><a href="grid.html">The grid</a></li>
+            <li><a href="imaging.html">Station imaging</a></li>
+            <li><a href="station-settings.html">Station settings</a></li>
+            <li><a href="preview.html">Preview</a></li>
+            <li><a href="intro-outro.html">Intros, outros and talking over the intro</a></li>
+          </ul>
+          <h2>Advertising</h2>
+          <ul>
+            <li><a href="advertisers-campaigns.html">Advertisers and campaigns</a></li>
+            <li><a href="sponsorships.html">Sponsorships</a></li>
+            <li><a href="delivery.html">Delivery report</a></li>
+          </ul>
+          <h2>Logs</h2>
+          <ul>
+            <li><a href="proof-of-play.html">Proof of play</a></li>
+          </ul>
+          <h2>Remote control and servers</h2>
+          <ul>
+            <li><a href="web-panel.html">Web panel</a></li>
+            <li><a href="headless-server.html">Headless server</a></li>
+            <li><a href="api-agents.html">API and AI agents</a></li>
+          </ul>
+          <h2>Reference</h2>
+          <ul>
+            <li><a href="shortcuts.html">Keyboard shortcuts</a></li>
+            <li><a href="troubleshooting.html">Troubleshooting</a></li>
+            <li><a href="glossary.html">Glossary</a></li>
+          </ul>
+        </nav>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <img src="../../img/logo-horizontal.png" alt="RIARS" width="117" height="28" loading="lazy">
+        <p>RIARS — Renou Integral Automation Radio Solution. Free software under the MIT licence.</p>
+        <p>© 2026 RIARS Contributors</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/thorkelstlkr/RIARS-Renou-Integral-Automation-Radio-Solution-/blob/main/LICENSE" target="_blank" rel="noopener">Licence</a>
+        <a href="../../en/code-signing.html">Code signing policy</a>
+        <a href="../../en/privacy.html">Privacy</a>
+        <a href="../../" hreflang="es" lang="es">Español</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>
