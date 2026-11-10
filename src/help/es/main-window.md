@@ -24,7 +24,7 @@ La ventana sigue la disposición clásica de los programas de radio, como RadioB
 
 ## Pestañas del centro
 
-Puedes ir a cada una con **Ctrl+1** … **Ctrl+7**:
+Puedes ir a cada una con **Ctrl+1** … **Ctrl+8**:
 
 1. **Lista de reproducción**: lo que va a sonar. Consulta [Lista de reproducción](topic:playlist).
 2. **Programación**: eventos a horas fijas. Consulta [Programación de eventos](topic:events).
@@ -33,6 +33,7 @@ Puedes ir a cada una con **Ctrl+1** … **Ctrl+7**:
 5. **Categorías**: consulta [Categorías](topic:categories).
 6. **Publicidad**: consulta [Anunciantes y campañas](topic:advertisers-campaigns).
 7. **Registro**: consulta [Registro de emisiones](topic:proof-of-play).
+8. **En directo**: consulta [Emisión en directo](topic:live).
 
 ## La tarjeta Automatización
 

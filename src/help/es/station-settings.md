@@ -20,6 +20,7 @@ Son los ajustes generales de la automatización. Están al final de la pestaña 
 | **Sweeper al cambiar de estilo** | Consulta [Imagen de emisora](topic:imaging). | No |
 | **Elementos por delante** y **Minutos por delante** | Lo que el generador mantiene preparado. | 3 y 15 |
 | **Elementos ya emitidos que se conservan** | Cuántos elementos ya emitidos se quedan en la lista. | 20 |
+| **Conservar el registro (meses)** | Las emisiones más antiguas del [registro](topic:proof-of-play) se borran al arrancar y una vez al día. Con 0 se conservan todas. | 13 |
 | **Segundos por bloque de anuncios** | La duración de un bloque cuyo hueco no dice otra cosa. | 180 |
 | **Tipos que nunca se funden** | Elementos que no se solapan con el [crossfade](topic:crossfade). | Cuña |
 

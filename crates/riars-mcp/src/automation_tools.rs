@@ -344,7 +344,8 @@ fn automation_config_schema() -> Value {
             "min_minutes_ahead": { "type": "integer", "minimum": 1, "maximum": 240 },
             "keep_played": { "type": "integer", "minimum": 0, "maximum": 500 },
             "ad_break_seconds": { "type": "integer", "minimum": 10, "maximum": 1800 },
-            "no_overlap_kinds": { "type": "array", "items": { "type": "string", "enum": item_kinds() } }
+            "no_overlap_kinds": { "type": "array", "items": { "type": "string", "enum": item_kinds() } },
+            "log_keep_months": { "type": "integer", "minimum": 0, "maximum": 120, "description": "Proof-of-play lines older than this are deleted; 0 keeps them all. Default 13." }
         }
     })
 }

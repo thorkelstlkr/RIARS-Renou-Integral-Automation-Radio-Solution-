@@ -1,6 +1,11 @@
 # Intros, outros, locución sobre la intro, preescucha y normalización (plan)
 
-Estado: **preparado, sin terminar** (24-10-2026). Se retoma cuando se renueve el uso semanal.
+Estado: **implementado** (revisado el 10-11-2026). Este documento es el plan original del 24-10-2026 y se conserva como referencia; no se ha repasado punto por punto contra el código. Lo que cambió al implementarlo:
+
+- Las columnas `cue_in_ms`, `cue_out_ms`, `cues_source`, `cues_confidence`, `loudness_lufs` y `peak_dbfs` ya existen (`analysis/store.rs`).
+- La fórmula de confianza quedó en `(contrast - 0.3) / 1.2` (`analysis/cues.rs`).
+- La herramienta MCP de análisis se llama `analyze_track`, no `analyze_track_cues`. Hay además `cue_detector`, `start_analysis`, `analysis_status`, `analysis_stats`, `get_normalization` y `set_normalization`.
+- El detector externo no es un ajuste `detector_command`, sino la variante `CueDetector::Command`. No se puede fijar por la API (responde 403).
 
 ## Objetivo
 
@@ -17,14 +22,15 @@ Marcar en cada canción del catálogo dónde **entra la voz** (fin de la intro) 
 - un índice de confianza;
 - la forma de onda para el editor.
 
-Tests sobre canciones sintéticas: 5 de 6 pasan. El que falla es `finds_intro_and_outro_of_a_song`: las marcas salen en el sitio correcto, pero la confianza da 0,297 cuando el test pide 0,3. Hay que calibrar la fórmula de confianza (`(contrast - 0.4) / 1.2`) o el umbral del test, y después probar con música real de `D:\Musica`.
+La fórmula de confianza se calibró a `(contrast - 0.3) / 1.2`, y con ella pasan los tests sobre canciones sintéticas.
 
 ## Modelo de datos
 
-La tabla `tracks` ya tiene `intro_ms` y `outro_ms` sin usar desde la fase 1. Faltan:
+La tabla `tracks` tiene `intro_ms` y `outro_ms` desde la fase 1, y además:
 - `cue_in_ms` y `cue_out_ms`;
 - `cues_source`: `auto`, `manual` o `agent`;
-- `cues_confidence`.
+- `cues_confidence`;
+- `loudness_lufs` y `peak_dbfs`.
 
 La forma de onda **no se guarda**: se calcula al abrir el editor, para no escribir en la SD. Las marcas manuales nunca se sobrescriben con detecciones nuevas.
 
@@ -32,8 +38,8 @@ La forma de onda **no se guarda**: se calcula al abrir el editor, para no escrib
 
 1. **Integrado** (por defecto): el análisis de `cues.rs`. Es gratis, funciona sin conexión y va en la Raspberry Pi, pero es aproximado.
 2. **Agente de IA** (petición del usuario): un rasgo `CueDetector` con varias implementaciones.
-   - **Por MCP**: herramientas `get_track_cues`, `analyze_track_cues` (devuelve los indicios y la forma de onda resumidos por segundo) y `set_track_cues` (escribe con `cues_source = agent`). Un agente externo (Claude u otro) revisa las canciones dudosas (confianza baja) y fija las marcas. RIARS no necesita claves de API.
-   - **Comando externo**: un ajuste `detector_command`, por ejemplo un script con un modelo de separación de voces (Demucs/Spleeter) o un VAD como Silero. RIARS le pasa la ruta y lee un JSON `{intro_ms, outro_ms, confidence}`. Es lo más preciso, a costa de CPU o GPU.
+   - **Por MCP**: herramientas `get_track_cues`, `analyze_track` (devuelve los indicios y la forma de onda resumidos por segundo) y `set_track_cues` (escribe con `cues_source = agent`). Un agente externo (Claude u otro) revisa las canciones dudosas (confianza baja) y fija las marcas. RIARS no necesita claves de API.
+   - **Comando externo**: el detector `CueDetector::Command` (solo se elige en el equipo, no por la API), por ejemplo un script con un modelo de separación de voces (Demucs/Spleeter) o un VAD como Silero. RIARS le pasa la ruta y lee un JSON `{intro_ms, outro_ms, confidence}`. Es lo más preciso, a costa de CPU o GPU.
    - **Modelo con audio por API** (opcional, más adelante): enviar un fragmento reducido a un modelo multimodal. Requiere una clave y que el usuario lo active, porque el audio sale del equipo.
 3. En todos los casos, el resultado se propone y la persona confirma o corrige en el editor.
 
@@ -71,7 +77,7 @@ La forma de onda **no se guarda**: se calcula al abrir el editor, para no escrib
 - **Motor de preescucha**: un segundo `AudioOutput` independiente, con su propio hilo de audio y un solo reproductor (sin playlist, sin registro de emisiones, sin detector de silencio). Nunca comparte búfer con la antena: un error en la preescucha no puede afectar a lo que suena.
 - **Usos**:
   - en el editor de marcas: escuchar desde el inicio audible, los últimos segundos de la intro y el paso a la outro;
-  - en la biblioteca y la playlist: botón o tecla de preescucha (por ejemplo **Ctrl+P**);
+  - en la biblioteca y la playlist: opción de preescucha en el menú contextual, y **Ctrl+P** con una pista seleccionada en la biblioteca;
   - en el servidor sin pantalla: no aplica (sin tarjeta).
 - **Seguridad**: si la salida de preescucha es la misma que la de antena, se pide confirmación antes de escuchar, porque sonaría en el aire.
 
@@ -87,8 +93,8 @@ La forma de onda **no se guarda**: se calcula al abrir el editor, para no escrib
 - Se guardan `loudness_lufs` y `peak_dbfs` por pista. La ganancia de normalización se calcula al reproducir: `objetivo - loudness`, limitada para no pasar de −1 dBTP.
 - **Objetivo** configurable, **−16 LUFS** por defecto (lo habitual en streaming), con **límite de ganancia** (+10 dB / −12 dB) para no reventar grabaciones muy flojas.
 - Se aplica como **ganancia fija por reproductor** (`TrackPlayer::set_gain`), sin coste en tiempo real.
-- Los jingles y las cuñas también se normalizan, cada uno con su propio objetivo opcional (las cuñas suelen ir 1-2 dB por encima).
-- Opción de usar la **ReplayGain** de las etiquetas si la canción la trae y aún no se ha analizado.
+- Los jingles y las cuñas también se normalizan, con objetivo propio opcional: `spot_target_lufs` para las cuñas (suelen ir 1-2 dB por encima) e `imaging_target_lufs` para jingles, bumpers, indicativos, sweepers y promos. Vacíos, usan `target_lufs`.
+- `use_replaygain` (activado por defecto): una pista sin analizar toma la sonoridad de sus etiquetas **ReplayGain** (referencia de −18 LUFS). Se leen al cargar la pista, fuera del lock del motor.
 - **Limitador de seguridad** en la salida, un *soft clipper* sencillo en el hilo de audio, para que ninguna combinación (normalización + superposición) sature.
 - **Por lotes**: "Analizar biblioteca" (marcas + sonoridad) en segundo plano y con baja prioridad, con progreso. En una Raspberry Pi tarda unos segundos por canción y solo hace falta una vez.
 - En la playlist y la biblioteca: columna de sonoridad (LUFS) y la ganancia aplicada.

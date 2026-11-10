@@ -23,6 +23,9 @@ pub fn validate_config(config: &AutomationConfig) -> Result<(), String> {
     if !(10..=1800).contains(&config.ad_break_seconds) {
         return Err("ad_break_seconds must be between 10 and 1800".to_string());
     }
+    if config.log_keep_months > 120 {
+        return Err("log_keep_months must be at most 120 (0 keeps everything)".to_string());
+    }
     Ok(())
 }
 

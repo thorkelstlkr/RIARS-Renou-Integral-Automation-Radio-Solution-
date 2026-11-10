@@ -169,7 +169,10 @@ fn normalization_schema() -> Value {
             "target_lufs": { "type": "number", "minimum": -30, "maximum": -5, "description": "Default -16 LUFS" },
             "max_gain_db": { "type": "number", "minimum": 0, "maximum": 20, "description": "Default 10 dB" },
             "max_cut_db": { "type": "number", "minimum": 0, "maximum": 30, "description": "Default 12 dB" },
-            "peak_ceiling_dbfs": { "type": "number", "minimum": -6, "maximum": 0, "description": "Default -1 dBFS" }
+            "peak_ceiling_dbfs": { "type": "number", "minimum": -6, "maximum": 0, "description": "Default -1 dBFS" },
+            "spot_target_lufs": { "type": ["number", "null"], "minimum": -30, "maximum": -5, "description": "Own target for spots; null uses target_lufs" },
+            "imaging_target_lufs": { "type": ["number", "null"], "minimum": -30, "maximum": -5, "description": "Own target for jingles, bumpers, station ids, sweepers and promos; null uses target_lufs" },
+            "use_replaygain": { "type": "boolean", "description": "Tracks not analysed yet take their loudness from their ReplayGain tags. Default true" }
         }
     })
 }

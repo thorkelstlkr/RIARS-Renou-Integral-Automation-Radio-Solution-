@@ -207,9 +207,7 @@ async fn set_crossfade(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CrossfadeSettings>,
 ) -> Result<Json<CrossfadeSettings>, ApiError> {
-    if req.duration_ms > 30000 {
-        return Err(ApiError::from("duration_ms must be at most 30000".to_string()));
-    }
+    riars_core::audio::crossfade::validate_crossfade_ms(req.duration_ms).map_err(ApiError::from)?;
     let mut engine = state.engine.lock().map_err(ApiError::internal)?;
     engine.set_crossfade(req.into());
     Ok(Json(CrossfadeSettings::from(engine.crossfade_config())))

@@ -43,7 +43,7 @@ Then open `http://YOUR-SERVER:3100/` in a browser and enter the token. Without `
 
 ## Data files
 
-The library database holds the tracks, categories, clocks, grid, campaigns and proof-of-play log. Next to it live `riars_schedule.json` (scheduled events), `riars_session.json` (the last session) and `riars_api_token` (the generated token). On Linux only the server's user can read the session and the token: the session holds the Icecast password. With `--db-path /srv/riars/riars_library.db`, all three are in `/srv/riars/`. The desktop app uses its per-user data folder; set `RIARS_DATA_DIR` to move that folder.
+The library database holds the tracks, categories, clocks, grid, campaigns and proof-of-play log. Next to it live `riars_schedule.json` (scheduled events), `riars_session.json` (the last session) and `riars_api_token` (the generated token). On Linux only the server's user can read the session and the token: the session holds the Icecast password. With `--db-path /srv/riars/riars_library.db`, all three are in `/srv/riars/`. The server also keeps a lock file, `riars.lock`, in that folder: a second server started on the same database stops with "Another RIARS process is using…" instead of writing the same files. The desktop app uses its per-user data folder; set `RIARS_DATA_DIR` to move that folder.
 
 ## Security
 

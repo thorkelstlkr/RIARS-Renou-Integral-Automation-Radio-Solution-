@@ -17,7 +17,7 @@ Every file is mastered at a different level: a recent song sounds much louder th
 3. A quiet track is raised only as far as its peak allows, and never more than the limit.
 4. A **soft limiter** on the output prevents clipping when something was raised or when a jingle plays over a song. Tracks that were not raised pass untouched.
 
-Tracks that have not been analysed play as they are.
+A track that has not been analysed uses its **ReplayGain** tags, when it has them and the option is ticked. Otherwise it plays as it is.
 
 ## Settings
 
@@ -30,6 +30,11 @@ Tracks that have not been analysed play as they are.
 | Most gain | 10 dB |
 | Most cut | 12 dB |
 | Peak ceiling | −1 dBFS |
+| Target for spots | The same (empty) |
+| Target for jingles and IDs | The same (empty) |
+| Use ReplayGain tags for tracks not analysed yet | Yes |
+
+The two own targets let spots or station imaging play slightly above or below the music: for example, spots at −15 LUFS with music at −16. Leave them empty to use the general target.
 
 The **LUFS** column of the [playlist](topic:playlist) shows each track's loudness. The cue-point editor shows the gain the track will get.
 

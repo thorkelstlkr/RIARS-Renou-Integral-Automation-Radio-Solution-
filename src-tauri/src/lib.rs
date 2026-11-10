@@ -50,6 +50,8 @@ pub struct AppState {
     pub preview: Mutex<riars_core::audio::preview::PreviewPlayer>,
     /// Sound cards chosen in the settings (`riars_audio.json`).
     pub audio_settings_path: PathBuf,
+    /// Held while the app runs: one process per data folder.
+    pub _instance: riars_core::instance::InstanceLock,
 }
 
 #[tauri::command]
@@ -230,9 +232,7 @@ fn crossfade_get(state: State<AppState>) -> Result<CrossfadeSettings, String> {
 
 #[tauri::command]
 fn crossfade_set(config: CrossfadeSettings, state: State<AppState>) -> Result<CrossfadeSettings, String> {
-    if config.duration_ms > 30_000 {
-        return Err("duration_ms must be at most 30000".to_string());
-    }
+    riars_core::audio::crossfade::validate_crossfade_ms(config.duration_ms)?;
     state.engine.lock().map_err(|e| e.to_string())?.set_crossfade(riars_core::audio::crossfade::CrossfadeConfig {
         enabled: config.enabled,
         duration: std::time::Duration::from_millis(config.duration_ms),
@@ -609,6 +609,9 @@ pub fn run() {
             };
             std::fs::create_dir_all(&data_dir)?;
             let db_path = data_dir.join("riars_library.db");
+            // One process per data folder: a server or a second app on the same
+            // database would write the same session, schedule and RDS files.
+            let instance = riars_core::instance::InstanceLock::acquire(&db_path)?;
             let library = MediaLibrary::open(&db_path.to_string_lossy())?;
             let schedule_path = data_dir.join("riars_schedule.json");
             let session_path = data_dir.join("riars_session.json");
@@ -645,6 +648,7 @@ pub fn run() {
                 analysis: riars_core::analysis::BatchAnalyzer::new(),
                 preview: Mutex::new(riars_core::audio::preview::PreviewPlayer::new()),
                 audio_settings_path,
+                _instance: instance,
             });
 
             // Normalisation reads each file's loudness from the library; the closure

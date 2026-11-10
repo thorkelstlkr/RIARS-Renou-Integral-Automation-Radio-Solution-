@@ -55,6 +55,15 @@ Otros avisos de la revisión que no son de la automatización (decodificar enter
 
 Todo en la base SQLite de la biblioteca (`riars_library.db`), en un módulo nuevo `riars-core/src/automation/` (el actual `automation.rs` pasa a `automation/events.rs`). Tipos públicos con `Serialize + Deserialize`.
 
+**Cómo quedó al implementarlo.** Las tablas de los apartados siguientes describen el modelo, no las columnas reales. En la base de datos:
+
+- `clocks` y `grid_rules` son `(id TEXT, data_json TEXT)`: el reloj entero, con sus huecos, y la regla entera van en JSON. No existe la tabla `clock_slots`.
+- `campaigns` es `(id, advertiser_id, data_json)`; `advertisers` y `campaign_spots` sí tienen las columnas del apartado 3.4.
+- `categories` tiene además `filter_json` (categoría inteligente) y `separation_json`. Los códigos van en `track_codes(track_id, code)` y los ajustes en `automation_kv(key, value)`.
+- `play_log` guarda `played_ms`, `reason` (por qué terminó) y `complete` en lugar de `duration_ms` y `status`, y no tiene `break_name`.
+
+Los esquemas están en `automation/store.rs` y `automation/traffic_store.rs`.
+
 ### 3.1 Categorías
 
 ```text
@@ -75,8 +84,7 @@ Campos nuevos en `tracks` (migración): `intro_ms`, `outro_ms` (para pisar locuc
 ### 3.2 Relojes (format clocks)
 
 ```text
-clocks(id, name, color, duration_min DEFAULT 60)
-clock_slots(clock_id, position, kind, params_json)
+clocks(id TEXT, data_json)   -- el reloj entero en JSON: name, color, duration_minutes, slots, fill_category
 ```
 
 Cada hueco (`ClockSlot`) es uno de:
@@ -102,10 +110,10 @@ Propuesta: blanda por defecto y dura como opción por hueco. Para acercarse a la
 ### 3.3 Parrilla (dayparts)
 
 ```text
-grid_rules(id, name, priority, target_kind, target_id,
-           weekdays_mask, months_mask, weeks_of_month_mask,
-           start_time, end_time, date_from NULL, date_to NULL, enabled)
+grid_rules(id TEXT, data_json)   -- la regla entera en JSON
 ```
+
+Los campos de la regla (prioridad, objetivo, máscaras de días, meses y semanas, horas, fechas, activa) van dentro del JSON; el tipo es `GridRule` en `automation/model.rs`.
 
 - `target`: un reloj o una playlist guardada.
 - Repetición por **hora** (`start_time`–`end_time`, puede cruzar medianoche), **día de la semana** (máscara de 7 bits), **semana del mes** (1.ª … 5.ª y "última"), **mes** (máscara de 12 bits), y **rango de fechas** opcional (temporada de verano, campaña de Navidad).
@@ -113,25 +121,23 @@ grid_rules(id, name, priority, target_kind, target_id,
 - Resolución: para un instante dado, gana la regla activa con mayor `priority`; a igual prioridad, la más específica (menos días/horas cubiertas). Si ninguna aplica, se usa el **reloj por defecto** de la emisora; si no hay, la automatización no añade nada y el motor sigue con lo que tenga (comportamiento actual).
 - La parrilla se resuelve **por hora de reloj**: al empezar una hora nueva se elige su reloj. Un reloj de 30 min se repite dos veces.
 
-Vista de la parrilla: una semana tipo de 7×24 casillas coloreadas por reloj, más un calendario mensual para ver excepciones.
+Vista de la parrilla: una semana tipo de 7×24 casillas coloreadas por reloj, y encima una tira con los días del mes que marca los que tienen reglas con fechas (las excepciones); al pulsar un día se muestra su semana.
 
 ### 3.4 Publicidad y patrocinios
 
 ```text
 advertisers(id, name, contact, notes)
-campaigns(id, advertiser_id, name, date_from, date_to,
-          plays_per_day, max_per_hour, dayparts_json, priority,
-          sponsor_of NULL)           -- clock/programa/regla de parrilla patrocinada
+campaigns(id, advertiser_id, data_json)         -- la campaña entera en JSON (tipo Campaign)
 campaign_spots(campaign_id, track_id, weight)   -- una o varias cuñas que rotan
 play_log(id, aired_at, ended_at, track_id, file_path, title, artist,
-         kind, category_id, campaign_id NULL, break_name NULL,
-         planned_at NULL, duration_ms, status)  -- proof of play
+         kind, category_id, campaign_id NULL, planned_at NULL,
+         played_ms, reason, complete)           -- proof of play
 ```
 
 - **Campaña**: anunciante, fechas, emisiones por día (objetivo), máximo por hora, franjas donde puede ir (p. ej. sólo 7–10 h y 18–20 h), prioridad.
 - **Bloques**: los huecos `AdBreak` del reloj. Al generar un bloque se eligen cuñas de las campañas activas que van más retrasadas respecto a su objetivo diario (reparto uniforme a lo largo del día), sin dos cuñas del mismo anunciante en el mismo bloque y respetando la duración máxima del bloque. Opcional: cortina de entrada y salida del bloque (categorías de imagen).
 - **Patrocinio**: una campaña con `sponsor_of` se emite al principio (y/o final) del programa o franja patrocinada ("Este programa llega gracias a...").
-- **Registro de emisiones** (*proof of play*): una fila por elemento que **de verdad sonó**, escrita cuando el motor cambia de pista (no al planificar), con la hora real. `status` = `aired` / `skipped` / `failed`. Exportable a **CSV** por anunciante, campaña y rango de fechas, con totales para facturar. También sirve para las rotaciones musicales y para informes de derechos de autor (SGAE y similares).
+- **Registro de emisiones** (*proof of play*): una fila por elemento que **de verdad sonó**, escrita cuando el motor cambia de pista (no al planificar), con la hora real. `reason` dice por qué terminó (fin natural, salto...) y `complete` si sonó entera. Exportable a **CSV** por anunciante, campaña y rango de fechas, con totales para facturar. También sirve para las rotaciones musicales y para informes de derechos de autor (SGAE y similares).
 - Las cuñas que no cupieron se registran como `missed` en un informe aparte para recolocarlas o compensar.
 - **Implementación (fase 2)**: `automation/traffic.rs` reparte las cuñas. El día se divide en tramos de 5 minutos: una campaña entra en un bloque cuando va retrasada respecto a un ritmo uniforme dentro de sus franjas (puede adelantarse como mucho media cuña), primero por prioridad y luego por retraso. Los bloques pueden llevar cortina de entrada y de salida. Un patrocinio se liga a un reloj o a una regla de la parrilla: suena antes de la primera canción del programa y al cerrarlo, y no se repite si el mismo programa sigue en la hora siguiente. El informe `delivery_report` (y `delivery_csv`) da por día y campaña lo contratado, lo emitido, lo cortado y lo perdido; `campaign_log_csv` da las líneas de emisión de un anunciante o campaña. Un bloque saltado porque pasó su hora se avisa, y sus cuñas se recolocan solas en los siguientes, porque esas campañas quedan retrasadas.
 
@@ -187,7 +193,7 @@ Cambiar a automático no corta lo que suena: añade por detrás.
 - Una inserción en `play_log` por pista que suena (≈ 15–20 por hora, unos KB al día). `last_played_at` y `play_count` en la misma transacción.
 - Relojes, parrilla y campañas se leen al arrancar y al cambiar; en cada elección no hay E/S salvo la consulta de candidatas cacheada.
 - Coste del generador: decenas de microsegundos por elección con listas de ids de unos miles; se medirá CPU, RAM y tiempo por elección en el Pi (o con `--no-sound-card` en el PC) antes y después.
-- Purga opcional del `play_log` pasado X meses (por defecto, conservar 13 meses para facturación anual).
+- Purga opcional del `play_log` pasado X meses (por defecto, conservar 13 meses para facturación anual). Implementado: `AutomationConfig.log_keep_months` (13 por defecto; 0 lo conserva todo) y una purga al arrancar y luego una vez al día, desde `automation/runner.rs`. El ajuste está en **Ajustes de la emisora** y también se cambia por la API o por MCP.
 
 ## 6. API, MCP e interfaces
 
@@ -197,7 +203,7 @@ Todo bajo `/api/v1/automation`, con el mismo token que el resto de la API. Error
 
 | Qué | Rutas |
 |---|---|
-| Estado y ajustes | `GET status` (activo, periodo de reloj en curso, avisos recientes) · `GET/POST config` · `POST enable {enabled}` |
+| Estado y ajustes | `GET status` (activo, periodo de reloj en curso, avisos recientes) · `GET/POST config` (incluye `log_keep_months`) · `POST enable {enabled}` |
 | Categorías | `GET/POST categories` (id 0 crea) · `POST categories/delete` · `POST categories/tracks {category_id, track_ids, weight, remove}` · `GET tracks/{id}/categories` · `POST tracks/codes` · `POST tracks/enabled` · `GET codes` |
 | Reglas de autoasignación | `GET/POST rules` · `POST rules/delete` · `POST rules/apply` |
 | Relojes y parrilla | `GET/POST clocks` · `POST clocks/delete` · `GET/POST grid` · `POST grid/delete` |
@@ -227,8 +233,7 @@ Implementada así:
 - La validación de datos vive en `riars-core/src/automation/validate.rs` y la comparten REST, MCP y escritorio.
 
 - **Guía visual**: la disposición de RadioBOSS Advanced, que el usuario tomó como referencia. Arriba: reloj, pista anterior, en el aire y siguiente. A la izquierda: biblioteca por carpetas y categorías, con un registro debajo. En el centro: playlist en pestañas con columnas de hora de inicio, duración, repeticiones, intro, outro, valoración y última emisión, y los controles debajo. Abajo del todo: barra de estado con el detector de silencio y el programador.
-- **Escritorio** (Tauri + React): pestañas *Categorías*, *Relojes* (editor de huecos con vista de "tarta" de la hora), *Parrilla* (semana tipo + calendario), *Publicidad* (anunciantes, campañas, estado de cumplimiento) y *Registro*.
-- **Panel web** (`/`): vista de la parrilla del día, lo que viene, estado de campañas y descarga del CSV. La edición completa queda en el escritorio y la API.
+- El calendario del plan original quedó como una tira mensual sobre la semana, en *Parrilla* (`src/automation/GridPanel.tsx`).
 
 ## 7. Fases
 

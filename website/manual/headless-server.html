@@ -67,7 +67,7 @@
 </tbody>
 </table></div>
 <h2 id="archivos">Archivos</h2>
-<p>Junto a la base de datos se guardan la programación de eventos (<code>riars_schedule.json</code>), la sesión (<code>riars_session.json</code>) y el token generado (<code>riars_api_token</code>). En Linux, la sesión y el token solo los puede leer el usuario del servidor: la sesión guarda la contraseña de Icecast. Al reiniciar, el servidor sigue con la misma lista, en la misma posición, con el mismo volumen y la emisión conectada si lo estaba.</p>
+<p>Junto a la base de datos se guardan la programación de eventos (<code>riars_schedule.json</code>), la sesión (<code>riars_session.json</code>) y el token generado (<code>riars_api_token</code>). En Linux, la sesión y el token solo los puede leer el usuario del servidor: la sesión guarda la contraseña de Icecast. El servidor crea además en esa carpeta un archivo de bloqueo, <code>riars.lock</code>: si arrancas un segundo servidor sobre la misma base de datos, se detiene con el mensaje «Another RIARS process is using…» en vez de escribir los mismos archivos. Al reiniciar, el servidor sigue con la misma lista, en la misma posición, con el mismo volumen y la emisión conectada si lo estaba.</p>
 <h2 id="seguridad">Seguridad</h2>
 <ul>
 <li>La API va por HTTP sin cifrar. Para manejar la emisora desde fuera de la red local, pon delante un proxy con HTTPS (por ejemplo Caddy o nginx) o usa una VPN.</li>

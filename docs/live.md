@@ -1,6 +1,10 @@
 # Emisión en directo: micrófono, banco de sonidos y modo asistido (plan)
 
-Estado: **propuesta, pendiente de aprobar** (27-10-2026). Rama prevista: `feat/live`, encima de `feat/intro-outro`.
+Estado: **implementado** (revisado el 10-11-2026). Este documento es la propuesta original del 27-10-2026 y se conserva como referencia; no se ha repasado punto por punto contra el código. Lo que cambió al implementarlo:
+
+- El compresor del micrófono viene activado por defecto; la puerta de ruido, no.
+- `/ws/events` envía `{"type": "mic", "available", "on", "speaking", "device"}` y `{"type": "cart", "playing": [botones]}` cuando cambian. No llevan el nivel del micrófono, que se lee con `GET /api/v1/live/status`.
+- En MCP hay además `set_microphone` (rechazada salvo que `allow_remote` esté activo), `list_cart_banks` y `get_cart_bank`. Editar bancos y los ajustes del micrófono es solo REST.
 
 ## Objetivo
 
@@ -103,10 +107,10 @@ Una pestaña nueva, **En directo** (Ctrl+8), con:
 - Estado del micrófono (abierto o cerrado, nivel).
 - Disparar y parar botones del banco.
 - Cambiar de modo.
-- Eventos `mic` y `cart` en `/ws/events`.
+- Eventos `mic` y `cart` en `/ws/events`, enviados cuando cambia el micrófono o lo que suena del banco (`riars-api/src/ws.rs`).
 
 **MCP**
-- `get_live_status`, `fire_cart`, `stop_carts` y `set_play_mode`.
+- `get_live_status`, `fire_cart`, `stop_carts`, `set_play_mode`, `set_microphone`, `list_cart_banks` y `get_cart_bank`.
 - Abrir el micrófono por API o MCP queda **desactivado por defecto**, porque un agente no debería abrir un micrófono sin que lo sepa el locutor. Se activa en los ajustes.
 
 **riars-server**
