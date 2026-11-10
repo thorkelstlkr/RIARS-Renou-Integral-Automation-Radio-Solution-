@@ -71,6 +71,12 @@ export interface NormalizationConfig {
   max_gain_db: number;
   max_cut_db: number;
   peak_ceiling_dbfs: number;
+  /** Own target for spots; null uses target_lufs. */
+  spot_target_lufs: number | null;
+  /** Own target for jingles, bumpers, station ids, sweepers and promos. */
+  imaging_target_lufs: number | null;
+  /** Tracks not analysed yet take their loudness from their ReplayGain tags. */
+  use_replaygain: boolean;
 }
 
 export interface AudioDevices {

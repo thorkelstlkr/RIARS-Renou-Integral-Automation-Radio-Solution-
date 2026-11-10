@@ -20,6 +20,7 @@ Station settings apply to the whole automation. In the desktop app they are at t
 | **Items ahead** | Minimum number of items the generator keeps in front of the air |
 | **Minutes ahead** | Minimum amount of audio it keeps in front |
 | **Keep played items** | How many finished items stay in the on-air playlist |
+| **Keep the play log (months)** | Older [proof-of-play](topic:proof-of-play) lines are deleted at start and once a day; 0 keeps them all (default 13) |
 | **Ad break seconds** | Default length of an ad break when the slot does not set one |
 
 The defaults are **3** items and **15** minutes ahead, **20** played items kept and **180** seconds for an ad break. A larger horizon gives more warning of what comes next but corrects changes later.

@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { automation } from "./api";
 import type { Clock, GridRule, GridTarget } from "./api";
-import { dateKey, resolveGrid } from "./grid";
+import { dateKey, datedRulesOn, resolveGrid } from "./grid";
 
 interface SavedPlaylist {
   id: string;
@@ -69,6 +69,18 @@ const S: Record<string, React.CSSProperties> = {
   },
   title: { fontSize: 14, fontWeight: 600, flex: 1 },
   weekBar: { display: "flex", alignItems: "center", gap: 6, marginLeft: "auto", fontSize: 12 },
+  month: {
+    display: "flex", alignItems: "center", gap: 3, padding: "4px 10px", flexWrap: "wrap",
+    borderBottom: "1px solid var(--border)", fontSize: 11,
+  },
+  monthName: { minWidth: 110, color: "var(--text-secondary)", textTransform: "capitalize" },
+  monthDay: {
+    width: 22, height: 22, padding: 0, borderRadius: "var(--radius)", fontSize: 11,
+    background: "transparent", border: "1px solid transparent", color: "var(--text-secondary)",
+  },
+  monthDayInWeek: { background: "var(--bg-panel)", borderColor: "var(--border)" },
+  monthDayDated: { borderColor: "var(--accent)", color: "var(--text-primary)", fontWeight: 700 },
+  monthLegend: { marginLeft: 8, color: "var(--text-muted)" },
   error: { padding: "6px 16px", fontSize: 12, color: "var(--red)", borderBottom: "1px solid var(--border)" },
   weekWrap: { flex: 1, minHeight: 0, overflow: "auto" },
   gridTable: { width: "100%", borderCollapse: "collapse", tableLayout: "fixed", fontSize: 11 },
@@ -320,6 +332,13 @@ export default function GridPanel() {
 
   const weekStart = mondayOf(refDate);
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // The month of the week shown, day by day, to find the dated rules (exceptions).
+  const monthFirst = new Date(weekStart.getFullYear(), weekStart.getMonth(), 1);
+  const monthDays = Array.from(
+    { length: new Date(monthFirst.getFullYear(), monthFirst.getMonth() + 1, 0).getDate() },
+    (_, i) => new Date(monthFirst.getFullYear(), monthFirst.getMonth(), i + 1),
+  );
+  const weekKeys = new Set(weekDays.map(dateKey));
   const dayFormat = new Intl.DateTimeFormat(i18n.language, { weekday: "short" });
   const defaultClock = defaultClockId
     ? clocks.find((clock) => clock.id === defaultClockId)
@@ -353,6 +372,33 @@ export default function GridPanel() {
         </div>
       </div>
       {error && <div style={S.error}>{error}</div>}
+
+      <div style={S.month} role="group" aria-label={t("automation.grid.month")}>
+        <span style={S.monthName}>
+          {monthFirst.toLocaleDateString(i18n.language, { month: "long", year: "numeric" })}
+        </span>
+        {monthDays.map((day) => {
+          const dated = datedRulesOn(rules, day);
+          const names = dated.map((rule) => rule.name).join(", ");
+          return (
+            <button
+              type="button"
+              key={dateKey(day)}
+              style={{
+                ...S.monthDay,
+                ...(weekKeys.has(dateKey(day)) ? S.monthDayInWeek : {}),
+                ...(dated.length > 0 ? S.monthDayDated : {}),
+              }}
+              title={dated.length > 0 ? t("automation.grid.datedRules", { names }) : dateKey(day)}
+              aria-label={dated.length > 0 ? `${dateKey(day)}: ${names}` : dateKey(day)}
+              onClick={() => setRefDate(mondayOf(day))}
+            >
+              {day.getDate()}
+            </button>
+          );
+        })}
+        <span style={S.monthLegend}>{t("automation.grid.monthLegend")}</span>
+      </div>
 
       <div style={S.weekWrap}>
         <table style={S.gridTable}>

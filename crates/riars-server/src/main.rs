@@ -111,6 +111,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     log::info!("{} v{}", t("server_starting"), env!("CARGO_PKG_VERSION"));
 
+    // Before the sound card and the database: a second process on the same database
+    // would write the same session, schedule and RDS files. Held until the process ends.
+    let _instance = riars_core::instance::InstanceLock::acquire(std::path::Path::new(&cli.db_path))?;
+
     let mut engine = if cli.no_sound_card {
         AudioEngine::new_headless()
     } else if let Some(device) = cli.device.as_deref() {

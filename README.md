@@ -31,7 +31,7 @@ Web: https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Soluti
 | **Windows** x86_64 | Desktop | GUI |
 | **macOS** Intel + Apple Silicon | Desktop | GUI |
 | **Raspberry Pi** (aarch64) | Headless | Terminal + API |
-| **Android** | App movil | GUI |
+| **Android** | App movil (planeada, aun sin empezar) | GUI |
 
 ## Arquitectura
 
@@ -48,15 +48,17 @@ Web: https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Soluti
 │    ┌──────┴─────────────────────┴─────────┐       │
 │    │            riars-core                 │       │
 │    │  Audio Engine · Playlists · Scheduler │       │
-│    │  Media Library · Streaming · Mixer    │       │
+│    │  Media Library · Automation · Mixer   │       │
 │    └──────┬──────────────────────┬────────┘       │
 │           │                      │                │
 │    ┌──────┴───────┐    ┌────────┴─────────┐       │
 │    │ riars-server  │    │   Tauri Desktop   │      │
-│    │  (headless)   │    │   + Android App   │      │
+│    │  (headless)   │    │  Android planeado │      │
 │    └───────────────┘    └──────────────────┘       │
 └─────────────────────────────────────────────────┘
 ```
+
+Junto a `riars-core` hay tres crates con la parte de red: `riars-stream` (emision a Icecast), `riars-rds` (codificadores RDS) y `riars-meta` (metadatos por Internet).
 
 ## Stack tecnico
 
@@ -66,7 +68,7 @@ Web: https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Soluti
 | API REST | Rust (`axum`, `tokio`) |
 | Servidor MCP | Rust (JSON-RPC stdio) |
 | Base de datos | SQLite (`rusqlite`) |
-| Desktop + Android | Tauri v2 |
+| Desktop (Android planeado) | Tauri v2 |
 | Interfaz | React 19 + TypeScript + Vite |
 
 ## Inicio rapido
@@ -74,7 +76,7 @@ Web: https://thorkelstlkr.github.io/RIARS-Renou-Integral-Automation-Radio-Soluti
 ### Desktop (Linux / Windows / macOS)
 
 ```bash
-# Requisitos: Rust >= 1.77, Node.js >= 20
+# Requisitos: Rust >= 1.89, Node.js >= 20
 # Dependencias de sistema para Tauri: https://v2.tauri.app/start/prerequisites/
 
 npm install
@@ -133,10 +135,13 @@ cargo build -p riars-server --release --target aarch64-unknown-linux-gnu
 Cargo.toml                          Workspace raiz
 crates/
   riars-core/                       Motor de audio y logica (sin red, sin GUI)
-  riars-api/                        API REST + WebSocket (axum)
+  riars-stream/                     Emision a Icecast y codificador MP3
+  riars-meta/                       Metadatos por Internet (MusicBrainz, AcoustID, caratulas)
+  riars-rds/                        Envio de RDS a codificadores externos y salida MPX
+  riars-api/                        API REST + WebSocket (axum) y panel web
   riars-mcp/                        Servidor MCP para agentes IA
   riars-server/                     Binario headless (Raspberry Pi, servidores)
-src-tauri/                          App Tauri (desktop + Android)
+src-tauri/                          App Tauri (desktop; Android planeado)
 src/                                Frontend React/TypeScript
 ```
 

@@ -39,7 +39,7 @@ Sin `--bind`, el servidor solo acepta conexiones del propio equipo. Para usar el
 
 ## Archivos
 
-Junto a la base de datos se guardan la programación de eventos (`riars_schedule.json`), la sesión (`riars_session.json`) y el token generado (`riars_api_token`). En Linux, la sesión y el token solo los puede leer el usuario del servidor: la sesión guarda la contraseña de Icecast. Al reiniciar, el servidor sigue con la misma lista, en la misma posición, con el mismo volumen y la emisión conectada si lo estaba.
+Junto a la base de datos se guardan la programación de eventos (`riars_schedule.json`), la sesión (`riars_session.json`) y el token generado (`riars_api_token`). En Linux, la sesión y el token solo los puede leer el usuario del servidor: la sesión guarda la contraseña de Icecast. El servidor crea además en esa carpeta un archivo de bloqueo, `riars.lock`: si arrancas un segundo servidor sobre la misma base de datos, se detiene con el mensaje «Another RIARS process is using…» en vez de escribir los mismos archivos. Al reiniciar, el servidor sigue con la misma lista, en la misma posición, con el mismo volumen y la emisión conectada si lo estaba.
 
 ## Seguridad
 

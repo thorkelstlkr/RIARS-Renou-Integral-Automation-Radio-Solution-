@@ -14,6 +14,8 @@ The **Grid** decides which clock or saved playlist plays at each moment. It is a
 
 Use the week arrows (**Previous week** and **Next week**) or the date box to move around. Click a coloured cell to select its rule and edit it below. Hover over a cell to see the rule name, its priority and what it plays.
 
+Above the week there is a strip with the days of the month. Outlined days have a rule with dates (**From** / **To**), that is, an exception: hover to see which one. Click a day to see its week.
+
 ## Creating a rule
 
 Click **New**, then fill in:

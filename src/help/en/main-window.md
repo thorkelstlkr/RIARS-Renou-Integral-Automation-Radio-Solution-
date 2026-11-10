@@ -27,7 +27,7 @@ Items that are not music show their kind next to the label, such as **Jingle**, 
 
 The left sidebar contains the [Library](topic:library), with its **Library** and **Folders** tabs.
 
-The centre holds seven tabs: **Playlist**, **Schedule**, **Clocks**, **Grid**, **Categories**, **Advertising** and **Log**. **Ctrl+1** to **Ctrl+7** switch between them in that order.
+The centre holds eight tabs: **Playlist**, **Schedule**, **Clocks**, **Grid**, **Categories**, **Advertising**, **Log** and **Live** (see [Live broadcasting](topic:live)). **Ctrl+1** to **Ctrl+8** switch between them in that order.
 
 The right sidebar contains the **Now Playing** card, the **VU Meter**, the **Log** pane with recent proof-of-play entries and automation warnings, and the **Automation** card with its **ON**/**OFF** toggle.
 

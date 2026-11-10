@@ -69,6 +69,18 @@ const dayMatches = (rule: GridRule, day: Date): boolean => {
   );
 };
 
+/** Whether an enabled rule applies on this day, at whatever hour. */
+export function ruleCoversDay(rule: GridRule, day: Date): boolean {
+  return rule.enabled && dayMatches(rule, day);
+}
+
+/** Enabled rules limited to dates (the exceptions of the grid) that apply on `day`. */
+export function datedRulesOn(rules: GridRule[], day: Date): GridRule[] {
+  return rules.filter(
+    (rule) => (rule.date_from != null || rule.date_to != null) && ruleCoversDay(rule, day),
+  );
+}
+
 export function ruleMatches(rule: GridRule, at: Date): boolean {
   if (!rule.enabled) return false;
   const day = spanDay(rule.start, rule.end, at);

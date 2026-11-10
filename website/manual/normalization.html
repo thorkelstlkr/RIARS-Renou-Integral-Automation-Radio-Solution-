@@ -50,7 +50,7 @@
 <li>Una pista floja solo se sube hasta donde su pico lo permite, y nunca más de lo indicado.</li>
 <li>Un <strong>limitador suave</strong> a la salida evita saturaciones cuando algo se ha subido o cuando suena un jingle encima de una canción. Las pistas que no se han subido pasan intactas.</li>
 </ol>
-<p>Las pistas sin analizar suenan tal cual.</p>
+<p>Una pista sin analizar usa sus etiquetas <strong>ReplayGain</strong>, si las tiene y la opción está marcada. Si no, suena tal cual.</p>
 <h2 id="ajustes">Ajustes</h2>
 <p><strong>Reproducción ▸ Normalización…</strong></p>
 <div class="table-wrap"><table>
@@ -61,8 +61,12 @@
 <tr><td>Subida máxima</td><td>10 dB</td></tr>
 <tr><td>Bajada máxima</td><td>12 dB</td></tr>
 <tr><td>Techo de picos</td><td>−1 dBFS</td></tr>
+<tr><td>Objetivo para cuñas</td><td>El mismo (vacío)</td></tr>
+<tr><td>Objetivo para jingles e indicativos</td><td>El mismo (vacío)</td></tr>
+<tr><td>Usar las etiquetas ReplayGain en las pistas sin analizar</td><td>Sí</td></tr>
 </tbody>
 </table></div>
+<p>Los dos objetivos propios sirven para que las cuñas o la imagen de la emisora suenen un poco por encima o por debajo de la música: por ejemplo, cuñas a −15 LUFS con la música a −16. Déjalos vacíos para usar el objetivo general.</p>
 <p>La columna <strong>LUFS</strong> de la <a href="playlist.html">lista de reproducción</a> muestra la sonoridad de cada pista. El editor de marcas indica la ganancia que se le aplicará.</p>
 <div class="callout">
 <p>Consejo: analiza toda la biblioteca una vez (<strong>Categorías ▸ Análisis ▸ Analizar biblioteca</strong>). Lo que añadas después se puede analizar con el mismo botón; solo procesa lo nuevo.</p>

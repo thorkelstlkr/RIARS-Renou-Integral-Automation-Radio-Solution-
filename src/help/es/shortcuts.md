@@ -20,7 +20,8 @@ keywords: atajos, teclado, teclas, shortcuts, f1, f5, ctrl
 | **Ctrl+L** | Buscar en la biblioteca |
 | **Ctrl+Mayús+A** | Añadir una carpeta a la biblioteca |
 | **Ctrl+E** | Activar o desactivar la automatización |
-| **Ctrl+1** … **Ctrl+7** | Pestañas: Lista de reproducción, Programación, Relojes, Parrilla, Categorías, Publicidad, Registro |
+| **Ctrl+1** … **Ctrl+8** | Pestañas: Lista de reproducción, Programación, Relojes, Parrilla, Categorías, Publicidad, Registro, En directo |
+| **Ctrl+P** | Preescuchar la pista seleccionada en la biblioteca |
 | **Ctrl+Q** | Salir |
 | **F10** o **Alt** | Ir a la barra de menús; luego, las flechas, **Intro** y **Esc** |
 

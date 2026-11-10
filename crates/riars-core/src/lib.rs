@@ -1,6 +1,7 @@
 pub mod audio;
 pub mod analysis;
 pub mod automation;
+pub mod instance;
 pub mod library;
 pub mod live;
 pub mod locale;

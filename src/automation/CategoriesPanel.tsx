@@ -874,6 +874,10 @@ export default function CategoriesPanel() {
                   <input style={S.input} type="number" min={10} max={1800} value={config.ad_break_seconds}
                     onChange={(e) => patchConfig({ ad_break_seconds: num(e.target.value) })} />
                 </label>
+                <label style={S.field} title={t("automation.categories.logKeepMonthsHint")}>{t("automation.categories.logKeepMonths")}
+                  <input style={S.input} type="number" min={0} max={120} value={config.log_keep_months ?? 13}
+                    onChange={(e) => patchConfig({ log_keep_months: Math.min(120, Math.max(0, num(e.target.value))) })} />
+                </label>
               </div>
 
               <div style={S.sectionTitle}>{t("automation.categories.noOverlapKinds")}</div>

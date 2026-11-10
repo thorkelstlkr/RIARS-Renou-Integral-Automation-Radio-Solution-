@@ -36,4 +36,6 @@ Las horas que no cubre ninguna regla usan el **Reloj por defecto** de [Ajustes d
 
 Arriba ves la semana en 7 × 24 casillas, cada una con el color y el nombre de la regla que gana. Con las flechas y la fecha puedes ver otras semanas, por ejemplo la de Navidad, para comprobar las excepciones. Haz clic en una casilla para editar su regla.
 
+Encima de la semana hay una tira con los días del mes. Los días con borde tienen alguna regla con fechas (**Desde** / **Hasta**), es decir, una excepción: pasa el ratón para ver cuál. Pulsa un día para ver su semana.
+
 > Nota: la regla se decide al empezar cada periodo del reloj (normalmente, cada hora). Un cambio en la parrilla se nota a partir de lo próximo que se genere.

@@ -265,6 +265,8 @@ pub struct AutomationConfig {
     pub no_overlap_kinds: Vec<ItemKind>,
     /// Imaging over the instrumental intro or outro of songs.
     pub talk_over: TalkOverConfig,
+    /// Proof-of-play lines older than this many months are deleted; 0 keeps them all.
+    pub log_keep_months: u32,
 }
 
 /// Playing imaging over a song's instrumental intro or outro, never over the voice.
@@ -312,6 +314,7 @@ impl Default for AutomationConfig {
             ad_break_seconds: 180,
             no_overlap_kinds: vec![ItemKind::Spot],
             talk_over: TalkOverConfig::default(),
+            log_keep_months: 13,
         }
     }
 }

@@ -17,7 +17,7 @@ Cada archivo viene masterizado a un nivel distinto: una canción actual suena mu
 3. Una pista floja solo se sube hasta donde su pico lo permite, y nunca más de lo indicado.
 4. Un **limitador suave** a la salida evita saturaciones cuando algo se ha subido o cuando suena un jingle encima de una canción. Las pistas que no se han subido pasan intactas.
 
-Las pistas sin analizar suenan tal cual.
+Una pista sin analizar usa sus etiquetas **ReplayGain**, si las tiene y la opción está marcada. Si no, suena tal cual.
 
 ## Ajustes
 
@@ -30,6 +30,11 @@ Las pistas sin analizar suenan tal cual.
 | Subida máxima | 10 dB |
 | Bajada máxima | 12 dB |
 | Techo de picos | −1 dBFS |
+| Objetivo para cuñas | El mismo (vacío) |
+| Objetivo para jingles e indicativos | El mismo (vacío) |
+| Usar las etiquetas ReplayGain en las pistas sin analizar | Sí |
+
+Los dos objetivos propios sirven para que las cuñas o la imagen de la emisora suenen un poco por encima o por debajo de la música: por ejemplo, cuñas a −15 LUFS con la música a −16. Déjalos vacíos para usar el objetivo general.
 
 La columna **LUFS** de la [lista de reproducción](topic:playlist) muestra la sonoridad de cada pista. El editor de marcas indica la ganancia que se le aplicará.
 

@@ -22,7 +22,8 @@ These shortcuts work in the desktop app.
 | **Ctrl+L** | Search the library |
 | **Ctrl+Shift+A** | Add a folder to the library |
 | **Ctrl+E** | Turn automation on or off |
-| **Ctrl+1 … Ctrl+7** | Tabs: Playlist, Scheduling, Clocks, Grid, Categories, Advertising, Log |
+| **Ctrl+1 … Ctrl+8** | Tabs: Playlist, Scheduling, Clocks, Grid, Categories, Advertising, Log, Live |
+| **Ctrl+P** | Pre-listen to the track selected in the library |
 | **Ctrl+Q** | Quit |
 
 ## Menus

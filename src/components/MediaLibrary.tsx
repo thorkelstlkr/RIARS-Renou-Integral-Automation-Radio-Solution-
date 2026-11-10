@@ -337,6 +337,12 @@ export default function MediaLibrary() {
       setSelected(new Set(tracks.map((tr) => tr.id)));
       return;
     }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p") {
+      e.preventDefault();
+      const chosen = selectedTracks();
+      if (chosen.length === 1) void prelisten(chosen[0]);
+      return;
+    }
     if (e.key === "Escape") {
       e.preventDefault();
       setSelected(new Set());

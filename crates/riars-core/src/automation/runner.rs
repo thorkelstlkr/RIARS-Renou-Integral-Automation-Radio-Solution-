@@ -24,12 +24,15 @@ use crate::library::db::MediaLibrary;
 const CHECK_EVERY: Duration = Duration::from_secs(10);
 /// Recent warnings kept for the status.
 const MAX_WARNINGS: usize = 50;
+/// Old proof-of-play lines are deleted this often (and once at start).
+const PURGE_EVERY: Duration = Duration::from_secs(24 * 3600);
 
 pub struct Automation {
     generator: Generator,
     /// Engine playlist revision after the last tick.
     last_revision: Option<u64>,
     next_check: Instant,
+    next_purge: Instant,
     warnings: VecDeque<(NaiveDateTime, String)>,
 }
 
@@ -63,7 +66,13 @@ pub struct TickReport {
 
 impl Automation {
     pub fn new() -> Self {
-        Self { generator: Generator::new(), last_revision: None, next_check: Instant::now(), warnings: VecDeque::new() }
+        Self {
+            generator: Generator::new(),
+            last_revision: None,
+            next_check: Instant::now(),
+            next_purge: Instant::now(),
+            warnings: VecDeque::new(),
+        }
     }
 
     fn push_warning(&mut self, at: NaiveDateTime, warning: String) {
@@ -119,6 +128,14 @@ fn lookahead(engine: &AudioEngine, now: NaiveDateTime) -> (NaiveDateTime, usize,
     (now + chrono::Duration::milliseconds(span as i64), ahead.len(), ms_ahead, overlap)
 }
 
+/// Proof-of-play lines aired before this are deleted; `None` keeps them all.
+fn purge_cutoff(now: NaiveDateTime, keep_months: u32) -> Option<NaiveDateTime> {
+    if keep_months == 0 {
+        return None;
+    }
+    now.checked_sub_months(chrono::Months::new(keep_months))
+}
+
 /// Log what came off air, top up the on-air playlist, and cut in for a hard anchor.
 /// Blocking (SQLite, and decoding for a hard anchor): run it from a worker thread.
 /// Failures also go to the status warnings.
@@ -171,6 +188,17 @@ fn tick_locked(
 
     auto.generator.load(&*library.lock().map_err(|e| err(&e))?)?;
     let config = auto.generator.config().clone();
+    if Instant::now() >= auto.next_purge {
+        auto.next_purge = Instant::now() + PURGE_EVERY;
+        if let Some(before) = purge_cutoff(now, config.log_keep_months) {
+            match library.lock().map_err(|e| err(&e))?.purge_play_log(before) {
+                Ok(0) => {}
+                Ok(lines) => log::info!("Automation: {lines} proof-of-play lines before {before} deleted"),
+                // Not worth stopping the generator for: it is tried again tomorrow.
+                Err(e) => log::warn!("Automation: cannot purge the proof-of-play log: {e}"),
+            }
+        }
+    }
     // Assisted and manual modes are the presenter at the controls: no fill, no cuts.
     let automatic = engine.lock().map_err(|e| err(&e))?.play_mode() == crate::audio::engine::PlayMode::Automatic;
     if config.enabled && automatic {
@@ -304,6 +332,14 @@ mod tests {
     use super::*;
     use crate::automation::model::{AutomationConfig, Clock, ClockSlot, SlotItem};
     use crate::playlist::playlist::ItemKind;
+
+    #[test]
+    fn purge_cutoff_keeps_the_configured_months() {
+        let now = chrono::NaiveDate::from_ymd_opt(2026, 11, 10).unwrap().and_hms_opt(12, 0, 0).unwrap();
+        assert_eq!(purge_cutoff(now, 0), None);
+        let expected = chrono::NaiveDate::from_ymd_opt(2025, 10, 10).unwrap().and_hms_opt(12, 0, 0).unwrap();
+        assert_eq!(purge_cutoff(now, 13), Some(expected));
+    }
 
     #[test]
     fn tick_fills_the_on_air_playlist_from_the_library() {

@@ -489,9 +489,7 @@ pub fn handle_tool_call(name: &str, args: &Value, state: &McpState) -> Result<Va
                 config.enabled = enabled;
             }
             if let Some(ms) = args["duration_ms"].as_u64() {
-                if ms > 30000 {
-                    return Err("duration_ms must be at most 30000".to_string());
-                }
+                riars_core::audio::crossfade::validate_crossfade_ms(ms)?;
                 config.duration = std::time::Duration::from_millis(ms);
             }
             if let Some(curve) = args["curve"].as_str() {

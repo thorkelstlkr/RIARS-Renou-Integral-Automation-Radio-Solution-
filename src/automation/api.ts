@@ -148,6 +148,8 @@ export interface AutomationConfig {
   ad_break_seconds: number;
   no_overlap_kinds: ItemKind[];
   talk_over: TalkOverConfig;
+  /** Proof-of-play lines older than this many months are deleted; 0 keeps them all. */
+  log_keep_months: number;
 }
 
 export interface Advertiser {

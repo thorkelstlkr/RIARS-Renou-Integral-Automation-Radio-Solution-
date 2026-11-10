@@ -26,6 +26,17 @@ impl Default for CrossfadeConfig {
     }
 }
 
+/// Longest crossfade a client may set.
+pub const MAX_CROSSFADE_MS: u64 = 30_000;
+
+/// The one check of a crossfade length sent by a client (REST, MCP or the desktop app).
+pub fn validate_crossfade_ms(duration_ms: u64) -> Result<(), String> {
+    if duration_ms > MAX_CROSSFADE_MS {
+        return Err(format!("duration_ms must be at most {MAX_CROSSFADE_MS}"));
+    }
+    Ok(())
+}
+
 impl CrossfadeConfig {
     pub fn gain_at(&self, progress: f32) -> (f32, f32) {
         let t = progress.clamp(0.0, 1.0);
@@ -60,6 +71,13 @@ mod tests {
         let (a, b) = config.gain_at(1.0);
         assert!(a.abs() < 1e-6);
         assert!((b - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn crossfade_length_limit() {
+        assert!(validate_crossfade_ms(0).is_ok());
+        assert!(validate_crossfade_ms(MAX_CROSSFADE_MS).is_ok());
+        assert_eq!(validate_crossfade_ms(MAX_CROSSFADE_MS + 1).unwrap_err(), "duration_ms must be at most 30000");
     }
 
     #[test]

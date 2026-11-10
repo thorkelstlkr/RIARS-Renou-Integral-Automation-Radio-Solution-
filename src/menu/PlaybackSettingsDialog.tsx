@@ -141,6 +141,24 @@ export default function PlaybackSettingsDialog({ focus, onClose }: { focus: Focu
                 peak_ceiling_dbfs: Math.min(0, Math.max(-6, Number(e.target.value))),
               })} />
           </label>
+          {(["spot_target_lufs", "imaging_target_lufs"] as const).map((key) => (
+            <label style={S.row} key={key}>
+              <span style={S.label}>
+                {t(key === "spot_target_lufs" ? "menu.normalizationSpot" : "menu.normalizationImaging")}
+              </span>
+              <input type="number" min={-30} max={-5} step={0.5} style={{ width: 90 }}
+                placeholder={String(normalization.target_lufs)} value={normalization[key] ?? ""}
+                onChange={(e) => setNormalization({
+                  ...normalization,
+                  [key]: e.target.value === "" ? null : Math.min(-5, Math.max(-30, Number(e.target.value))),
+                })} />
+            </label>
+          ))}
+          <label style={S.row}>
+            <input type="checkbox" checked={normalization.use_replaygain ?? true}
+              onChange={(e) => setNormalization({ ...normalization, use_replaygain: e.target.checked })} />
+            {t("menu.normalizationReplayGain")}
+          </label>
           <div style={S.hint}>{t("menu.normalizationHint")}</div>
         </div>
       )}

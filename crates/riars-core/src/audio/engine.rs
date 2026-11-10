@@ -12,7 +12,7 @@ use super::normalize::{db_to_gain, NormalizationConfig};
 use super::live::{CartVoice, MicConfig, MicInput, MAX_CART_VOICES};
 use super::player::{Overlay, TrackPlayer};
 use crate::live::{CartButton, CartMode};
-use crate::playlist::playlist::{Playlist, PlaylistItem};
+use crate::playlist::playlist::{ItemKind, Playlist, PlaylistItem};
 use crate::session::SessionState;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -1110,6 +1110,23 @@ impl AudioEngine {
         Ok(())
     }
 
+    /// `mic_status` without the level: reading the level resets the meter's peak, so
+    /// watchers that only want to know whether the microphone is open use this.
+    pub fn mic_state(&self) -> MicStatus {
+        let Some(output) = &self.output else {
+            return MicStatus { error: self.mic_error.clone(), ..MicStatus::default() };
+        };
+        let controls = &output.shared.mic;
+        MicStatus {
+            available: self.mic.is_some(),
+            on: controls.on.load(Ordering::Relaxed),
+            device: self.mic.as_ref().map(|m| m.device_name.clone()),
+            level: 0.0,
+            speaking: controls.speaking.load(Ordering::Relaxed),
+            error: self.mic_error.clone(),
+        }
+    }
+
     pub fn mic_status(&self) -> MicStatus {
         let Some(output) = &self.output else {
             return MicStatus { error: self.mic_error.clone(), ..MicStatus::default() };
@@ -1255,6 +1272,24 @@ impl AudioEngine {
     }
 }
 
+/// Loudness and peak of a file: from the library, else from its ReplayGain tags when
+/// the settings allow. Reads the library and maybe the file: no engine lock held.
+fn measured_loudness(
+    normalization: &NormalizationConfig,
+    lookup: Option<&LoudnessLookup>,
+    path: &str,
+) -> (Option<f32>, Option<f32>) {
+    if !normalization.enabled {
+        return (None, None);
+    }
+    lookup
+        .and_then(|l| l(path))
+        .or_else(|| {
+            normalization.use_replaygain.then(|| super::normalize::replaygain_of_file(Path::new(path))).flatten()
+        })
+        .map_or((None, None), |(l, p)| (Some(l), p))
+}
+
 /// Decode the playlist item at `index` without holding the engine lock, then start it.
 /// With `skip_failures` (auto-advance), unplayable items are skipped and the engine
 /// stops if none can be played. Blocking: call it from a worker thread.
@@ -1278,15 +1313,15 @@ pub fn play_index_unlocked(
             Ok(mut player) => {
                 // Gain and imaging are set up here, with no lock held: the loudness
                 // lookup reads the library.
-                let gain_of = |path: &str| {
-                    let (lufs, peak) = loudness.as_ref().and_then(|l| l(path)).map_or((None, None), |(l, p)| (Some(l), p));
-                    db_to_gain(normalization.gain_db(lufs, peak))
+                let gain_of = |path: &str, kind: ItemKind| {
+                    let (lufs, peak) = measured_loudness(&normalization, loudness.as_ref(), path);
+                    db_to_gain(normalization.gain_db_for(kind, lufs, peak))
                 };
-                player.set_gain(gain_of(&path));
+                player.set_gain(gain_of(&path, item.as_ref().map_or(ItemKind::Music, |i| i.kind)));
                 let overlay = item.as_ref().and_then(|i| i.overlay.as_deref()).and_then(|spec| {
                     match TrackPlayer::from_file(Path::new(&spec.item.track_path), 44100) {
                         Ok(mut over) => {
-                            over.set_gain(gain_of(&spec.item.track_path));
+                            over.set_gain(gain_of(&spec.item.track_path, spec.item.kind));
                             let start_frame = spec.start_ms as f64 * player.sample_rate() as f64 / 1000.0;
                             player.set_overlay(Overlay { player: Box::new(over), start_frame, duck: db_to_gain(-spec.duck_db.abs()) });
                             Some(spec.item.clone())
@@ -1367,10 +1402,7 @@ pub fn fire_cart_unlocked(engine: &Mutex<AudioEngine>, button: &CartButton) -> R
             player
         }
     };
-    let (lufs, peak) = loudness
-        .as_ref()
-        .and_then(|l| l(&button.file_path))
-        .map_or((None, None), |(l, p)| (Some(l), p));
+    let (lufs, peak) = measured_loudness(&normalization, loudness.as_ref(), &button.file_path);
     let gain = db_to_gain(button.gain_db) * db_to_gain(normalization.gain_db(lufs, peak));
     lock()?.start_cart(button, player, gain);
     Ok(true)
