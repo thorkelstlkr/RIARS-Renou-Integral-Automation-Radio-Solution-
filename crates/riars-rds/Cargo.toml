@@ -1,6 +1,6 @@
 [package]
 name = "riars-rds"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
 description = "RDS output for RIARS: PS, RadioText and RT+ to external encoders (UECP or ASCII over TCP, UDP, serial or a file)"
 
